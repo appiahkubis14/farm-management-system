@@ -517,8 +517,8 @@ function initializeMap() {
     };
 
     // Add default basemap
-    baseLayers.osm.addTo(map);
-    var currentBasemap = 'osm';
+    baseLayers.satellite.addTo(map);
+    var currentBasemap = 'satellite';
 
     // Farm layers
     var farmLayer = L.layerGroup().addTo(map);
