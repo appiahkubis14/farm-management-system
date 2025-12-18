@@ -1,0 +1,72 @@
+{% extends 'sensors/base.html' %}
+
+{% block title %}All Devices - Soil IoT System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📱 All Registered Devices</h2>
+    <p style="color: #666; margin-bottom: 20px;">Manage and monitor all your IoT devices</p>
+    
+    <div class="grid">
+        {% for device in devices %}
+        <div class="device-card" onclick="window.location.href='{% url 'sensors:device_detail' device.device_id %}'">
+            <h3>{{ device.device_name }}</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">
+                <strong>ID:</strong> {{ device.device_id }}<br>
+                <strong>Type:</strong> {{ device.get_device_type_display }}<br>
+                <strong>Location:</strong> {{ device.location|default:"Not specified" }}
+            </p>
+            <span class="status-badge status-{{ device.status }}">{{ device.get_status_display }}</span>
+            
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                <p style="font-size: 0.85rem; color: #999;">
+                    <strong>Registered:</strong> {{ device.registered_at|date:"Y-m-d H:i" }}<br>
+                    <strong>Last Seen:</strong> {{ device.last_seen|timesince }} ago
+                </p>
+            </div>
+        </div>
+        {% empty %}
+        <div class="card">
+            <p style="text-align: center; color: #999; padding: 40px;">
+                No devices registered yet.<br><br>
+                <strong>Register a device:</strong><br>
+                POST to <code>/api/register/</code> with:<br>
+                <code>{"device_id": "ESP32-001", "device_name": "Soil Sensor 1", "device_type": "multi", "location": "Garden A"}</code>
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>📖 API Documentation</h2>
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+        <h3 style="margin-bottom: 15px;">Registering a Device</h3>
+        <pre style="background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 8px; overflow-x: auto;">
+POST /api/register/
+Content-Type: application/json
+
+{
+    "device_id": "ESP32-001",
+    "device_name": "Soil Sensor 1",
+    "device_type": "multi",
+    "location": "Garden A"
+}</pre>
+        
+        <h3 style="margin: 20px 0 15px 0;">Submitting Sensor Data</h3>
+        <pre style="background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 8px; overflow-x: auto;">
+POST /api/submit/
+Content-Type: application/json
+
+{
+    "device_id": "ESP32-001",
+    "api_key": "your-device-api-key",
+    "temperature": 25.5,
+    "humidity": 65.0,
+    "soil_moisture": 45.0,
+    "battery_level": 85.0,
+    "signal_strength": -70
+}</pre>
+    </div>
+</div>
+{% endblock %}

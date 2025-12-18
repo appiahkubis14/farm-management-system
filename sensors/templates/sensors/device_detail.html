@@ -1,0 +1,315 @@
+{% extends 'sensors/base.html' %}
+
+{% block title %}{{ device.device_name }} - Device Detail{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2>{{ device.device_name }}</h2>
+            <p style="color: #666;">Device ID: {{ device.device_id }}</p>
+            <p style="color: #666;">Location: {{ device.location|default:"Not specified" }}</p>
+            <span class="status-badge status-{{ device.status }}">{{ device.get_status_display }}</span>
+        </div>
+        <div>
+            <a href="{% url 'sensors:devices_list' %}" class="btn btn-primary">← Back to Devices</a>
+        </div>
+    </div>
+</div>
+
+<div class="grid">
+    <div class="stat-card" id="currentTemp">
+        <h3>Current Temperature</h3>
+        <div class="value">--°C</div>
+    </div>
+    <div class="stat-card green" id="currentHumidity">
+        <h3>Current Humidity</h3>
+        <div class="value">--%</div>
+    </div>
+    <div class="stat-card orange" id="currentSoil">
+        <h3>Soil Moisture</h3>
+        <div class="value">--%</div>
+    </div>
+    <div class="stat-card" id="currentSoilRaw">
+        <h3>Raw Soil Value</h3>
+        <div class="value">--</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>📈 Real-Time Charts</h2>
+    
+    <div style="margin-bottom: 30px;">
+        <canvas id="temperatureChart" style="max-height: 300px;"></canvas>
+    </div>
+    
+    <div style="margin-bottom: 30px;">
+        <canvas id="humidityChart" style="max-height: 300px;"></canvas>
+    </div>
+    
+    <div style="margin-bottom: 30px;">
+        <canvas id="soilChart" style="max-height: 300px;"></canvas>
+    </div>
+    
+    <div>
+        <canvas id="soilRawChart" style="max-height: 300px;"></canvas>
+    </div>
+</div>
+
+<div class="card">
+    <h2>📋 Recent Readings</h2>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 12px; text-align: left;">Timestamp</th>
+                    <th style="padding: 12px; text-align: left;">Temperature</th>
+                    <th style="padding: 12px; text-align: left;">Humidity</th>
+                    <th style="padding: 12px; text-align: left;">Soil Moisture</th>
+                    <th style="padding: 12px; text-align: left;">Raw Value</th>
+                    <th style="padding: 12px; text-align: left;">Battery</th>
+                </tr>
+            </thead>
+            <tbody id="readingsTable">
+                {% for reading in recent_readings %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px;">{{ reading.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    <td style="padding: 12px;">{{ reading.temperature|default:"-" }}°C</td>
+                    <td style="padding: 12px;">{{ reading.humidity|default:"-" }}%</td>
+                    <td style="padding: 12px;">{{ reading.soil_moisture|default:"-" }}%</td>
+                    <td style="padding: 12px;">{{ reading.soil_raw|default:"-" }}</td>
+                    <td style="padding: 12px;">{{ reading.battery_level|default:"-" }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const deviceId = '{{ device.device_id }}';
+    const maxDataPoints = 20;
+    
+    // Initialize charts
+    const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+    const tempChart = new Chart(tempCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Temperature (°C)',
+                data: [],
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            },
+            animation: {
+                duration: 750
+            }
+        }
+    });
+    
+    const humCtx = document.getElementById('humidityChart').getContext('2d');
+    const humChart = new Chart(humCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Humidity (%)',
+                data: [],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            },
+            animation: {
+                duration: 750
+            }
+        }
+    });
+    
+    const soilCtx = document.getElementById('soilChart').getContext('2d');
+    const soilChart = new Chart(soilCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Soil Moisture (%)',
+                data: [],
+                borderColor: '#2ecc71',
+                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            },
+            animation: {
+                duration: 750
+            }
+        }
+    });
+    
+    const soilRawCtx = document.getElementById('soilRawChart').getContext('2d');
+    const soilRawChart = new Chart(soilRawCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Raw Soil Sensor Value',
+                data: [],
+                borderColor: '#f39c12',
+                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 4095
+                }
+            },
+            animation: {
+                duration: 750
+            }
+        }
+    });
+    
+    // Load initial data
+    fetch(`/api/device/${deviceId}/readings/?limit=20`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Initial data loaded:', data);
+            if (data.readings) {
+                data.readings.reverse().forEach(reading => {
+                    addDataToCharts(reading);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading initial data:', error);
+        });
+    
+    function addDataToCharts(reading) {
+        const time = new Date(reading.timestamp).toLocaleTimeString();
+        
+        // Temperature
+        if (reading.temperature !== null) {
+            tempChart.data.labels.push(time);
+            tempChart.data.datasets[0].data.push(reading.temperature);
+            if (tempChart.data.labels.length > maxDataPoints) {
+                tempChart.data.labels.shift();
+                tempChart.data.datasets[0].data.shift();
+            }
+            tempChart.update('none');
+            
+            document.querySelector('#currentTemp .value').textContent = 
+                reading.temperature.toFixed(1) + '°C';
+        }
+        
+        // Humidity
+        if (reading.humidity !== null) {
+            humChart.data.labels.push(time);
+            humChart.data.datasets[0].data.push(reading.humidity);
+            if (humChart.data.labels.length > maxDataPoints) {
+                humChart.data.labels.shift();
+                humChart.data.datasets[0].data.shift();
+            }
+            humChart.update('none');
+            
+            document.querySelector('#currentHumidity .value').textContent = 
+                reading.humidity.toFixed(0) + '%';
+        }
+        
+        // Soil Moisture
+        if (reading.soil_moisture !== null) {
+            soilChart.data.labels.push(time);
+            soilChart.data.datasets[0].data.push(reading.soil_moisture);
+            if (soilChart.data.labels.length > maxDataPoints) {
+                soilChart.data.labels.shift();
+                soilChart.data.datasets[0].data.shift();
+            }
+            soilChart.update('none');
+            
+            document.querySelector('#currentSoil .value').textContent = 
+                reading.soil_moisture.toFixed(0) + '%';
+        }
+        
+        // Soil Raw Value
+        if (reading.soil_raw !== null && reading.soil_raw !== undefined) {
+            soilRawChart.data.labels.push(time);
+            soilRawChart.data.datasets[0].data.push(reading.soil_raw);
+            if (soilRawChart.data.labels.length > maxDataPoints) {
+                soilRawChart.data.labels.shift();
+                soilRawChart.data.datasets[0].data.shift();
+            }
+            soilRawChart.update('none');
+            
+            document.querySelector('#currentSoilRaw .value').textContent = reading.soil_raw;
+        }
+    }
+    
+    function handleSensorUpdate(data) {
+        if (data.device_id === deviceId) {
+            addDataToCharts(data);
+            
+            // Add row to table
+            const table = document.getElementById('readingsTable');
+            const row = table.insertRow(0);
+            const time = new Date(data.timestamp).toLocaleString();
+            
+            row.innerHTML = `
+                <td style="padding: 12px;">${time}</td>
+                <td style="padding: 12px;">${data.temperature ? data.temperature.toFixed(1) + '°C' : '-'}</td>
+                <td style="padding: 12px;">${data.humidity ? data.humidity.toFixed(0) + '%' : '-'}</td>
+                <td style="padding: 12px;">${data.soil_moisture ? data.soil_moisture.toFixed(0) + '%' : '-'}</td>
+                <td style="padding: 12px;">${data.soil_raw !== null && data.soil_raw !== undefined ? data.soil_raw : '-'}</td>
+                <td style="padding: 12px;">${data.battery_level ? data.battery_level.toFixed(0) + '%' : '-'}</td>
+            `;
+            
+            // Keep only 50 rows
+            while (table.rows.length > 50) {
+                table.deleteRow(table.rows.length - 1);
+            }
+        }
+    }
+</script>
+{% endblock %}

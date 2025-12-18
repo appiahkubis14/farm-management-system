@@ -1,0 +1,318 @@
+{% load static %}
+{% load i18n %}
+
+<div class="leftside-menu">
+    <!-- Brand Logo Light -->
+    <a href="/" class="logo logo-light">
+        <span class="logo-lg">
+            <img src="/static/assets/images/logo-dark-afarinick.png" style="height:60" alt="logo">
+        </span>
+        <span class="logo-sm">
+            <img src="/static/assets/images/logo-dark-afarinick.png" alt="small logo">
+        </span>
+    </a>
+
+    <!-- Brand Logo Dark -->
+    <a href="/" class="logo logo-dark">
+        <span class="logo-lg">
+            <img src="/static/assets/images/logo-dark-afarinick.png" alt="dark logo">
+        </span>
+        <span class="logo-sm">
+            <img src="/static/assets/images/logo-dark-afarinick.png" alt="small logo">
+        </span>
+    </a>
+
+    <!-- Sidebar Hover Menu Toggle Button -->
+    <div class="button-sm-hover" data-bs-toggle="tooltip" data-bs-placement="right" title="Show Full Sidebar">
+        <i class="ri-checkbox-blank-circle-line align-middle"></i>
+    </div>
+
+    <!-- Full Sidebar Menu Close Button -->
+    <div class="button-close-fullsidebar">
+        <i class="ri-close-fill align-middle"></i>
+    </div>
+
+    <!-- Sidebar -left -->
+    <div class="h-100" id="leftside-menu-container" data-simplebar>
+        <!-- Leftbar User -->
+        <div class="leftbar-user p-3 text-white">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <img src="{% static 'assets/images/users/avatar-1.jpg' %}" alt="user-image" height="42" class="rounded-circle shadow">
+                </div>
+                <div class="flex-grow-1 ms-2">
+                    {% if user %}
+                        <span class="fw-semibold fs-15 d-block">{{ user.get_full_name|default:user.username }}</span>
+                        <span class="fs-13 text-white-50">
+                            {% with groups=user.groups.all %}
+                                {% if groups %}
+                                    {{ groups.0.name }}
+                                {% else %}
+                                    {% trans "User" %}
+                                {% endif %}
+                            {% endwith %}
+                        </span>
+                    {% else %}
+                        <span class="fw-semibold fs-15 d-block">Guest</span>
+                        <span class="fs-13 text-white-50">{% trans "Not logged in" %}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!--- Sidemenu -->
+        <ul class="side-nav">
+            <li class="side-nav-title mt-1 fs-13 text-uppercase fw-semibold letter-spacing-1">{% trans "Main" %}</li>
+
+            {% if sidebar_items and user.is_authenticated %}
+                {% for name, item in sidebar_items.items %}
+                    <li class="side-nav-item">
+                        {% if item.sub_items %}
+                            <!-- Parent item with children -->
+                            <a data-bs-toggle="collapse" href="#nav-{{ forloop.counter }}" aria-expanded="false" aria-controls="nav-{{ forloop.counter }}" class="side-nav-link fw-semibold">
+                                <i class="{{ item.icon|default:'ri-circle-fill' }} me-2"></i>
+                                <span>{{ name }}</span>
+                                <span class="menu-arrow"><i class="ri-arrow-right-s-line"></i></span>
+                            </a>
+                            
+                            <!-- Children items -->
+                            <div class="collapse" id="nav-{{ forloop.counter }}">
+                                <ul class="side-nav-second-level">
+                                    {% for child_name, child_item in item.sub_items.items %}
+                                        <li class="{% if child_item.sub_items %}side-nav-item{% endif %}">
+                                            {% if child_item.sub_items %}
+                                                <!-- Child item with its own children -->
+                                                <a data-bs-toggle="collapse" href="#nav-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" aria-expanded="false" aria-controls="nav-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="fw-medium">
+                                                    <i class="{{ child_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                    <span>{{ child_name }}</span>
+                                                    <span class="menu-arrow"><i class="ri-arrow-right-s-line"></i></span>
+                                                </a>
+                                                
+                                                <!-- Grandchildren items -->
+                                                <div class="collapse" id="nav-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                                                    <ul class="side-nav-third-level">
+                                                        {% for grandchild_name, grandchild_item in child_item.sub_items.items %}
+                                                            <li>
+                                                                {% if grandchild_item.sub_items %}
+                                                                    <!-- Grandchild item with its own children -->
+                                                                    <a data-bs-toggle="collapse" href="#nav-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" aria-expanded="false" aria-controls="nav-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="fw-normal">
+                                                                        <i class="{{ grandchild_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                                        <span>{{ grandchild_name }}</span>
+                                                                        <span class="menu-arrow"><i class="ri-arrow-right-s-line"></i></span>
+                                                                    </a>
+                                                                    
+                                                                    <!-- Great-grandchildren items -->
+                                                                    <div class="collapse" id="nav-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                                                                        <ul class="side-nav-forth-level">
+                                                                            {% for great_grandchild_name, great_grandchild_item in grandchild_item.sub_items.items %}
+                                                                                <li>
+                                                                                    <a href="{{ great_grandchild_item.url }}" class="fw-light">
+                                                                                        <i class="{{ great_grandchild_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                                                        <span>{{ great_grandchild_name }}</span>
+                                                                                    </a>
+                                                                                </li>
+                                                                            {% endfor %}
+                                                                        </ul>
+                                                                    </div>
+                                                                {% else %}
+                                                                    <!-- Grandchild item without children -->
+                                                                    <a href="{{ grandchild_item.url }}" class="fw-normal">
+                                                                        <i class="{{ grandchild_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                                        <span>{{ grandchild_name }}</span>
+                                                                    </a>
+                                                                {% endif %}
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            {% else %}
+                                                <!-- Child item without children -->
+                                                <a href="{{ child_item.url }}" class="fw-medium">
+                                                    <i class="{{ child_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                    <span>{{ child_name }}</span>
+                                                </a>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% else %}
+                            <!-- Single item without children -->
+                            <a href="{{ item.url }}" class="side-nav-link fw-semibold">
+                                <i class="{{ item.icon|default:'ri-circle-fill' }} me-2"></i>
+                                {% if item.badge %}
+                                    <span class="badge {{ item.badge_class|default:'bg-success' }} float-end">{{ item.badge }}</span>
+                                {% endif %}
+                                <span>{{ name }}</span>
+                            </a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            {% elif not user.is_authenticated %}
+                <!-- Show login prompt for non-authenticated users -->
+                <li class="side-nav-item">
+                    <a href="/admin/login/?next=/" class="side-nav-link fw-semibold text-primary">
+                        <i class="ri-login-box-fill me-2"></i>
+                        <span>{% trans "Login to access menu" %}</span>
+                    </a>
+                </li>
+            {% else %}
+                <!-- Show message if no sidebar items are available -->
+                <li class="side-nav-item">
+                    <a href="#" class="side-nav-link text-muted">
+                        <i class="ri-information-line me-2"></i>
+                        <span>{% trans "No menu items available for your role" %}</span>
+                    </a>
+                </li>
+            {% endif %}
+
+            <!-- Admin Panel link - only show for staff/admin users -->
+            {% if user.is_authenticated and user.is_staff %}
+                <li class="side-nav-title mt-3 fs-13 text-uppercase fw-semibold letter-spacing-1">{% trans "Administration" %}</li>
+                <li class="side-nav-item">
+                    <a href="/admin/" class="side-nav-link fw-semibold" target="_blank">
+                        <i class="ri-shield-user-fill me-2"></i>
+                        <span>{% trans "Admin Panel" %}</span>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+        <!--- End Sidemenu -->
+
+        <div class="clearfix"></div>
+    </div>
+</div>
+
+<style>
+    /* Sidebar styling improvements */
+    .side-nav {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    
+    .side-nav-title {
+        color: #6c757d !important;
+        font-weight: 600 !important;
+        padding: 12px 20px 6px !important;
+        margin-top: 10px !important;
+        letter-spacing: 0.5px;
+    }
+    
+    .side-nav-link {
+        padding: 10px 20px !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+    
+    .side-nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-left-color: #3e70c9;
+    }
+    
+    .side-nav-link.active {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-left-color: #3e70c9;
+        font-weight: 600 !important;
+    }
+    
+    .side-nav-second-level {
+        padding-left: 25px !important;
+    }
+    
+    .side-nav-second-level a {
+        padding: 8px 15px !important;
+        font-size: 13.5px !important;
+        color: #adb5bd !important;
+        border-left: 2px solid transparent;
+    }
+    
+    .side-nav-second-level a:hover {
+        /* color: #ffffff !important; */
+        background-color: rgba(255, 255, 255, 0.03);
+        border-left-color: #3e70c9;
+    }
+    
+    .side-nav-third-level {
+        padding-left: 20px !important;
+    }
+    
+    .side-nav-third-level a {
+        padding: 6px 15px !important;
+        font-size: 13px !important;
+        color: #8a94a6 !important;
+        border-left: 1px solid transparent;
+    }
+    
+    .side-nav-third-level a:hover {
+        /* color: #dee2e6 !important; */
+        background-color: rgba(255, 255, 255, 0.02);
+        border-left-color: #3e70c9;
+    }
+    
+    .side-nav-forth-level {
+        padding-left: 15px !important;
+    }
+    
+    .side-nav-forth-level a {
+        padding: 5px 15px !important;
+        font-size: 12.5px !important;
+        color: #6c757d !important;
+    }
+    
+    .side-nav-forth-level a:hover {
+        color: #adb5bd !important;
+        background-color: rgba(255, 255, 255, 0.01);
+    }
+    
+    /* Font weight hierarchy */
+    .side-nav-link.fw-semibold {
+        font-weight: 600 !important;
+    }
+    
+    .fw-medium {
+        font-weight: 500 !important;
+    }
+    
+    .fw-normal {
+        font-weight: 400 !important;
+    }
+    
+    .fw-light {
+        font-weight: 300 !important;
+    }
+    
+    /* Menu arrow styling */
+    .menu-arrow {
+        transition: transform 0.2s ease;
+        float: right;
+        margin-top: 2px;
+    }
+    
+    .menu-arrow i {
+        font-size: 16px;
+    }
+    
+    [aria-expanded="true"] .menu-arrow {
+        transform: rotate(90deg);
+    }
+    
+    /* Icon spacing */
+    .side-nav-link i,
+    .side-nav-second-level a i,
+    .side-nav-third-level a i,
+    .side-nav-forth-level a i {
+        min-width: 20px;
+        text-align: center;
+    }
+    
+    /* Better spacing for collapsed items */
+    .collapse.show + .collapse {
+        margin-top: 2px;
+    }
+    
+    /* Active state for parent items when child is active */
+    .side-nav-item > a[aria-expanded="true"] {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-left-color: #3e70c9;
+    }
+</style>

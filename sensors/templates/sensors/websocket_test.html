@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+        .box { background: white; padding: 20px; margin: 10px 0; border-radius: 10px; }
+        .green { color: green; }
+        .red { color: red; }
+        #messages { max-height: 400px; overflow-y: auto; }
+        .message { padding: 10px; margin: 5px 0; background: #f9f9f9; border-left: 4px solid #3498db; }
+    </style>
+</head>
+<body>
+    <h1>🌱 Real-Time WebSocket Test</h1>
+    
+    <div class="box">
+        <h3>Connection Status</h3>
+        <p id="status" class="red">Disconnected</p>
+    </div>
+    
+    <div class="box">
+        <h3>Latest Reading</h3>
+        <div id="latest">Waiting for data...</div>
+    </div>
+    
+    <div class="box">
+        <h3>WebSocket Messages</h3>
+        <button onclick="sendTestData()">📡 Send Test Data</button>
+        <div id="messages"></div>
+    </div>
+    
+    <script>
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/dashboard/`;
+        let socket;
+        
+        function connect() {
+            console.log('Connecting to:', wsUrl);
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function(e) {
+                console.log('WebSocket connected!');
+                document.getElementById('status').className = 'green';
+                document.getElementById('status').textContent = 'Connected to ' + wsUrl;
+                addMessage('✅ WebSocket connected!', 'green');
+            };
+            
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                console.log('Message received:', data);
+                addMessage('📨 Received: ' + JSON.stringify(data, null, 2), 'blue');
+                
+                if (data.type === 'sensor_update') {
+                    updateLatest(data.data);
+                }
+            };
+            
+            socket.onclose = function(event) {
+                console.log('WebSocket closed');
+                document.getElementById('status').className = 'red';
+                document.getElementById('status').textContent = 'Disconnected - Reconnecting...';
+                addMessage('❌ WebSocket closed. Reconnecting...', 'red');
+                setTimeout(connect, 3000);
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                addMessage('⚠️ WebSocket error: ' + error, 'red');
+            };
+        }
+        
+        function addMessage(msg, color) {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.style.borderLeftColor = color;
+            div.innerHTML = '<pre>' + msg + '</pre>';
+            const container = document.getElementById('messages');
+            container.insertBefore(div, container.firstChild);
+            
+            // Keep only last 20 messages
+            while (container.children.length > 20) {
+                container.removeChild(container.lastChild);
+            }
+        }
+        
+        function updateLatest(data) {
+            const html = `
+                <strong>${data.device_name || data.device_id}</strong><br>
+                <span style="font-size: 0.9em; color: #666;">${new Date(data.timestamp).toLocaleString()}</span><br><br>
+                🌡️ Temperature: <strong>${data.temperature}°C</strong><br>
+                💧 Humidity: <strong>${data.humidity}%</strong><br>
+                🌱 Soil Moisture: <strong>${data.soil_moisture}%</strong>
+            `;
+            document.getElementById('latest').innerHTML = html;
+        }
+        
+        function sendTestData() {
+            fetch('/api/register/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    device_id: 'WEBSOCKET-TEST',
+                    device_name: 'WebSocket Test Device',
+                    device_type: 'multi',
+                    location: 'Test Lab'
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                console.log('Device registered:', data);
+                return fetch('/api/submit/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        device_id: 'WEBSOCKET-TEST',
+                        api_key: data.api_key,
+                        temperature: 25.5,
+                        humidity: 65.0,
+                        soil_moisture: 45.0
+                    })
+                });
+            })
+            .then(r => r.json())
+            .then(data => {
+                console.log('Data submitted:', data);
+                addMessage('✅ Test data sent successfully!', 'green');
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                addMessage('❌ Error: ' + err, 'red');
+            });
+        }
+        
+        // Connect on page load
+        connect();
+    </script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+{% extends 'sensors/base.html' %}
+
+{% block title %}Dashboard - Soil IoT System{% endblock %}
+
+{% block content %}
+<div class="grid">
+    <div class="stat-card">
+        <h3>Total Devices</h3>
+        <div class="value">{{ devices.count }}</div>
+    </div>
+    <div class="stat-card green">
+        <h3>Active Devices</h3>
+        <div class="value">{{ active_devices }}</div>
+    </div>
+    <div class="stat-card orange">
+        <h3>Total Readings</h3>
+        <div class="value">{{ total_readings }}</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>🎛️ Active Devices</h2>
+    <div class="grid">
+        {% for device in devices %}
+        <div class="device-card" onclick="window.location.href='{% url 'sensors:device_detail' device.device_id %}'">
+            <h3>{{ device.device_name }}</h3>
+            <p style="color: #666; font-size: 0.9rem;">{{ device.location|default:"No location set" }}</p>
+            <span class="status-badge status-{{ device.status }}">{{ device.get_status_display }}</span>
+            
+            <div class="device-info" id="device-{{ device.device_id }}">
+                <div class="info-item">
+                    <div class="label">Temperature</div>
+                    <div class="value temp">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Humidity</div>
+                    <div class="value humidity">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Soil</div>
+                    <div class="value soil">--</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Raw Value</div>
+                    <div class="value soil-raw">--</div>
+                </div>
+            </div>
+            <p style="color: #999; font-size: 0.85rem; margin-top: 10px;">
+                Last seen: <span class="last-seen">{{ device.last_seen|timesince }} ago</span>
+            </p>
+        </div>
+        {% empty %}
+        <div class="card">
+            <p style="text-align: center; color: #999; padding: 40px;">
+                No devices registered yet. Register your first device through the API.
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>📊 Real-Time Updates</h2>
+    <div id="recentUpdates" style="max-height: 400px; overflow-y: auto;">
+        <p style="color: #999; text-align: center; padding: 20px;">Waiting for sensor updates...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Load initial data for all devices
+    fetch('/api/devices/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Devices loaded:', data);
+            if (data.devices) {
+                data.devices.forEach(device => {
+                    updateDeviceDisplay(device);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading devices:', error);
+        });
+    
+    function updateDeviceDisplay(device) {
+        const deviceCard = document.getElementById(`device-${device.device_id}`);
+        if (!deviceCard) return;
+        
+        if (device.latest_reading) {
+            const reading = device.latest_reading;
+            
+            const tempEl = deviceCard.querySelector('.temp');
+            const humEl = deviceCard.querySelector('.humidity');
+            const soilEl = deviceCard.querySelector('.soil');
+            const soilRawEl = deviceCard.querySelector('.soil-raw');
+            
+            if (reading.temperature !== null) {
+                tempEl.textContent = reading.temperature.toFixed(1) + '°C';
+            }
+            if (reading.humidity !== null) {
+                humEl.textContent = reading.humidity.toFixed(0) + '%';
+            }
+            if (reading.soil_moisture !== null) {
+                soilEl.textContent = reading.soil_moisture.toFixed(0) + '%';
+            }
+            if (reading.soil_raw !== null && reading.soil_raw !== undefined) {
+                soilRawEl.textContent = reading.soil_raw;
+            }
+        }
+    }
+    
+    function handleSensorUpdate(data) {
+        console.log('New sensor reading:', data);
+        
+        // Update device card
+        const deviceCard = document.getElementById(`device-${data.device_id}`);
+        if (deviceCard) {
+            const tempEl = deviceCard.querySelector('.temp');
+            const humEl = deviceCard.querySelector('.humidity');
+            const soilEl = deviceCard.querySelector('.soil');
+            const soilRawEl = deviceCard.querySelector('.soil-raw');
+            
+            if (data.temperature !== null) {
+                tempEl.textContent = data.temperature.toFixed(1) + '°C';
+                tempEl.style.animation = 'none';
+                setTimeout(() => tempEl.style.animation = 'flash 0.5s', 10);
+            }
+            if (data.humidity !== null) {
+                humEl.textContent = data.humidity.toFixed(0) + '%';
+                humEl.style.animation = 'none';
+                setTimeout(() => humEl.style.animation = 'flash 0.5s', 10);
+            }
+            if (data.soil_moisture !== null) {
+                soilEl.textContent = data.soil_moisture.toFixed(0) + '%';
+                soilEl.style.animation = 'none';
+                setTimeout(() => soilEl.style.animation = 'flash 0.5s', 10);
+            }
+            if (data.soil_raw !== null && data.soil_raw !== undefined) {
+                soilRawEl.textContent = data.soil_raw;
+                soilRawEl.style.animation = 'none';
+                setTimeout(() => soilRawEl.style.animation = 'flash 0.5s', 10);
+            }
+        }
+        
+        // Add to recent updates
+        const updatesDiv = document.getElementById('recentUpdates');
+        const updateItem = document.createElement('div');
+        updateItem.style.cssText = 'padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #3498db;';
+        
+        const time = new Date(data.timestamp).toLocaleTimeString();
+        updateItem.innerHTML = `
+            <strong>${data.device_name}</strong> <span style="color: #999;">${time}</span><br>
+            <span style="font-size: 0.9rem;">
+                ${data.temperature ? `🌡️ ${data.temperature.toFixed(1)}°C` : ''}
+                ${data.humidity ? ` 💧 ${data.humidity.toFixed(0)}%` : ''}
+                ${data.soil_moisture ? ` 🌱 ${data.soil_moisture.toFixed(0)}%` : ''}
+                ${data.soil_raw !== null && data.soil_raw !== undefined ? ` 📊 Raw: ${data.soil_raw}` : ''}
+            </span>
+        `;
+        
+        if (updatesDiv.querySelector('p')) {
+            updatesDiv.innerHTML = '';
+        }
+        updatesDiv.insertBefore(updateItem, updatesDiv.firstChild);
+        
+        // Keep only last 10 updates
+        while (updatesDiv.children.length > 10) {
+            updatesDiv.removeChild(updatesDiv.lastChild);
+        }
+    }
+</script>
+
+<style>
+    @keyframes flash {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; background: yellow; }
+    }
+</style>
+{% endblock %}
