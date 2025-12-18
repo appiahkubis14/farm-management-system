@@ -1,0 +1,783 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+
+
+{% block content %}
+
+    <br>
+    <!-- Page Header -->
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box d-flex align-items-center justify-content-between">
+                <h4 class="mb-0">Farm Details Management</h4>
+                <div class="page-title-right">
+                    <button class="btn btn-primary" id="addFarmBtn">
+                        <i class="fas fa-plus me-1"></i> Add New Farm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br>
+
+    <!-- Stats Cards -->
+    <!-- <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-h-30">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Farms</span>
+                            <h4 class="mb-3" id="totalFarms">0</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-tractor text-primary h2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-h-30">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <span class="text-muted mb-3 lh-1 d-block text-truncate">In Maintenance</span>
+                            <h4 class="mb-3" id="maintenanceFarms">0</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-tools text-warning h2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-h-30">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <span class="text-muted mb-3 lh-1 d-block text-truncate">In Treatment</span>
+                            <h4 class="mb-3" id="treatmentFarms">0</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-seedling text-success h2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-h-30">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <span class="text-muted mb-3 lh-1 d-block text-truncate">Newly Established</span>
+                            <h4 class="mb-3" id="establishedFarms">0</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-leaf text-info h2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br> -->
+
+    <!-- Main Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="farmTable"  class="table table-striped  datatable" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Farm Ref</th>
+                                    <th>Farmer Name</th>
+                                    <th>Region</th>
+                                    <th>District</th>
+                                    <th>Location</th>
+                                    <th>Farm Size</th>
+                                    <th>Status</th>
+                                    <th>Year Established</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Farm Modal -->
+<div class="modal fade" id="farmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header  text-white">
+                <h5 class="modal-title" id="modalTitle">Add New Farm</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="farmForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="farmId" name="farm_id">
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="farm_reference" class="form-label">Farm Reference *</label>
+                                <input type="text" class="form-control" id="farm_reference" name="farm_reference" required>
+                                <div class="invalid-feedback">Please enter a farm reference</div>
+                                <small class="form-text text-muted">Unique identifier for the farm</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="farmer_name" class="form-label">Farmer Name *</label>
+                                <input type="text" class="form-control" id="farmer_name" name="farmer_name" required>
+                                <div class="invalid-feedback">Please enter farmer name</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="region" class="form-label">Region *</label>
+                                <input type="text" class="form-control" id="region" name="region" required>
+                                <div class="invalid-feedback">Please enter region</div>
+                            </div>
+                        </div>
+                        <!-- <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="district" class="form-label">District *</label>
+                                <select class="form-select" id="district" name="district" required>
+                                    <option value="">Select District</option>
+                                    {% for district in districts %}
+                                        <option value="{{ district.district }}">{{ district.district }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">Please select district</div>
+                            </div>
+                        </div> -->
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="district" class="form-label">District *</label>
+                                <input type="text" class="form-control" id="district" name="district" required>
+                                <div class="invalid-feedback">Please enter district</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="location" class="form-label">Location *</label>
+                                <input type="text" class="form-control" id="location" name="location" required>
+                                <div class="invalid-feedback">Please enter location</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="farm_size" class="form-label">Farm Size (acres)</label>
+                                <input type="number" class="form-control" id="farm_size" name="farm_size" step="0.01" min="0">
+                                <small class="form-text text-muted">Size in acres</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="sector" class="form-label">Sector</label>
+                                <input type="number" class="form-control" id="sector" name="sector" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if value == 'Maintenance' %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="year_of_establishment" class="form-label">Year of Establishment</label>
+                                <input type="date" class="form-control" id="year_of_establishment" name="year_of_establishment">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="reason4expunge" class="form-label">Expunge Reason (if applicable)</label>
+                                <textarea class="form-control" id="reason4expunge" name="reason4expunge" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Farm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header  text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this farm? This will mark it as expunged.</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Farm Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header  text-white">
+                <h5 class="modal-title">Farm Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="farmDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="printFarmBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required CSS -->
+     
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
+
+ <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+ <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+<script>
+$(document).ready(function() {
+
+    if (window.jQuery) {
+        console.log('jQuery already loaded:', window.jQuery.fn.jquery);
+        
+        // Use jQuery.noConflict() if needed
+        if (window.$ && window.$.fn.jquery !== window.jQuery.fn.jquery) {
+            console.log('Different jQuery versions detected');
+            var originalJQuery = window.jQuery;
+            var original$ = window.$;
+            
+            // Restore original jQuery if it was overwritten
+            window.jQuery = window.jQuery || originalJQuery;
+            window.$ = window.$ || original$;
+        }
+    } else {
+        console.log('jQuery not loaded');
+    }
+    // Initialize DataTable
+    var farmTable = $('#farmTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'farm_details_api' %}",
+            type: "GET"
+        },
+        columns: [
+            { data: 'farm_reference' },
+            { data: 'farmer_name' },
+            { data: 'region' },
+            { data: 'district' },
+            { data: 'location' },
+            { data: 'farm_size' },
+            { 
+                data: 'status',
+                render: function(data) {
+                    var badgeClass = 'bg-';
+                    switch(data) {
+                        case 'Treatment': badgeClass += 'success'; break;
+                        case 'Establishment': badgeClass += 'info'; break;
+                        case 'Maintenance': badgeClass += 'warning'; break;
+                        default: badgeClass += 'secondary';
+                    }
+                    return '<span class="badge ' + badgeClass + '">' + data + '</span>';
+                }
+            },
+            { data: 'year_of_establishment' },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-farm" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary edit-farm" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger delete-farm" data-id="${data}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        // responsive: true,
+        // order: [[0, 'asc']],
+        // dom: 'Bfrtip',
+        buttons: [
+        {
+            extend: "copy",
+            text: '<i class="fas fa-copy"></i> Copy',
+            className: "btn btn-sm btn-outline-secondary",
+        },
+        {
+            extend: "csv",
+            text: '<i class="fas fa-file-csv"></i> CSV',
+            className: "btn btn-sm btn-outline-success",
+        },
+        {
+            extend: "excel",
+            text: '<i class="fas fa-file-excel"></i> Excel',
+            titleAttr: "Export to Excel",
+            className: "btn btn-sm btn-outline-primary",
+        },
+        {
+            extend: "pdf",
+            text: '<i class="fas fa-file-pdf"></i> PDF',
+            className: "btn btn-sm btn-outline-danger",
+        },
+    ],
+        order: [[0, 'desc']],
+        language: {
+            emptyTable: "No farms found",
+            zeroRecords: "No matching farms found"
+        }
+    });
+
+    // Load stats
+    function loadStats() {
+        $.ajax({
+            url: "{% url 'farm_details_api' %}",
+            type: "GET",
+            data: { draw: 1, start: 0, length: 1000 },
+            success: function(response) {
+                var data = response.data;
+                var total = data.length;
+                var maintenance = data.filter(f => f.status === 'Maintenance').length;
+                var treatment = data.filter(f => f.status === 'Treatment').length;
+                var establishment = data.filter(f => f.status === 'Establishment').length;
+                
+                $('#totalFarms').text(total);
+                $('#maintenanceFarms').text(maintenance);
+                $('#treatmentFarms').text(treatment);
+                $('#establishedFarms').text(establishment);
+            }
+        });
+    }
+
+    // Add Farm Button
+    $('#addFarmBtn').click(function() {
+        $('#farmForm')[0].reset();
+        $('#modalTitle').text('Add New Farm');
+        $('#farmId').val('');
+        $('#farmModal').modal('show');
+    });
+
+    // Form Submission
+    $('#farmForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        var formData = {
+            farm_reference: $('#farm_reference').val(),
+            farmer_name: $('#farmer_name').val(),
+            region: $('#region').val(),
+            district: $('#district').val(),
+            location: $('#location').val(),
+            farm_size: $('#farm_size').val(),
+            sector: $('#sector').val(),
+            status: $('#status').val(),
+            year_of_establishment: $('#year_of_establishment').val(),
+            reason4expunge: $('#reason4expunge').val()
+        };
+        
+        var farmId = $('#farmId').val();
+        var url = farmId ? `/api/farm-details/${farmId}/update/` : '/api/farm-details/create/';
+        var method = farmId ? 'POST' : 'POST';
+        
+        $.ajax({
+            url: url,
+            type: method,
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#saveBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#farmModal').modal('hide');
+                    farmTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#saveBtn').prop('disabled', false).html('Save Farm');
+            }
+        });
+    });
+
+    // Edit Farm
+    $(document).on('click', '.edit-farm', function() {
+        var farmId = $(this).data('id');
+        
+        $.ajax({
+            url: `/api/farm-details/${farmId}/`,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var farm = response.data;
+                    
+                    $('#farmId').val(farm.id);
+                    $('#farm_reference').val(farm.farm_reference);
+                    $('#farmer_name').val(farm.farmer_name);
+                    $('#region').val(farm.region);
+                    $('#district').val(farm.district);
+                    $('#location').val(farm.location);
+                    $('#farm_size').val(farm.farm_size);
+                    $('#sector').val(farm.sector);
+                    $('#status').val(farm.status);
+                    $('#year_of_establishment').val(farm.year_of_establishment);
+                    $('#reason4expunge').val(farm.reason4expunge);
+                    
+                    $('#modalTitle').text('Edit Farm');
+                    $('#farmModal').modal('show');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to load farm details', 'error');
+            }
+        });
+    });
+
+    // View Farm
+    $(document).on('click', '.view-farm', function() {
+        var farmId = $(this).data('id');
+        
+        $.ajax({
+            url: `/api/farm-details/${farmId}/`,
+            type: 'GET',
+            beforeSend: function() {
+                $('#farmDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading farm details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var farm = response.data;
+                    var html = `
+                        <div class="farm-details">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Farm Reference</h6>
+                                    <p class="fw-bold">${farm.farm_reference}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Farmer Name</h6>
+                                    <p class="fw-bold">${farm.farmer_name}</p>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Region</h6>
+                                    <p class="fw-bold">${farm.region}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">District</h6>
+                                    <p class="fw-bold">${farm.district}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Location</h6>
+                                    <p class="fw-bold">${farm.location}</p>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Farm Size</h6>
+                                    <p class="fw-bold">${farm.farm_size} acres</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Status</h6>
+                                    <p><span class="badge bg-${farm.status === 'Treatment' ? 'success' : farm.status === 'Establishment' ? 'info' : 'warning'}">${farm.status}</span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Sector</h6>
+                                    <p class="fw-bold">${farm.sector || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Year of Establishment</h6>
+                                    <p class="fw-bold">${farm.year_of_establishment || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Created At</h6>
+                                    <p class="fw-bold">${farm.created_at}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $('#farmDetails').html(html);
+                    $('#viewModal').modal('show');
+                } else {
+                    $('#farmDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load farm details: ${response.message}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#farmDetails').html(`
+                    <div class="alert alert-danger">
+                        Failed to load farm details
+                    </div>
+                `);
+            }
+        });
+    });
+
+    // Delete Farm
+    var deleteFarmId = null;
+    $(document).on('click', '.delete-farm', function() {
+        deleteFarmId = $(this).data('id');
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+
+    $('#confirmDeleteBtn').click(function() {
+        var reason = $('#deleteReason').val();
+        if (!reason.trim()) {
+            Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: `/api/farm-details/${deleteFarmId}/delete/`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ reason: reason }),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deleteModal').modal('hide');
+                    farmTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmDeleteBtn').prop('disabled', false).html('Delete');
+            }
+        });
+    });
+
+    // Print Farm Details
+    $('#printFarmBtn').click(function() {
+        var printContent = $('#farmDetails').html();
+        var originalContent = $('body').html();
+        
+        $('body').html(`
+            <div class="container mt-5">
+                <h2 class="text-center mb-4">Farm Details Report</h2>
+                ${printContent}
+                <div class="mt-5 text-center">
+                    <small>Printed on: ${new Date().toLocaleString()}</small>
+                </div>
+            </div>
+        `);
+        
+        window.print();
+        $('body').html(originalContent);
+        $('#viewModal').modal('show');
+    });
+
+    // Auto-fill districts based on region
+    $('#region').on('change', function() {
+        var region = $(this).val();
+        if (region) {
+            $.ajax({
+                url: '/api/get-districts-by-region/',
+                type: 'GET',
+                data: { region: region },
+                success: function(response) {
+                    if (response.success) {
+                        var $districtSelect = $('#district');
+                        $districtSelect.empty().append('<option value="">Select District</option>');
+                        response.districts.forEach(function(district) {
+                            $districtSelect.append(`<option value="${district}">${district}</option>`);
+                        });
+                    }
+                }
+            });
+        }
+    });
+
+    // CSRF Token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initial load
+    loadStats();
+});
+</script>
+
+<style>
+.card-h-100 {
+    height: 100%;
+}
+
+.farm-details h6 {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.farm-details p {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+@media print {
+    .modal-header, .modal-footer, .btn {
+        display: none !important;
+    }
+    
+    .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .modal-body {
+        padding: 0 !important;
+    }
+}
+</style>
+{% endblock %}

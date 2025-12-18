@@ -1,11 +1,9 @@
 asgiref==3.11.0
 boto3==1.42.11
 botocore==1.42.11
-crispy-bootstrap4==2025.6
 diff-match-patch==20241021
 Django==6.0
 django-allauth==65.13.1
-django-crispy-forms==2.5
 django-dbbackup==5.0.1
 django-decouple==2.1
 django-import-export==4.3.14
@@ -15,7 +13,6 @@ django-leaflet-admin-list==0.0.9
 django-storages==1.14.6
 djangorestframework==3.16.1
 drf-yasg==1.21.11
-git-filter-repo==2.47.0
 inflection==0.5.1
 jmespath==1.0.1
 packaging==25.0

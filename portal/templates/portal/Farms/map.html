@@ -1,0 +1,1117 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+
+<!-- Leaflet Draw CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
+<!-- Custom Map CSS -->
+<style>
+    #map {
+        height: calc(100vh - 56px); /* Subtract navbar height */
+        width: 100%;
+        z-index: 1;
+    }
+    
+    /* Map Controls */
+    .map-controls {
+        position: absolute;
+        top: 12px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .map-control-btn {
+        width: 30px;
+        height: 30px;
+        /* background: white; */
+        border: none;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .map-control-btn:hover {
+        background: #f8f9fa;
+        transform: scale(1.1);
+    }
+    
+    .map-control-btn.active {
+        background: #198754;
+        color: white;
+    }
+    
+    /* Search Box */
+    .search-box {
+        position: absolute;
+        top: 10px;
+        left: 111px;
+        z-index: 1000;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        width: 300px;
+    }
+    
+    /* Legend */
+    .legend {
+        position: absolute;
+        bottom: 30px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        line-height: 18px;
+        max-width: 200px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    
+    .legend-icon {
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    
+    .basic-farm { background-color: #198754; }
+    .detailed-farm { background-color: #dc3545; }
+    .selected-farm { background-color: #ffc107; }
+    
+    /* Popup Styles */
+    .farm-popup .leaflet-popup-content-wrapper {
+        border-radius: 5px;
+        padding: 10px;
+        max-width: 300px;
+    }
+    
+    .farm-popup h5 {
+        color: #198754;
+        margin-bottom: 10px;
+    }
+    
+    /* Basemap Controls */
+    .basemap-controls {
+        position: absolute;
+        top: 120px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        width: 200px;
+        display: none;
+    }
+    
+    .basemap-option {
+        padding: 8px 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .basemap-option:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .basemap-option.active {
+        background-color: #198754;
+        color: white;
+    }
+    
+    /* Tools Panel */
+    .tools-panel {
+        position: absolute;
+        top: 120px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        width: 200px;
+        display: none;
+    }
+    
+    .tool-btn {
+        width: 100%;
+        margin-bottom: 8px;
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+    }
+    
+    .tool-btn:hover {
+        background-color: #f8f9fa;
+        border-color: #198754;
+    }
+    
+    .tool-btn.active {
+        background-color: #198754;
+        color: white;
+        border-color: #198754;
+    }
+    
+    /* Stats Panel */
+    .stats-panel {
+        position: absolute;
+        top: 120px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        width: 250px;
+        display: none;
+    }
+    
+    .stats-card {
+        margin-bottom: 10px;
+        border-left: 4px solid #198754;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .stats-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #198754;
+    }
+    
+    .stats-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    /* Measurement Results */
+    .measurement-results {
+        position: absolute;
+        bottom: 80px;
+        left: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        display: none;
+    }
+    
+    /* Search Results */
+    .search-result-item {
+        padding: 8px 10px;
+        border-bottom: 1px solid #dee2e6;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .search-result-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    /* Layer Controls */
+    .layer-controls {
+        position: absolute;
+        top: 280px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        width: 200px;
+        display: none;
+    }
+    
+    .layer-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .layer-toggle:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+    }
+    
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+        background-color: #198754;
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+    
+    /* Drawing Tooltip */
+    .leaflet-draw-tooltip {
+        background-color: #198754;
+        color: white;
+        border: none;
+        border-radius: 3px;
+    }
+</style>
+
+<div id="map"></div>
+
+<!-- Search Box -->
+<div class="search-box">
+    <div class="input-group input-group-sm">
+        <input type="text" class="form-control" id="quickSearch" placeholder="Search farms by ID or name...">
+        <button class="btn btn-outline-primary" type="button" id="quickSearchBtn">
+            <i class="fas fa-search"></i>
+        </button>
+    </div>
+    <div id="searchResults" class="mt-2" style="max-height: 200px; overflow-y: auto; display: none;"></div>
+</div>
+
+<!-- Map Controls -->
+<div class="map-controls">
+    <button id="zoomToAll" class="map-control-btn" title="Zoom to All Farms">
+        <i class="fas fa-search-location"></i>
+    </button>
+    <button id="toggleBasemaps" class="map-control-btn" title="Change Basemap">
+        <i class="fas fa-map"></i>
+    </button>
+    <button id="toggleTools" class="map-control-btn" title="Tools">
+        <i class="fas fa-tools"></i>
+    </button>
+    <button id="toggleLayers" class="map-control-btn" title="Toggle Layers">
+        <i class="fas fa-layer-group"></i>
+    </button>
+    <button id="locateMe" class="map-control-btn" title="Locate Me">
+        <i class="fas fa-location-arrow"></i>
+    </button>
+    <button id="toggleStats" class="map-control-btn" title="Show Statistics">
+        <i class="fas fa-chart-bar"></i>
+    </button>
+    <button id="toggleLegend" class="map-control-btn" title="Toggle Legend">
+        <i class="fas fa-info-circle"></i>
+    </button>
+    <button id="toggleFullscreen" class="map-control-btn" title="Fullscreen">
+        <i class="fas fa-expand"></i>
+    </button>
+</div>
+
+<!-- Basemap Controls Panel -->
+<div id="basemapPanel" class="basemap-controls">
+    <h6 style="margin-top: 0; margin-bottom: 10px;">Basemaps</h6>
+    <div class="basemap-option active" data-layer="osm">
+        <i class="fas fa-road me-2"></i> OpenStreetMap
+    </div>
+    <div class="basemap-option" data-layer="satellite">
+        <i class="fas fa-satellite me-2"></i> Satellite
+    </div>
+    <div class="basemap-option" data-layer="topo">
+        <i class="fas fa-mountain me-2"></i> Topographic
+    </div>
+    <div class="basemap-option" data-layer="dark">
+        <i class="fas fa-moon me-2"></i> Dark Mode
+    </div>
+</div>
+
+<!-- Tools Panel -->
+<div id="toolsPanel" class="tools-panel">
+    <h6 style="margin-top: 0; margin-bottom: 10px;">Tools</h6>
+    <button class="tool-btn" id="measureDistance">
+        <i class="fas fa-ruler me-2"></i> Measure Distance
+    </button>
+    <button class="tool-btn" id="measureArea">
+        <i class="fas fa-ruler-combined me-2"></i> Measure Area
+    </button>
+    <button class="tool-btn" id="drawMarker">
+        <i class="fas fa-map-marker-alt me-2"></i> Add Marker
+    </button>
+    <button class="tool-btn" id="drawPolyline">
+        <i class="fas fa-draw-polygon me-2"></i> Draw Line
+    </button>
+    <button class="tool-btn" id="drawPolygon">
+        <i class="fas fa-draw-polygon me-2"></i> Draw Polygon
+    </button>
+    <button class="tool-btn" id="drawRectangle">
+        <i class="fas fa-vector-square me-2"></i> Draw Rectangle
+    </button>
+    <button class="tool-btn" id="clearDrawings" style="color: #dc3545;">
+        <i class="fas fa-eraser me-2"></i> Clear Drawings
+    </button>
+</div>
+
+<!-- Layer Controls Panel -->
+<div id="layerPanel" class="layer-controls">
+    <h6 style="margin-top: 0; margin-bottom: 10px;">Layers</h6>
+    <div class="layer-toggle">
+        <span>Farm Markers</span>
+        <label class="switch">
+            <input type="checkbox" id="toggleFarmMarkers" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="layer-toggle">
+        <span>Cluster Markers</span>
+        <label class="switch">
+            <input type="checkbox" id="toggleClustering">
+            <span class="slider"></span>
+        </label>
+    </div>
+</div>
+
+<!-- Legend -->
+<div id="legend" class="legend" style="display: none;">
+    <h6 style="margin-top: 0; margin-bottom: 10px;">Legend</h6>
+    <div class="legend-item">
+        <div class="legend-icon basic-farm"></div>
+        <span>Farm without details</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-icon detailed-farm"></div>
+        <span>Farm with details</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-icon selected-farm"></div>
+        <span>Selected farm</span>
+    </div>
+</div>
+
+<!-- Statistics Panel -->
+<div id="statsPanel" class="stats-panel">
+    <h6 style="margin-top: 0; margin-bottom: 15px;">Farm Statistics</h6>
+    <div class="stats-card">
+        <div class="stats-number" id="totalFarmsCount">{{ total_farms }}</div>
+        <div class="stats-label">Total Farms</div>
+    </div>
+    <div class="stats-card">
+        <div class="stats-number" id="farmsWithDetails">{{ total_farm_details }}</div>
+        <div class="stats-label">With Details</div>
+    </div>
+    <div class="stats-card">
+        <div class="stats-number" id="farmsWithoutDetails">{{ farms_without_details }}</div>
+        <div class="stats-label">Without Details</div>
+    </div>
+</div>
+
+<!-- Measurement Results -->
+<div id="measurementResults" class="measurement-results">
+    <div id="distanceResult" style="display: none;">
+        <strong>Distance:</strong> <span id="distanceValue">0</span> km
+    </div>
+    <div id="areaResult" style="display: none;">
+        <strong>Area:</strong> <span id="areaValue">0</span> hectares
+    </div>
+</div>
+
+<!-- Load Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Load Leaflet Draw AFTER Leaflet -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// Wait for Leaflet Draw to load
+let leafletDrawLoaded = false;
+
+// Check if Leaflet Draw is loaded
+function checkLeafletDraw() {
+    if (typeof L.Control.Draw !== 'undefined' && L.Draw) {
+        leafletDrawLoaded = true;
+        console.log('Leaflet Draw loaded successfully');
+        initializeMap();
+    } else {
+        console.log('Waiting for Leaflet Draw to load...');
+        setTimeout(checkLeafletDraw, 100);
+    }
+}
+
+// Main initialization function
+function initializeMap() {
+    // Initialize map
+    var map = L.map('map').setView([7.9465, -1.0232], 8);
+
+    // Define base layers
+    var baseLayers = {
+        osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }),
+        
+        satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri',
+            maxZoom: 19
+        }),
+        
+        topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenTopoMap',
+            maxZoom: 17
+        }),
+        
+        dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© CARTO',
+            maxZoom: 19
+        })
+    };
+
+    // Add default basemap
+    baseLayers.osm.addTo(map);
+    var currentBasemap = 'osm';
+
+    // Farm layers
+    var farmLayer = L.layerGroup().addTo(map);
+    var markerCluster = null;
+    var selectedFarm = null;
+
+    // Drawing layers and control
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    var drawControl = new L.Control.Draw({
+        edit: {
+            featureGroup: drawnItems
+        }
+    });
+    
+    // Add draw control to map
+    map.addControl(drawControl);
+
+    // Measurement variables
+    var measuring = false;
+    var currentTool = null;
+
+    // Load farm data
+    function loadFarms() {
+        fetch("{% url 'get_farm_geojson' %}")
+            .then(response => response.json())
+            .then(geojson => {
+                farmLayer.clearLayers();
+                if (markerCluster) {
+                    markerCluster.clearLayers();
+                    map.removeLayer(markerCluster);
+                }
+                
+                var farms = L.geoJSON(geojson, {
+                    pointToLayer: function(feature, latlng) {
+                        var hasDetails = feature.properties.has_details;
+                        
+                        var marker = L.circleMarker(latlng, {
+                            radius: 8,
+                            fillColor: hasDetails ? '#dc3545' : '#198754',
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                        
+                        if (feature.properties.popup_content) {
+                            marker.bindPopup(feature.properties.popup_content);
+                        }
+                        
+                        marker.on('click', function(e) {
+                            if (selectedFarm) {
+                                selectedFarm.setStyle({ radius: 8 });
+                            }
+                            selectedFarm = this;
+                            this.setStyle({ radius: 12, fillColor: '#ffc107' });
+                            showFarmDetails(feature.properties);
+                        });
+                        
+                        return marker;
+                    },
+                    onEachFeature: function(feature, layer) {
+                        layer.feature = feature;
+                    }
+                });
+                
+                // Add to appropriate layer based on clustering setting
+                if (document.getElementById('toggleClustering').checked) {
+                    markerCluster = L.markerClusterGroup();
+                    markerCluster.addLayer(farms);
+                    map.addLayer(markerCluster);
+                } else {
+                    farmLayer.addLayer(farms);
+                }
+                
+                // Zoom to bounds if we have farms
+                if (geojson.features.length > 0) {
+                    var bounds = farms.getBounds();
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading farm data:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to load farm data'
+                });
+            });
+    }
+
+    // Show farm details
+    function showFarmDetails(properties) {
+        var content = `
+            <div class="farm-popup">
+                <h5 style="margin-top: 0;">${properties.farm_id}</h5>
+        `;
+        
+        if (properties.has_details) {
+            content += `
+                <table style="width: 100%; font-size: 14px;">
+                    <tr>
+                        <td><strong>Farmer:</strong></td>
+                        <td>${properties.farmer_name}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Location:</strong></td>
+                        <td>${properties.location}, ${properties.district}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Size:</strong></td>
+                        <td>${properties.farm_size || 'N/A'} acres</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Status:</strong></td>
+                        <td>
+                            <span style="background-color: #198754; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                                ${properties.status}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            `;
+        } else {
+            content += `
+                <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 8px; border-radius: 4px; margin: 10px 0;">
+                    <i class="fas fa-exclamation-triangle" style="color: #856404;"></i>
+                    No detailed information available
+                </div>
+            `;
+        }
+        
+        if (properties.has_details) {
+            content += `
+                <button onclick="viewFarmDetails('${properties.id}')" 
+                        style="width: 100%; background-color: #198754; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 10px;">
+                    <i class="fas fa-external-link-alt"></i> View Full Details
+                </button>
+            `;
+        }
+        
+        content += '</div>';
+        
+        Swal.fire({
+            html: content,
+            width: 350,
+            showCloseButton: true,
+            showConfirmButton: false
+        });
+    }
+
+    // View full details
+    window.viewFarmDetails = function(farmId) {
+        window.open(`/farms/farm-details/`, '_blank');
+    }
+
+    // Search farms
+    function searchFarms(query) {
+        if (!query.trim()) return;
+        
+        fetch("{% url 'search_farms' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                type: 'all',
+                query: query
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySearchResults(data);
+            }
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+        });
+    }
+
+    // Display search results
+    function displaySearchResults(data) {
+        var resultsDiv = document.getElementById('searchResults');
+        resultsDiv.style.display = 'block';
+        
+        if (data.count === 0) {
+            resultsDiv.innerHTML = '<div style="padding: 10px; text-align: center; color: #6c757d;">No farms found</div>';
+            return;
+        }
+        
+        var html = '<div style="max-height: 200px; overflow-y: auto;">';
+        data.features.forEach(function(feature) {
+            html += `
+                <div class="search-result-item" 
+                     onclick="zoomToFarm(${feature.geometry.coordinates[1]}, ${feature.geometry.coordinates[0]}, '${feature.properties.id}')">
+                    <div style="font-weight: bold; color: #198754;">${feature.properties.farm_id}</div>
+                    ${feature.properties.has_details ? `
+                        <div style="font-size: 12px; color: #495057;">${feature.properties.farmer_name}</div>
+                        <div style="font-size: 11px; color: #6c757d;">${feature.properties.location}</div>
+                    ` : '<div style="font-size: 11px; color: #6c757d;">No details available</div>'}
+                </div>
+            `;
+        });
+        html += '</div>';
+        resultsDiv.innerHTML = html;
+    }
+
+    // Zoom to specific farm
+    window.zoomToFarm = function(lat, lng, farmId) {
+        map.setView([lat, lng], 15);
+        
+        farmLayer.eachLayer(function(layer) {
+            if (layer.feature && layer.feature.properties.id == farmId) {
+                layer.fire('click');
+            }
+        });
+        
+        if (markerCluster) {
+            markerCluster.eachLayer(function(layer) {
+                if (layer.feature && layer.feature.properties.id == farmId) {
+                    layer.fire('click');
+                }
+            });
+        }
+        
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('quickSearch').value = '';
+    }
+
+    // Change basemap
+    function changeBasemap(layerName) {
+        // Remove current basemap
+        map.removeLayer(baseLayers[currentBasemap]);
+        
+        // Add new basemap
+        baseLayers[layerName].addTo(map);
+        currentBasemap = layerName;
+        
+        // Update UI
+        document.querySelectorAll('.basemap-option').forEach(option => {
+            option.classList.remove('active');
+        });
+        document.querySelector(`[data-layer="${layerName}"]`).classList.add('active');
+    }
+
+    // Toggle panel
+    function togglePanel(panelId) {
+        var panels = ['basemapPanel', 'toolsPanel', 'layerPanel', 'statsPanel', 'legend'];
+        panels.forEach(panel => {
+            var el = document.getElementById(panel);
+            if (el) el.style.display = panel === panelId ? 'block' : 'none';
+        });
+    }
+
+    // Initialize drawing tools
+    function initDrawingTool(toolType) {
+        if (currentTool) {
+            currentTool.disable();
+            currentTool = null;
+        }
+        
+        measuring = false;
+        
+        // Check if L.Draw is available
+        if (!L.Draw) {
+            console.error('Leaflet Draw not loaded');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Drawing tools not available. Please refresh the page.'
+            });
+            return;
+        }
+        
+        var toolOptions = {
+            shapeOptions: {
+                color: '#198754',
+                weight: 3
+            }
+        };
+        
+        switch(toolType) {
+            case 'distance':
+                currentTool = new L.Draw.Polyline(map, {
+                    ...toolOptions,
+                    showLength: true,
+                    metric: true
+                });
+                measuring = true;
+                break;
+                
+            case 'area':
+                currentTool = new L.Draw.Polygon(map, {
+                    shapeOptions: {
+                        ...toolOptions.shapeOptions,
+                        fillColor: '#198754',
+                        fillOpacity: 0.2
+                    },
+                    showArea: true,
+                    metric: true
+                });
+                measuring = true;
+                break;
+                
+            case 'marker':
+                currentTool = new L.Draw.Marker(map);
+                break;
+                
+            case 'polyline':
+                currentTool = new L.Draw.Polyline(map, {
+                    shapeOptions: {
+                        color: '#dc3545',
+                        weight: 3
+                    }
+                });
+                break;
+                
+            case 'polygon':
+                currentTool = new L.Draw.Polygon(map, {
+                    shapeOptions: {
+                        color: '#198754',
+                        weight: 3,
+                        fillColor: '#198754',
+                        fillOpacity: 0.3
+                    }
+                });
+                break;
+                
+            case 'rectangle':
+                currentTool = new L.Draw.Rectangle(map, {
+                    shapeOptions: {
+                        color: '#0d6efd',
+                        weight: 3,
+                        fillColor: '#0d6efd',
+                        fillOpacity: 0.3
+                    }
+                });
+                break;
+        }
+        
+        if (currentTool) {
+            currentTool.enable();
+            togglePanel(null);
+        }
+    }
+
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initialize event listeners
+    function initEventListeners() {
+        // Load initial data
+        loadFarms();
+        
+        // Zoom to all farms
+        document.getElementById('zoomToAll').addEventListener('click', function() {
+            var bounds = farmLayer.getBounds();
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        });
+        
+        // Basemap controls
+        document.getElementById('toggleBasemaps').addEventListener('click', function() {
+            togglePanel('basemapPanel');
+        });
+        
+        document.querySelectorAll('.basemap-option').forEach(option => {
+            option.addEventListener('click', function() {
+                var layerName = this.getAttribute('data-layer');
+                changeBasemap(layerName);
+            });
+        });
+        
+        // Tools controls
+        document.getElementById('toggleTools').addEventListener('click', function() {
+            togglePanel('toolsPanel');
+        });
+        
+        // Layer controls
+        document.getElementById('toggleLayers').addEventListener('click', function() {
+            togglePanel('layerPanel');
+        });
+        
+        // Tool buttons
+        document.getElementById('measureDistance').addEventListener('click', function() {
+            initDrawingTool('distance');
+        });
+        
+        document.getElementById('measureArea').addEventListener('click', function() {
+            initDrawingTool('area');
+        });
+        
+        document.getElementById('drawMarker').addEventListener('click', function() {
+            initDrawingTool('marker');
+        });
+        
+        document.getElementById('drawPolyline').addEventListener('click', function() {
+            initDrawingTool('polyline');
+        });
+        
+        document.getElementById('drawPolygon').addEventListener('click', function() {
+            initDrawingTool('polygon');
+        });
+        
+        document.getElementById('drawRectangle').addEventListener('click', function() {
+            initDrawingTool('rectangle');
+        });
+        
+        document.getElementById('clearDrawings').addEventListener('click', function() {
+            drawnItems.clearLayers();
+            if (currentTool) {
+                currentTool.disable();
+                currentTool = null;
+            }
+            document.getElementById('measurementResults').style.display = 'none';
+            togglePanel(null);
+        });
+        
+        // Layer toggles
+        document.getElementById('toggleFarmMarkers').addEventListener('change', function() {
+            if (this.checked) {
+                map.addLayer(farmLayer);
+                if (markerCluster) {
+                    map.addLayer(markerCluster);
+                }
+            } else {
+                map.removeLayer(farmLayer);
+                if (markerCluster) {
+                    map.removeLayer(markerCluster);
+                }
+            }
+        });
+        
+        document.getElementById('toggleClustering').addEventListener('change', function() {
+            loadFarms();
+        });
+        
+        // Other controls
+        document.getElementById('locateMe').addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    map.setView([position.coords.latitude, position.coords.longitude], 15);
+                });
+            }
+        });
+        
+        document.getElementById('toggleStats').addEventListener('click', function() {
+            togglePanel('statsPanel');
+        });
+        
+        document.getElementById('toggleLegend').addEventListener('click', function() {
+            var legend = document.getElementById('legend');
+            legend.style.display = legend.style.display === 'block' ? 'none' : 'block';
+            togglePanel(null);
+        });
+        
+        // Fullscreen
+        document.getElementById('toggleFullscreen').addEventListener('click', function() {
+            var elem = document.getElementById('map');
+            if (!document.fullscreenElement) {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        });
+        
+        // Search functionality
+        document.getElementById('quickSearchBtn').addEventListener('click', function() {
+            var query = document.getElementById('quickSearch').value;
+            searchFarms(query);
+        });
+        
+        document.getElementById('quickSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchFarms(this.value);
+            }
+        });
+        
+        // Close panels when clicking outside
+        document.addEventListener('click', function(e) {
+            var panels = ['basemapPanel', 'toolsPanel', 'layerPanel', 'statsPanel', 'searchResults'];
+            var inPanel = false;
+            
+            panels.forEach(panelId => {
+                var panel = document.getElementById(panelId);
+                if (panel && panel.contains(e.target)) {
+                    inPanel = true;
+                }
+            });
+            
+            var controlBtns = document.querySelectorAll('.map-control-btn');
+            controlBtns.forEach(btn => {
+                if (btn.contains(e.target)) {
+                    inPanel = true;
+                }
+            });
+            
+            if (!inPanel && e.target.id !== 'quickSearch' && e.target.id !== 'quickSearchBtn') {
+                panels.forEach(panelId => {
+                    var panel = document.getElementById(panelId);
+                    if (panel) panel.style.display = 'none';
+                });
+            }
+        });
+        
+        // Handle drawing events
+        map.on(L.Draw.Event.CREATED, function(e) {
+            var type = e.layerType;
+            var layer = e.layer;
+            
+            drawnItems.addLayer(layer);
+            
+            if (type === 'polyline' && measuring) {
+                var distance = layer.getDistance() / 1000; // Convert to km
+                document.getElementById('distanceValue').textContent = distance.toFixed(2);
+                document.getElementById('distanceResult').style.display = 'block';
+                document.getElementById('measurementResults').style.display = 'block';
+            }
+            
+            if (type === 'polygon' && measuring) {
+                var area = layer.getArea() / 10000; // Convert to hectares
+                document.getElementById('areaValue').textContent = area.toFixed(2);
+                document.getElementById('areaResult').style.display = 'block';
+                document.getElementById('measurementResults').style.display = 'block';
+            }
+            
+            // Disable current tool after drawing
+            if (currentTool) {
+                currentTool.disable();
+                currentTool = null;
+            }
+        });
+        
+        // Handle fullscreen change
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('msfullscreenchange', handleFullscreenChange);
+        
+        function handleFullscreenChange() {
+            var btn = document.getElementById('toggleFullscreen');
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                btn.innerHTML = '<i class="fas fa-compress"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-expand"></i>';
+            }
+        }
+        
+        // Add draw control events
+        map.on('draw:drawstart', function(e) {
+            console.log('Drawing started:', e.layerType);
+        });
+        
+        map.on('draw:drawstop', function(e) {
+            console.log('Drawing stopped');
+        });
+    }
+
+    // Start event listeners
+    initEventListeners();
+
+    // Auto-refresh farm data every 5 minutes
+    setInterval(loadFarms, 300000);
+}
+
+// Start checking for Leaflet Draw
+checkLeafletDraw();
+</script>
+{% endblock %}
