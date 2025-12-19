@@ -265,49 +265,46 @@ class fetchregionDistrictsView(View):
 
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class loginmobileView(View):
-    def post(self, request):
-        try:
-            data = json.loads(request.body)
-            status ={}
-            status["status"] =False
+# @method_decorator(csrf_exempt, name='dispatch')
+# class loginmobileView(View):
+#     def post(self, request):
+#         try:
+#             data = json.loads(request.body)
+#             status ={}
+#             status["status"] =False
 
-            if data["telephone"] :
-                if staffTbl.objects.filter(contact=data["telephone"]).exists():
-                    staff= staffTbl.objects.filter(contact=data["telephone"]).first()
-                    print(staff.staffid)
-                    status["status"] =  1
-                    status["msg"] = "Login successful11"
-                    status["data"] ={
-                    "first_name" :f'{staff.first_name.title()}',
-                    "last_name" :f'{staff.last_name.title()}',
-                    "user_id" :f'{staff.id}',
-                    "staff_id" :f'{staff.staffid}',
-                    "group" : f'{staff.designation.name}'
-                    }
+#             if data["telephone"] :
+#                 if staffTbl.objects.filter(contact=data["telephone"]).exists():
+#                     staff= staffTbl.objects.filter(contact=data["telephone"]).first()
+#                     print(staff.staffid)
+#                     status["status"] =  1
+#                     status["msg"] = "Login successful11"
+#                     status["data"] ={
+#                     "first_name" :f'{staff.first_name.title()}',
+#                     "last_name" :f'{staff.last_name.title()}',
+#                     "user_id" :f'{staff.id}',
+#                     "staff_id" :f'{staff.staffid}',
+#                     "group" : f'{staff.designation.name}'
+#                     }
 
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Login unsuccessful!"
-                    status["data"] ={
-                    "user" :'',
-                    "group" : ''
-                    }
-            else:
-                status["status"] =  0
-                status["msg"] =  "Login unsuccessful!"
-                status["data"] ={
-                "user" :'',
-                "group" : ''
-                }
+#                 else:
+#                     status["status"] =  0
+#                     status["msg"] =  "Login unsuccessful!"
+#                     status["data"] ={
+#                     "user" :'',
+#                     "group" : ''
+#                     }
+#             else:
+#                 status["status"] =  0
+#                 status["msg"] =  "Login unsuccessful!"
+#                 status["data"] ={
+#                 "user" :'',
+#                 "group" : ''
+#                 }
 
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
+#         except Exception as e:
+#             raise e
+#         return JsonResponse(status, safe=False)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -315,63 +312,108 @@ class loginmobileV2View(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
-            status ={}
-            status["status"] =False
+            status = {}
+            status["status"] = False
 
-            if data["telephone"] :
-                if staffTbl.objects.filter(contact=data["telephone"],crmpassword=data["password"]).exists():
-                    staff= staffTbl.objects.filter(contact=data["telephone"]).first()
+            if data["telephone"]:
+                if staffTbl.objects.filter(contact=data["telephone"], crmpassword=data["password"]).exists():
+                    staff = staffTbl.objects.filter(contact=data["telephone"]).first()
                     
-                    checksec=sectorStaffassignment.objects.filter(staffTbl_foreignkey=staff.id)
-                    checkdist=districtStaffTbl.objects.filter(staffTbl_foreignkey=staff.id)
-                    if checksec.exists:
-                        sector = checksec.first().sector.sector
-                    else:
-                        sector = ""
-
-                    if checkdist.exists:
-                        district = checkdist.first().districtTbl_foreignkey.id
-                    else:
-                        district = ""
-
-
-                    print(staff.staffid)
-                    status["status"] =  1
+                    # Get assigned farms with optimized query
+                    assigned_farms = projectStaffTbl.objects.filter(
+                        staffTbl_foreignkey=staff.id
+                    ).select_related('farms')
+                    
+                    # Get all farm details in one query
+                    farm_ids = [assignment.farms.id for assignment in assigned_farms if assignment.farms]
+                    farm_details = FarmdetailsTbl.objects.filter(
+                        farm_foreignkey__id__in=farm_ids
+                    )
+                    
+                    # Create a lookup dictionary for quick access
+                    farm_detail_dict = {}
+                    for detail in farm_details:
+                        if detail.farm_foreignkey:
+                            farm_detail_dict[detail.farm_foreignkey.id] = detail
+                    
+                    # Prepare farm data
+                    farm_data = []
+                    # Also collect projectStaffTbl IDs
+                    project_staff_ids = []
+                    
+                    for assignment in assigned_farms:
+                        if assignment.farms and assignment.farms.id in farm_detail_dict:
+                            farm_detail = farm_detail_dict[assignment.farms.id]
+                            farm_data.append({
+                                "farm_id": assignment.farms.id,
+                                "farm_reference": farm_detail.farm_reference or "N/A",
+                                "farmer_name": farm_detail.farmername or "N/A",
+                                "region": farm_detail.region or "N/A",
+                                "district": farm_detail.district or "N/A",
+                                "location": farm_detail.location or "N/A",
+                                "farm_size": farm_detail.farm_size or 0,
+                                "status": farm_detail.status or "N/A",
+                                "sector": farm_detail.sector or 0,
+                                "year_established": farm_detail.year_of_establishment.strftime('%Y-%m-%d') if farm_detail.year_of_establishment else "N/A",
+                                "assigned_date": assignment.created_date.strftime('%Y-%m-%d %H:%M:%S') if assignment.created_date else "N/A"
+                            })
+                            project_staff_ids.append(assignment.id)
+                    
+                    print(f"Login successful for: {staff.staffid}")
+                    status["status"] = 1
                     status["msg"] = "Login successful"
-                    status["data"] ={
-                    "first_name" :f'{staff.first_name.title()}',
-                    "last_name" :f'{staff.last_name.title()}',
-                    "user_id" :f'{staff.id}',
-                    "staff_id" :f'{staff.staffid}',
-                    "group" : f'{staff.designation.name}',
-                    "sector":sector,
-                    "district":district
+                    status["data"] = {
+                        "project_id": assignment.id if assigned_farms else None,
+                        "first_name": f'{staff.first_name.title()}',
+                        "last_name": f'{staff.last_name.title()}',
+                        "user_id": f'{staff.id}',
+                        "staff_id": staff.staffid if staff.staffid else "",
+                        "group": f'{staff.designation.name}',
+                        # "assigned_farms": farm_data,
+                        # "total_assigned_farms": len(farm_data),
+                        # "contact": staff.contact or "",
+                        # "email": staff.email_address or "",
+                        # "gender": staff.gender or "",
+                        # "designation_id": staff.designation.id if staff.designation else None,
+                        # "designation_name": staff.designation.name if staff.designation else "",
+                        # "total_project_assignments": len(project_staff_ids)
                     }
 
                 else:
-                    status["status"] =  0
-                    status["msg"] =  "Login unsuccessful!"
-                    status["data"] ={
-                    "user" :'',
-                    "group" : ''
+                    status["status"] = 0
+                    status["msg"] = "Invalid telephone number or password!"
+                    status["data"] = {
+                        "user": '',
+                        "group": '',
+                        "assigned_farms": []
                     }
             else:
-                status["status"] =  0
-                status["msg"] =  "Login unsuccessful!"
-                status["data"] ={
-                "user" :'',
-                "group" : ''
+                status["status"] = 0
+                status["msg"] = "Telephone number is required!"
+                status["data"] = {
+                    "user": '',
+                    "group": '',
+                    "assigned_farms": []
                 }
 
+        except json.JSONDecodeError:
+            status["status"] = 0
+            status["msg"] = "Invalid JSON data!"
+            status["data"] = {
+                "user": '',
+                "group": '',
+                "assigned_farms": []
+            }
         except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e),
+            status["status"] = 0
+            status["msg"] = f"Error occurred: {str(e)}"
+            status["data"] = {
+                "user": '',
+                "group": '',
+                "assigned_farms": []
+            }
+        
         return JsonResponse(status, safe=False)
-    
-
-
 
 
 

@@ -8,8 +8,8 @@ app_name = 'API'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('v1/auth/login/', views.loginmobileView.as_view()),
-    path('v2/auth/login/', views.loginmobileV2View.as_view()),
+    path('v1/auth/login/', views.loginmobileV2View.as_view()),
+    # path('v2/auth/login/', views.loginmobileV2View.as_view()),
 
     # path('v1/saveoutbreakfarm/', views.outbreakFarmView.as_view()),
     # path('v1/fetchoutbreak/', views.fetchoutbreakView.as_view()),
@@ -21,7 +21,6 @@ urlpatterns = [
     # path('v1/savepomonitoring/', views.savepomonitoringView.as_view()),
 
     
-
     path('v1/saveregister/', views.saveregistrationView.as_view()),
     path('v1/regiondistricts/', views.fetchregionDistrictsView.as_view()),
     path('v1/fetchallcontractors/', views.fetchallContractors.as_view()), 

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+     'django.contrib.gis',
 
     'core',
     'portal',
@@ -65,6 +66,10 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
 ]
+
+
+GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'  # or wherever GDAL is installed
+    # On Mac: '/usr/local/opt/gdal/lib/libgdal.dylib'
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

@@ -1034,6 +1034,16 @@ admin.site.register(odkdailyreportingTbl, odkdailyreportingTblAdmin)
 admin.site.register(allFarmqueryTbl, allFarmqueryTblAdmin)
 admin.site.register(staffFarmsAssignment, staffFarmsAssignmentAdmin)
 
+from django.contrib import admin
+from .models import projectStaffTbl
+
+@admin.register(projectStaffTbl)
+class projectStaffTblAdmin(admin.ModelAdmin):
+    list_display = ['id', 'staffTbl_foreignkey', 'farms',]
+    # list_filter = ['create_date']
+    search_fields = ['staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name', 'farms__farm_id']
+    # ordering = ['-create_date']
+
 # ============================================
 # ADMIN SITE CUSTOMIZATION
 # ============================================
