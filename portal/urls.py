@@ -24,10 +24,18 @@ urlpatterns = [
     path('api/farm-details/<int:farm_id>/delete/', delete_farm, name='delete_farm'),
     path('api/get-districts-by-region/', get_districts_by_region, name='get_districts_by_region'),
 
-     path('farm-management/mapped-farms/', farm_mapping_page, name='farm_mapping_page'),
+    path('farm-management/mapped-farms/', farm_mapping_page, name='farm_mapping_page'),
     path('api/farm-geojson/', get_farm_geojson, name='get_farm_geojson'),
     path('api/district-boundaries/', get_district_boundaries, name='get_district_boundaries'),
     path('api/farm-stats/', get_farm_stats, name='get_farm_stats'),
     path('api/search-farms/', search_farms, name='search_farms'),
     path('api/farm/<int:farm_id>/', get_farm_by_id, name='get_farm_by_id'),
+
+    path('farm-management/farm-assignment/', farm_assignment_page, name='farm_assignment_page'),
+    path('api/farm-assignment/', farm_assignment_api, name='farm_assignment_api'),
+    path('api/get-available-farms/', get_available_farms, name='get_available_farms'),
+    path('api/get-available-staff/', get_available_staff, name='get_available_staff'),
+    path('api/create-assignment/', create_assignment, name='create_assignment'),
+    path('api/delete-assignment/<int:assignment_id>/', delete_assignment, name='delete_assignment'),
+    path('api/assignment-details/<int:assignment_id>/', get_assignment_details, name='get_assignment_details'),
 ]

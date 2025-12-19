@@ -145,7 +145,7 @@ class fetchfarmsView(View):
                 eok["farm_size"]= farm.farm_size
                 data.append(eok)
                 status["status"] =  True
-                status["msg"]: "Success!"
+                status["msg"] = "Success!"
             except Exception as e:
                 continue
 
@@ -1014,7 +1014,7 @@ class fetchoutbreakView(View):
                 
             asd.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = asd
 
@@ -1047,7 +1047,7 @@ class fetchcommunityTblView(View):
             
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1075,7 +1075,7 @@ class fetchcocoatypeTblView(View):
             
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1101,7 +1101,7 @@ class cocoaageclassTblView(View):
             
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1133,7 +1133,7 @@ class fetchdemarcartedFarmsTblView(View):
             
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1183,7 +1183,7 @@ class fetchoutbreakCSV(View):
             eok["temp_code"]=farm.temp_code
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1226,7 +1226,7 @@ class fetchallRAView(View):
 
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1544,7 +1544,7 @@ class fetchoutbreaFarms(View):
             eok["temp_code"]=farm.temp_code
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1578,7 +1578,7 @@ class fetchcontractorView(View):
             
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1674,7 +1674,7 @@ class fetchallFeedback(View):
             
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1715,7 +1715,7 @@ class fetchallEquipmentView(View):
             eok["staff_name"]=equip.staff_name
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1860,7 +1860,7 @@ class fetchpaymentReportView(View):
             
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
 
@@ -1912,7 +1912,7 @@ class fetchpaymentdetailsReportView(View):
 
             data.append(eok)
             status["status"] =  True
-            status["msg"]: "Success!"
+            status["msg"] = "Success!"
 
         status["data"] = data
         return JsonResponse(status, safe=False)
@@ -2638,7 +2638,7 @@ class fetchjoborderView(View):
 
                 data.append(eok)
                 status["status"] =  True
-                status["msg"]: "Success!"
+                status["msg"] = "Success!"
             except Exception as e:
                 print(e)
                 continue

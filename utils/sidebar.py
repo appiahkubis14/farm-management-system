@@ -30,7 +30,7 @@ class Sidebar:
                 # },
                 "Farm Assignments": {
                     "icon": "fas fa-user-check", 
-                    "url": "/farm-management/staff-assignments/", 
+                    "url": "/farm-management/farm-assignment/", 
                     "groups": ["Admin", "Project Officer", "Project Coordinator"]
                 },
             }
