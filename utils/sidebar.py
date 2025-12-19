@@ -47,7 +47,7 @@ class Sidebar:
                 },
                 "Sensor Management": {
                     "icon": "fas fa-cogs", 
-                    "url": "/sensors/sensors/", 
+                    "url": "/sensors/devices/management/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
                 },
                 "Data Logs": {

@@ -343,6 +343,46 @@ class Activities(models.Model):
 
 
 
+class Farms(models.Model):
+    geom = models.MultiPolygonField(blank=True, null=True)
+    farm_id = models.CharField(max_length=51, blank=True, null=True)
+
+  
+
+# class Farms(models.Model):
+#     geom = models.MultiPolygonField(blank=True, null=True)
+#     farm_id = models.CharField(max_length=50, blank=True, null=True)
+#     farm_loc = models.CharField(max_length=50, blank=True, null=True)
+#     farmer_nam = models.CharField(max_length=50, blank=True, null=True)
+#     sex = models.CharField(max_length=50, blank=True, null=True)
+#     age = models.CharField(max_length=50, blank=True, null=True)
+#     id_number = models.CharField(max_length=50, blank=True, null=True)
+#     name_ta = models.CharField(max_length=50, blank=True, null=True)
+#     area_ha = models.FloatField(blank=True, null=True)
+#     region = models.CharField(max_length=254, blank=True, null=True)
+#     district = models.CharField(max_length=254, blank=True, null=True)
+#     farm_size = models.CharField(max_length=254, blank=True, null=True)
+#     main_activity = models.CharField(max_length=254, blank=True, null=True)
+#     lng = models.CharField(max_length=254, blank=True, null=True)
+#     lat = models.CharField(max_length=254, blank=True, null=True)
+#     date = models.DateField(blank=True, null=True)
+#     sub_activity = models.CharField(max_length=254, blank=True, null=True)
+
+#     class Meta:
+#         managed = False
+#         db_table = 'farmss'
+
+class projectTbl(timeStamp):
+	name= models.CharField(max_length=250) 
+
+
+class projectStaffTbl(timeStamp):
+	staffTbl_foreignkey = models.ForeignKey(staffTbl, on_delete=models.CASCADE)
+	projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE,blank=True, null=True)
+	
+
+
+
 class rehabassistantsTbl(timeStamp):
 	new_staff_code	= models.CharField(max_length=250,blank=True, null=True,unique=True)
 	computcode	= models.IntegerField(blank=True, null=True)
@@ -360,7 +400,7 @@ class rehabassistantsTbl(timeStamp):
 	ssnit_number = models.CharField(max_length=250,blank=True, null=True)	
 	district = models.CharField(max_length=250,blank=True, null=True)
 	region = models.CharField(max_length=250,blank=True, null=True)
-	districtTbl_foreignkey = models.ForeignKey(cocoaDistrict,on_delete=models.CASCADE,blank=True, null=True	)
+	projectTbl_foreignkey = models.ForeignKey(projectTbl,on_delete=models.CASCADE,blank=True, null=True	)
 	dob = models.DateField(max_length=250,blank=True, null=True)
 	owner_momo = models.CharField(max_length=250,blank=True, null=True)
 	momo_account_name = models.CharField(max_length=250,blank=True, null=True)
@@ -424,42 +464,6 @@ class rehabassistantsTbl(timeStamp):
 		# self.staff_code = racode
 		return super(rehabassistantsTbl, self).save()
 
-
-class Farms(models.Model):
-    geom = models.MultiPolygonField(blank=True, null=True)
-    farm_id = models.CharField(max_length=51, blank=True, null=True)
-
-  
-
-# class Farms(models.Model):
-#     geom = models.MultiPolygonField(blank=True, null=True)
-#     farm_id = models.CharField(max_length=50, blank=True, null=True)
-#     farm_loc = models.CharField(max_length=50, blank=True, null=True)
-#     farmer_nam = models.CharField(max_length=50, blank=True, null=True)
-#     sex = models.CharField(max_length=50, blank=True, null=True)
-#     age = models.CharField(max_length=50, blank=True, null=True)
-#     id_number = models.CharField(max_length=50, blank=True, null=True)
-#     name_ta = models.CharField(max_length=50, blank=True, null=True)
-#     area_ha = models.FloatField(blank=True, null=True)
-#     region = models.CharField(max_length=254, blank=True, null=True)
-#     district = models.CharField(max_length=254, blank=True, null=True)
-#     farm_size = models.CharField(max_length=254, blank=True, null=True)
-#     main_activity = models.CharField(max_length=254, blank=True, null=True)
-#     lng = models.CharField(max_length=254, blank=True, null=True)
-#     lat = models.CharField(max_length=254, blank=True, null=True)
-#     date = models.DateField(blank=True, null=True)
-#     sub_activity = models.CharField(max_length=254, blank=True, null=True)
-
-#     class Meta:
-#         managed = False
-#         db_table = 'farmss'
-
-
-
-class projectStaffTbl(timeStamp):
-	staffTbl_foreignkey = models.ForeignKey(staffTbl, on_delete=models.CASCADE)
-	farms = models.ForeignKey(Farms, on_delete=models.CASCADE)
-	
 
 
 

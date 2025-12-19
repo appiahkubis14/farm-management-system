@@ -1039,9 +1039,9 @@ from .models import projectStaffTbl
 
 @admin.register(projectStaffTbl)
 class projectStaffTblAdmin(admin.ModelAdmin):
-    list_display = ['id', 'staffTbl_foreignkey', 'farms',]
+    list_display = ['id', 'staffTbl_foreignkey', 'projectTbl_foreignkey',]
     # list_filter = ['create_date']
-    search_fields = ['staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name', 'farms__farm_id']
+    search_fields = ['staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name', 'projectTbl_foreignkey__project_name']
     # ordering = ['-create_date']
 
 # ============================================

@@ -166,9 +166,9 @@ class fetchRehabassistantsView(View):
         data = json.loads(request.body)
         userid= data["userid"]
 
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
+        proj = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
 
-        Rehabs = rehabassistantsTbl.objects.filter(districtTbl_foreignkey=dist)
+        Rehabs = rehabassistantsTbl.objects.filter(projectTbl_foreignkey=proj)
         data = []
         domain = "https://cocoa-monitor-static.s3.amazonaws.com/media"
         # print(domain)
@@ -177,10 +177,8 @@ class fetchRehabassistantsView(View):
                 eok={}
                 eok["rehab_code"]=rehab.id
                 eok["rehab_name"]=f'{rehab.name.title()}'
-                eok["district_id"]=rehab.districtTbl_foreignkey.id
-                eok["district_name"]=rehab.districtTbl_foreignkey.district.title()
-                eok["region_id"]=rehab.districtTbl_foreignkey.reg_code.reg_code
-                eok["region_name"]=rehab.districtTbl_foreignkey.reg_code.region.title()
+                eok["project_id"]=rehab.projectTbl_foreignkey.id
+                eok["project_name"]=rehab.projectTbl_foreignkey.name.title()
                 eok["designation"]=rehab.designation
                 if rehab.photo_staff:
                     eok["image"]=f'{domain}/{str(rehab.photo_staff)}'
@@ -240,20 +238,20 @@ class fetchregionDistrictsView(View):
         status ={}
         status["status"] =False
         data = json.loads(request.body)
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
+        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
 
         if data["userid"] :
-            districts = cocoaDistrict.objects.filter(id=dist)
+            projects = cocoaDistrict.objects.filter(id=dist)
         else:
-            districts = cocoaDistrict.objects.all()
+            projects = cocoaDistrict.objects.all()
         data = []
 
-        for district in districts:
+        for project in projects:
             eok={}
-            eok["district_id"]=district.id
-            eok["district_name"]=district.district.title()
-            eok["region_id"]=district.reg_code.reg_code
-            eok["region_name"]=district.reg_code.region.title()
+            eok["project_id"]=project.id
+            eok["project_name"]=project.name
+            # eok["region_id"]=project.reg_code.reg_code
+            # eok["region_name"]=project.reg_code.region.title()
             data.append(eok)
         
         if data:
@@ -322,17 +320,17 @@ class loginmobileV2View(View):
                     # Get assigned farms with optimized query
                     assigned_farms = projectStaffTbl.objects.filter(
                         staffTbl_foreignkey=staff.id
-                    ).select_related('farms')
+                    ).select_related('projectTbl_foreignkey')
                     
                     # Get all farm details in one query
-                    farm_ids = [assignment.farms.id for assignment in assigned_farms if assignment.farms]
-                    farm_details = FarmdetailsTbl.objects.filter(
-                        farm_foreignkey__id__in=farm_ids
+                    project_id = [assignment.projectTbl_foreignkey.id for assignment in assigned_farms if assignment.projectTbl_foreignkey]
+                    project_details = FarmdetailsTbl.objects.filter(
+                        farm_foreignkey__id__in=project_id
                     )
                     
                     # Create a lookup dictionary for quick access
                     farm_detail_dict = {}
-                    for detail in farm_details:
+                    for detail in project_details:
                         if detail.farm_foreignkey:
                             farm_detail_dict[detail.farm_foreignkey.id] = detail
                     
@@ -342,10 +340,10 @@ class loginmobileV2View(View):
                     project_staff_ids = []
                     
                     for assignment in assigned_farms:
-                        if assignment.farms and assignment.farms.id in farm_detail_dict:
-                            farm_detail = farm_detail_dict[assignment.farms.id]
+                        if assignment.projectTbl_foreignkey and assignment.projectTbl_foreignkey.id in farm_detail_dict:
+                            farm_detail = farm_detail_dict[assignment.projectTbl_foreignkey.id]
                             farm_data.append({
-                                "farm_id": assignment.farms.id,
+                                "farm_id": assignment.projectTbl_foreignkey.id,
                                 "farm_reference": farm_detail.farm_reference or "N/A",
                                 "farmer_name": farm_detail.farmername or "N/A",
                                 "region": farm_detail.region or "N/A",

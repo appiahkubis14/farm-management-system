@@ -1,0 +1,913 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<br>
+<!-- Page Header -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">IoT Devices Management</h4>
+            <div class="page-title-right">
+                <button class="btn btn-primary" id="addDeviceBtn">
+                    <i class="fas fa-plus me-1"></i> Add New Device
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Stats Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Devices</span>
+                        <h4 class="mb-3" id="totalDevices">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-microchip text-primary h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Active Devices</span>
+                        <h4 class="mb-3" id="activeDevices">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-wifi text-success h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Inactive Devices</span>
+                        <h4 class="mb-3" id="inactiveDevices">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-power-off text-warning h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Maintenance</span>
+                        <h4 class="mb-3" id="maintenanceDevices">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-tools text-info h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Main Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="devicesTable" class="table table-striped datatable" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Device ID</th>
+                                <th>Device Name</th>
+                                <th>Type</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th>Last Reading</th>
+                                <th>Last Seen</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Device Modal -->
+<div class="modal fade" id="deviceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTitle">Add New Device</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="deviceForm" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="deviceId" name="device_id">
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="device_id" class="form-label">Device ID *</label>
+                                <input type="text" class="form-control" id="device_id" name="device_id" required 
+                                       pattern="[A-Za-z0-9_-]+" minlength="3" maxlength="100">
+                                <div class="invalid-feedback">Please enter a valid device ID (letters, numbers, -, _)</div>
+                                <small class="form-text text-muted">Unique identifier for the device</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="device_name" class="form-label">Device Name *</label>
+                                <input type="text" class="form-control" id="device_name" name="device_name" required>
+                                <div class="invalid-feedback">Please enter device name</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="device_type" class="form-label">Device Type *</label>
+                                <select class="form-select" id="device_type" name="device_type" required>
+                                    <option value="">Select Type</option>
+                                    <option value="soil">Soil Moisture Sensor</option>
+                                    <option value="temperature">Temperature Sensor</option>
+                                    <option value="humidity">Humidity Sensor</option>
+                                    <option value="multi" selected>Multi-Sensor Device</option>
+                                </select>
+                                <div class="invalid-feedback">Please select device type</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="active" selected>Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       placeholder="e.g., Greenhouse 1, Field A, etc.">
+                                <small class="form-text text-muted">Physical location of the device</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        After creating the device, you'll receive an API key that should be used to submit readings.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Device</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Device Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Device Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="deviceDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All sensor readings associated with this device will also be deleted.
+                </div>
+                <p>Are you sure you want to delete this device?</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete Device</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Key Modal -->
+<div class="modal fade" id="apiKeyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Device API Key</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-key me-2"></i>
+                    <strong>Important:</strong> Save this API key securely. You won't be able to see it again!
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Device ID:</label>
+                    <input type="text" class="form-control" id="modalDeviceId" readonly>
+                </div>
+                <div class="form-group mt-3">
+                    <label class="form-label">API Key:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="modalApiKey" readonly>
+                        <button class="btn btn-outline-secondary" type="button" id="copyApiKeyBtn">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6>Usage Example:</h6>
+                    <pre class="bg-light p-3 rounded"><code>curl -X POST {{ request.scheme }}://{{ request.get_host }}{% url 'sensors:api_submit_reading' %}
+-H "Content-Type: application/json"
+-d '{
+  "device_id": "<span id="exampleDeviceId"></span>",
+  "api_key": "<span id="exampleApiKey"></span>",
+  "temperature": 25.5,
+  "humidity": 60,
+  "soil_moisture": 45
+}'</code></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">I've Saved the Key</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    var devicesTable = $('#devicesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'sensors:api_devices_list' %}",
+            type: "GET"
+        },
+        columns: [
+            { 
+                data: 'device_id',
+                render: function(data, type, row) {
+                    return `<code>${data}</code>`;
+                }
+            },
+            { data: 'device_name' },
+            { data: 'device_type' },
+            { data: 'location' },
+            { 
+                data: 'status',
+                render: function(data) {
+                    var badgeClass = 'bg-';
+                    switch(data) {
+                        case 'Active': badgeClass += 'success'; break;
+                        case 'Inactive': badgeClass += 'warning'; break;
+                        case 'Maintenance': badgeClass += 'info'; break;
+                        default: badgeClass += 'secondary';
+                    }
+                    return `<span class="badge ${badgeClass}">${data}</span>`;
+                }
+            },
+            { 
+                data: null,
+                render: function(data) {
+                    var readings = [];
+                    if (data.temperature && data.temperature !== '--') readings.push(`${data.temperature}°C`);
+                    if (data.humidity && data.humidity !== '--') readings.push(`${data.humidity}%`);
+                    if (data.soil_moisture && data.soil_moisture !== '--') readings.push(`${data.soil_moisture}% soil`);
+                    
+                    return readings.length > 0 ? readings.join(', ') : 'No readings';
+                }
+            },
+            { 
+                data: 'last_seen',
+                render: function(data) {
+                    return `<span title="${data}">${timeAgo(data)}</span>`;
+                }
+            },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-device" data-id="${data}" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary edit-device" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-success api-key-device" data-id="${data}" title="API Key">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            <button class="btn btn-danger delete-device" data-id="${data}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        order: [[6, 'desc']],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: "copy",
+                text: '<i class="fas fa-copy"></i> Copy',
+                className: "btn btn-sm btn-outline-secondary",
+            },
+            {
+                extend: "csv",
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                className: "btn btn-sm btn-outline-success",
+            },
+            {
+                extend: "excel",
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                titleAttr: "Export to Excel",
+                className: "btn btn-sm btn-outline-primary",
+            },
+            {
+                extend: "pdf",
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                className: "btn btn-sm btn-outline-danger",
+            },
+        ],
+        language: {
+            emptyTable: "No devices found",
+            zeroRecords: "No matching devices found"
+        }
+    });
+
+    // Time ago helper function
+    function timeAgo(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        
+        if (seconds < 60) return 'just now';
+        
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        
+        const days = Math.floor(hours / 24);
+        if (days < 7) return `${days}d ago`;
+        
+        return date.toLocaleDateString();
+    }
+
+    // Load stats
+    function loadStats() {
+        $.ajax({
+            url: "{% url 'sensors:api_devices_list' %}",
+            type: "GET",
+            data: { draw: 1, start: 0, length: 1000 },
+            success: function(response) {
+                var data = response.data;
+                var total = response.recordsTotal;
+                var active = data.filter(d => d.status === 'Active').length;
+                var inactive = data.filter(d => d.status === 'Inactive').length;
+                var maintenance = data.filter(d => d.status === 'Maintenance').length;
+                
+                $('#totalDevices').text(total);
+                $('#activeDevices').text(active);
+                $('#inactiveDevices').text(inactive);
+                $('#maintenanceDevices').text(maintenance);
+            }
+        });
+    }
+
+    // Add Device Button
+    $('#addDeviceBtn').click(function() {
+        $('#deviceForm')[0].reset();
+        $('#modalTitle').text('Add New Device');
+        $('#deviceId').val('');
+        $('#device_id').prop('readonly', false);
+        $('#deviceModal').modal('show');
+    });
+
+    // Form Submission
+    $('#deviceForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        var formData = {
+            device_id: $('#device_id').val(),
+            device_name: $('#device_name').val(),
+            device_type: $('#device_type').val(),
+            location: $('#location').val(),
+            status: $('#status').val()
+        };
+        
+        var deviceId = $('#deviceId').val();
+        var url = deviceId ? `/sensors/api/devices/${deviceId}/update/` : '{% url "sensors:api_device_create" %}';
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#saveBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deviceModal').modal('hide');
+                    
+                    if (response.data && response.data.api_key) {
+                        // Show API key modal for new devices
+                        $('#modalDeviceId').val(response.data.device_id);
+                        $('#modalApiKey').val(response.data.api_key);
+                        $('#exampleDeviceId').text(response.data.device_id);
+                        $('#exampleApiKey').text(response.data.api_key);
+                        $('#apiKeyModal').modal('show');
+                    }
+                    
+                    devicesTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#saveBtn').prop('disabled', false).html('Save Device');
+            }
+        });
+    });
+
+    // Edit Device
+    $(document).on('click', '.edit-device', function() {
+        var deviceId = $(this).data('id');
+        
+        $.ajax({
+            url: `/sensors/api/devices/${deviceId}/`,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var device = response.data;
+                    
+                    $('#deviceId').val(device.device_id);
+                    $('#device_id').val(device.device_id).prop('readonly', true);
+                    $('#device_name').val(device.device_name);
+                    $('#device_type').val(device.device_type);
+                    $('#location').val(device.location);
+                    $('#status').val(device.status);
+                    
+                    $('#modalTitle').text('Edit Device');
+                    $('#deviceModal').modal('show');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to load device details', 'error');
+            }
+        });
+    });
+
+    // View Device Details
+    $(document).on('click', '.view-device', function() {
+        var deviceId = $(this).data('id');
+        
+        $.ajax({
+            url: `/sensors/api/devices/${deviceId}/`,
+            type: 'GET',
+            beforeSend: function() {
+                $('#deviceDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading device details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var device = response.data;
+                    var latest = device.latest_reading;
+                    
+                    var html = `
+                        <div class="device-details">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Device ID</h6>
+                                    <p class="fw-bold"><code>${device.device_id}</code></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Device Name</h6>
+                                    <p class="fw-bold">${device.device_name}</p>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Device Type</h6>
+                                    <p class="fw-bold">${getDeviceTypeLabel(device.device_type)}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Status</h6>
+                                    <p><span class="badge bg-${device.status === 'active' ? 'success' : device.status === 'inactive' ? 'warning' : 'info'}">${device.status.charAt(0).toUpperCase() + device.status.slice(1)}</span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="text-muted">Location</h6>
+                                    <p class="fw-bold">${device.location || 'Not set'}</p>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Registered At</h6>
+                                    <p class="fw-bold">${device.registered_at}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Last Seen</h6>
+                                    <p class="fw-bold">${device.last_seen}</p>
+                                </div>
+                            </div>
+                            <div class="card mt-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Latest Reading</h6>
+                                </div>
+                                <div class="card-body">
+                    `;
+                    
+                    if (latest) {
+                        html += `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Timestamp:</strong> ${latest.timestamp}</p>
+                                    ${latest.temperature !== null ? `<p><strong>Temperature:</strong> ${latest.temperature}°C</p>` : ''}
+                                    ${latest.humidity !== null ? `<p><strong>Humidity:</strong> ${latest.humidity}%</p>` : ''}
+                                </div>
+                                <div class="col-md-6">
+                                    ${latest.soil_moisture !== null ? `<p><strong>Soil Moisture:</strong> ${latest.soil_moisture}%</p>` : ''}
+                                    ${latest.soil_raw !== null ? `<p><strong>Raw Soil Value:</strong> ${latest.soil_raw}</p>` : ''}
+                                    ${latest.battery_level !== null ? `<p><strong>Battery:</strong> ${latest.battery_level}%</p>` : ''}
+                                    ${latest.signal_strength !== null ? `<p><strong>Signal:</strong> ${latest.signal_strength}dB</p>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `<p class="text-muted">No readings available</p>`;
+                    }
+                    
+                    html += `
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $('#deviceDetails').html(html);
+                    $('#viewModal').modal('show');
+                } else {
+                    $('#deviceDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load device details: ${response.message}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#deviceDetails').html(`
+                    <div class="alert alert-danger">
+                        Failed to load device details
+                    </div>
+                `);
+            }
+        });
+    });
+
+    // API Key Management
+    $(document).on('click', '.api-key-device', function() {
+        var deviceId = $(this).data('id');
+        
+        Swal.fire({
+            title: 'API Key Management',
+            text: 'What would you like to do?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Generate New Key',
+            cancelButtonText: 'View Current Key',
+            showDenyButton: true,
+            denyButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Generate new key
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: 'This will invalidate the current API key. Make sure to update your devices!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, generate new key',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/sensors/sensors/api/devices/${deviceId}/generate-key/`,
+                            type: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $('#modalDeviceId').val(deviceId);
+                                    $('#modalApiKey').val(response.api_key);
+                                    $('#exampleDeviceId').text(deviceId);
+                                    $('#exampleApiKey').text(response.api_key);
+                                    $('#apiKeyModal').modal('show');
+                                } else {
+                                    Swal.fire('Error', response.message, 'error');
+                                }
+                            },
+                            error: function() {
+                                Swal.fire('Error', 'Failed to generate new API key', 'error');
+                            }
+                        });
+                    }
+                });
+            } else if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
+                // View current key - we can't retrieve it from server for security
+                Swal.fire({
+                    title: 'Current API Key',
+                    text: 'For security reasons, API keys can only be shown when they are generated. You need to generate a new key to see it.',
+                    icon: 'info',
+                    confirmButtonText: 'Generate New Key',
+                    showCancelButton: true,
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Generate new key
+                        $.ajax({
+                            url: `/sensors/api/devices/${deviceId}/generate-key/`,
+                            type: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $('#modalDeviceId').val(deviceId);
+                                    $('#modalApiKey').val(response.api_key);
+                                    $('#exampleDeviceId').text(deviceId);
+                                    $('#exampleApiKey').text(response.api_key);
+                                    $('#apiKeyModal').modal('show');
+                                } else {
+                                    Swal.fire('Error', response.message, 'error');
+                                }
+                            },
+                            error: function() {
+                                Swal.fire('Error', 'Failed to generate new API key', 'error');
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    });
+
+    // Delete Device
+    var deleteDeviceId = null;
+    $(document).on('click', '.delete-device', function() {
+        deleteDeviceId = $(this).data('id');
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+
+    $('#confirmDeleteBtn').click(function() {
+        var reason = $('#deleteReason').val();
+        if (!reason.trim()) {
+            Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: `/sensors/api/devices/${deleteDeviceId}/delete/`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ reason: reason }),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deleteModal').modal('hide');
+                    devicesTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmDeleteBtn').prop('disabled', false).html('Delete Device');
+            }
+        });
+    });
+
+    // Copy API Key
+    $('#copyApiKeyBtn').click(function() {
+        var apiKeyInput = $('#modalApiKey');
+        apiKeyInput.select();
+        document.execCommand('copy');
+        
+        // Show feedback
+        var originalHtml = $(this).html();
+        $(this).html('<i class="fas fa-check"></i>');
+        setTimeout(() => {
+            $(this).html(originalHtml);
+        }, 2000);
+    });
+
+    // Helper functions
+    function getDeviceTypeLabel(type) {
+        var labels = {
+            'soil': 'Soil Moisture Sensor',
+            'temperature': 'Temperature Sensor',
+            'humidity': 'Humidity Sensor',
+            'multi': 'Multi-Sensor Device'
+        };
+        return labels[type] || type;
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initial load
+    loadStats();
+});
+</script>
+
+<style>
+.card-h-30 {
+    height: 100%;
+}
+
+.device-details h6 {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.device-details p {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+pre {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    overflow-x: auto;
+}
+
+code {
+    background: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+    color: #d63384;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+    .btn-group-sm .btn {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.75rem;
+    }
+    
+    .dataTables_wrapper .dt-buttons {
+        margin-bottom: 1rem;
+    }
+}
+</style>
+{% endblock %}

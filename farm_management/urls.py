@@ -24,7 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('portal.urls')),
     path('core/', include('core.urls')),
-    path('senssors/', include('sensors.urls')),
+    path('sensors/', include('sensors.urls')),
     path('api/', include('API.urls')),
     path('502/', TemplateView.as_view(template_name='pages-500.html'), name='502'),
     path('403/', TemplateView.as_view(template_name='pages-403.html'), name='403'),

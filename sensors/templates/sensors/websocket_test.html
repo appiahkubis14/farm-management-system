@@ -1,139 +1,1010 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>WebSocket Test</title>
-    <style>
-        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
-        .box { background: white; padding: 20px; margin: 10px 0; border-radius: 10px; }
-        .green { color: green; }
-        .red { color: red; }
-        #messages { max-height: 400px; overflow-y: auto; }
-        .message { padding: 10px; margin: 5px 0; background: #f9f9f9; border-left: 4px solid #3498db; }
-    </style>
-</head>
-<body>
-    <h1>🌱 Real-Time WebSocket Test</h1>
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+:root {
+    --primary: #3b82f6;
+    --primary-light: #60a5fa;
+    --primary-dark: #1d4ed8;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #0ea5e9;
+    --dark: #1f2937;
+    --light: #ffffff;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+}
+
+[data-theme="dark"] {
+    --light: #111827;
+    --gray-100: #1f2937;
+    --gray-200: #374151;
+    --gray-300: #4b5563;
+    --gray-400: #6b7280;
+    --gray-500: #9ca3af;
+    --gray-600: #d1d5db;
+    --gray-700: #e5e7eb;
+    --gray-800: #f3f4f6;
+    --gray-900: #f9fafb;
+}
+
+.websocket-container {
+    padding: 1.5rem;
+    max-width: 100%;
+    min-height: calc(100vh - 120px);
+}
+
+/* Header */
+.websocket-header {
+    /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+    padding: 2rem;
+    border-radius: 12px;
+    /* color: white; */
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.header-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.header-subtitle {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+/* Status Cards */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.status-card {
+    background: var(--light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gray-200);
+}
+
+.status-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.status-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.connection-icon {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.connection-icon.connected {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.latest-icon {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.status-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.status-value {
+    font-size: 1.25rem;
+    margin: 0.5rem 0;
+}
+
+.status-connected {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.status-disconnected {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.status-url {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    font-family: 'Courier New', monospace;
+    background: var(--gray-100);
+    padding: 0.5rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    overflow-wrap: break-word;
+}
+
+/* Test Data Controls */
+.test-controls {
+    background: var(--light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gray-200);
+    margin-bottom: 2rem;
+}
+
+.test-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.test-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 0;
+}
+
+.test-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #0da271;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-secondary {
+    background: var(--gray-200);
+    color: var(--gray-800);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-300);
+    transform: translateY(-2px);
+}
+
+.test-data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.test-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.test-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.test-input {
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    background: var(--light);
+    color: var(--dark);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.test-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.test-checkboxes {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid var(--gray-300);
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"]:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.checkbox-group label {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    cursor: pointer;
+}
+
+/* Latest Reading Display */
+.latest-reading {
+    background: var(--light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gray-200);
+    margin-bottom: 2rem;
+}
+
+.latest-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.data-item {
+    text-align: center;
+    padding: 1rem;
+    background: var(--gray-100);
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+}
+
+.data-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin: 0.5rem 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.data-unit {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.data-label {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.temp-value { color: #ef4444; }
+.humidity-value { color: #3b82f6; }
+.soil-value { color: #10b981; }
+.raw-value { color: #8b5cf6; }
+
+/* Messages Panel */
+.messages-panel {
+    background: var(--light);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gray-200);
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.messages-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.messages-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 0;
+}
+
+.messages-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.messages-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.message-item {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    background: var(--gray-100);
+    border-left: 4px solid var(--gray-300);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.message-item.info {
+    border-left-color: var(--info);
+    background: rgba(14, 165, 233, 0.05);
+}
+
+.message-item.success {
+    border-left-color: var(--success);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.message-item.warning {
+    border-left-color: var(--warning);
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.message-item.error {
+    border-left-color: var(--danger);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.message-content {
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--dark);
+}
+
+/* Connection Indicator */
+.connection-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    animation: pulse 2s infinite;
+}
+
+.indicator-dot.connected {
+    background: #10b981;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Loading Animation */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gray-300);
+    border-top: 2px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .websocket-container {
+        padding: 1rem;
+    }
     
-    <div class="box">
-        <h3>Connection Status</h3>
-        <p id="status" class="red">Disconnected</p>
+    .websocket-header {
+        padding: 1.5rem;
+    }
+    
+    .header-title {
+        font-size: 1.5rem;
+    }
+    
+    .test-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .latest-content {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+
+<div class="websocket-container">
+    <div class="websocket-header" style="display: flex;justify-content: space-between;">
+        <!-- Header -->
+    <div class=>
+        <h1 class="header-title">🌱 WebSocket Connection Tester</h1>
+        <p class="header-subtitle">Real-time WebSocket testing and monitoring for IoT sensors</p>
+    </div>
+     <div class="device-actions" style="display: flex;gap: 0.5rem;flex-direction: column;">
+            <a href="/sensors/devices/management/" class="btn btn-secondary">
+                <span>←</span>
+                <span>Back to Devices</span>
+            </a>
+            <button class="btn btn-primary" onclick="refreshData()">
+                <span>🔄</span>
+                <span>Refresh</span>
+            </button>
+        </div>
     </div>
     
-    <div class="box">
-        <h3>Latest Reading</h3>
-        <div id="latest">Waiting for data...</div>
+
+    <!-- Status Cards -->
+    <div class="status-grid">
+        <div class="status-card">
+            <div class="status-header">
+                <div class="status-icon connection-icon" id="connectionStatusIcon">
+                    🔌
+                </div>
+                <div>
+                    <h3 class="status-title">Connection Status</h3>
+                </div>
+            </div>
+            <div class="status-value" id="connectionStatusText">
+                <span class="status-disconnected">Disconnected</span>
+            </div>
+            <div class="status-url" id="connectionUrl">
+                Connecting...
+            </div>
+            <div class="connection-indicator" style="margin-top: 1rem;">
+                <span class="indicator-dot" id="indicatorDot"></span>
+                <span id="connectionTime">Not connected</span>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <div class="status-header">
+                <div class="status-icon latest-icon">📡</div>
+                <div>
+                    <h3 class="status-title">Latest Received Data</h3>
+                </div>
+            </div>
+            <div id="latestData">
+                <p style="color: var(--gray-500);">Waiting for WebSocket data...</p>
+            </div>
+        </div>
     </div>
-    
-    <div class="box">
-        <h3>WebSocket Messages</h3>
-        <button onclick="sendTestData()">📡 Send Test Data</button>
-        <div id="messages"></div>
+
+    <!-- Test Controls -->
+    <div class="test-controls">
+        <div class="test-header">
+            <h3 class="test-title">Test Data Generator</h3>
+            <div class="test-actions">
+                <button class="btn btn-success" onclick="sendTestData()">
+                    <span>📡</span>
+                    <span>Send Test Data</span>
+                </button>
+                <button class="btn btn-warning" onclick="generateRandomData()">
+                    <span>🎲</span>
+                    <span>Random Data</span>
+                </button>
+                <button class="btn btn-secondary" onclick="clearMessages()">
+                    <span>🗑️</span>
+                    <span>Clear Messages</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="test-data-grid">
+            <div class="test-input-group">
+                <label class="test-label">Device ID</label>
+                <input type="text" class="test-input" id="deviceId" value="WEBSOCKET-TEST" placeholder="Enter device ID">
+            </div>
+            <div class="test-input-group">
+                <label class="test-label">Device Name</label>
+                <input type="text" class="test-input" id="deviceName" value="WebSocket Test Device" placeholder="Enter device name">
+            </div>
+            <div class="test-input-group">
+                <label class="test-label">Location</label>
+                <input type="text" class="test-input" id="deviceLocation" value="Test Lab" placeholder="Enter location">
+            </div>
+        </div>
+
+        <div class="test-checkboxes">
+            <div class="checkbox-group">
+                <input type="checkbox" id="includeTemp" checked>
+                <label for="includeTemp">🌡️ Include Temperature</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="includeHumidity" checked>
+                <label for="includeHumidity">💧 Include Humidity</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="includeSoil" checked>
+                <label for="includeSoil">🌱 Include Soil Moisture</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="includeBattery">
+                <label for="includeBattery">🔋 Include Battery</label>
+            </div>
+        </div>
     </div>
-    
-    <script>
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/dashboard/`;
-        let socket;
+
+    <!-- Latest Reading Display -->
+    <div class="latest-reading">
+        <div class="test-header">
+            <h3 class="test-title">Last Received Reading</h3>
+            <div class="connection-indicator">
+                <span class="indicator-dot" id="dataIndicatorDot"></span>
+                <span id="lastUpdateTime">No data received</span>
+            </div>
+        </div>
         
-        function connect() {
-            console.log('Connecting to:', wsUrl);
-            socket = new WebSocket(wsUrl);
-            
-            socket.onopen = function(e) {
-                console.log('WebSocket connected!');
-                document.getElementById('status').className = 'green';
-                document.getElementById('status').textContent = 'Connected to ' + wsUrl;
-                addMessage('✅ WebSocket connected!', 'green');
-            };
-            
-            socket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                console.log('Message received:', data);
-                addMessage('📨 Received: ' + JSON.stringify(data, null, 2), 'blue');
-                
-                if (data.type === 'sensor_update') {
-                    updateLatest(data.data);
-                }
-            };
-            
-            socket.onclose = function(event) {
-                console.log('WebSocket closed');
-                document.getElementById('status').className = 'red';
-                document.getElementById('status').textContent = 'Disconnected - Reconnecting...';
-                addMessage('❌ WebSocket closed. Reconnecting...', 'red');
-                setTimeout(connect, 3000);
-            };
-            
-            socket.onerror = function(error) {
-                console.error('WebSocket error:', error);
-                addMessage('⚠️ WebSocket error: ' + error, 'red');
-            };
-        }
+        <div class="latest-content" id="latestReadingDisplay">
+            <div class="data-item">
+                <div class="data-label">Temperature</div>
+                <div class="data-value temp-value">--</div>
+                <div class="data-unit">°C</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Humidity</div>
+                <div class="data-value humidity-value">--</div>
+                <div class="data-unit">%</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Soil Moisture</div>
+                <div class="data-value soil-value">--</div>
+                <div class="data-unit">%</div>
+            </div>
+            <div class="data-item">
+                <div class="data-label">Raw Value</div>
+                <div class="data-value raw-value">--</div>
+                <div class="data-unit"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages Panel -->
+    <div class="messages-panel">
+        <div class="messages-header">
+            <h3 class="messages-title">WebSocket Messages</h3>
+            <div class="messages-actions">
+                <button class="btn btn-secondary" onclick="clearMessages()" style="padding: 0.5rem 1rem; font-size: 0.75rem;">
+                    <span>🗑️</span>
+                    <span>Clear</span>
+                </button>
+            </div>
+        </div>
+        <div class="messages-body" id="messagesContainer">
+            <div class="message-item info">
+                <div class="message-time">
+                    <span>ℹ️</span>
+                    <span id="currentTime"></span>
+                </div>
+                <div class="message-content">WebSocket test interface initialized. Ready to connect...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let socket = null;
+let connectionStartTime = null;
+let lastDataTime = null;
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsUrl = `${protocol}//${window.location.host}/ws/dashboard/`;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 1000);
+    connectWebSocket();
+});
+
+// Update current time display
+function updateCurrentTime() {
+    const now = new Date();
+    document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+}
+
+// Connect to WebSocket
+function connectWebSocket() {
+    console.log('Connecting to WebSocket:', wsUrl);
+    
+    // Update UI
+    document.getElementById('connectionUrl').textContent = wsUrl;
+    document.getElementById('connectionStatusText').innerHTML = '<span class="status-disconnected">Connecting...</span>';
+    document.getElementById('indicatorDot').className = 'indicator-dot';
+    document.getElementById('connectionTime').textContent = 'Connecting...';
+    
+    // Create WebSocket connection
+    socket = new WebSocket(wsUrl);
+    
+    socket.onopen = function(event) {
+        console.log('✅ WebSocket connected successfully!');
+        connectionStartTime = new Date();
         
-        function addMessage(msg, color) {
-            const div = document.createElement('div');
-            div.className = 'message';
-            div.style.borderLeftColor = color;
-            div.innerHTML = '<pre>' + msg + '</pre>';
-            const container = document.getElementById('messages');
-            container.insertBefore(div, container.firstChild);
+        // Update UI
+        document.getElementById('connectionStatusIcon').innerHTML = '✅';
+        document.getElementById('connectionStatusIcon').className = 'status-icon connection-icon connected';
+        document.getElementById('connectionStatusText').innerHTML = '<span class="status-connected">Connected</span>';
+        document.getElementById('indicatorDot').className = 'indicator-dot connected';
+        
+        addMessage('✅ WebSocket connection established', 'success');
+        updateConnectionTime();
+        
+        // Start connection time updater
+        setInterval(updateConnectionTime, 1000);
+    };
+    
+    socket.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            console.log('📨 Message received:', data);
             
-            // Keep only last 20 messages
-            while (container.children.length > 20) {
-                container.removeChild(container.lastChild);
+            // Update last data time
+            lastDataTime = new Date();
+            document.getElementById('dataIndicatorDot').className = 'indicator-dot connected';
+            document.getElementById('lastUpdateTime').textContent = 'Updated ' + lastDataTime.toLocaleTimeString();
+            
+            // Add message to log
+            addMessage('📨 Received: ' + JSON.stringify(data, null, 2), 'info');
+            
+            // Update latest data display
+            if (data.type === 'sensor_update') {
+                updateLatestData(data.data);
             }
+            
+        } catch (error) {
+            console.error('Error parsing message:', error);
+            addMessage('❌ Error parsing message: ' + error, 'error');
+        }
+    };
+    
+    socket.onclose = function(event) {
+        console.log('❌ WebSocket closed');
+        
+        // Update UI
+        document.getElementById('connectionStatusIcon').innerHTML = '🔌';
+        document.getElementById('connectionStatusIcon').className = 'status-icon connection-icon';
+        document.getElementById('connectionStatusText').innerHTML = '<span class="status-disconnected">Disconnected</span>';
+        document.getElementById('indicatorDot').className = 'indicator-dot';
+        document.getElementById('connectionTime').textContent = 'Reconnecting in 3s...';
+        
+        addMessage('❌ WebSocket connection closed. Reconnecting...', 'error');
+        
+        // Attempt to reconnect after 3 seconds
+        setTimeout(connectWebSocket, 3000);
+    };
+    
+    socket.onerror = function(error) {
+        console.error('⚠️ WebSocket error:', error);
+        addMessage('⚠️ WebSocket error occurred', 'error');
+    };
+}
+
+// Update connection time
+function updateConnectionTime() {
+    if (connectionStartTime) {
+        const now = new Date();
+        const diff = Math.floor((now - connectionStartTime) / 1000);
+        const hours = Math.floor(diff / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+        
+        let timeString = '';
+        if (hours > 0) timeString += hours + 'h ';
+        if (minutes > 0) timeString += minutes + 'm ';
+        timeString += seconds + 's';
+        
+        document.getElementById('connectionTime').textContent = 'Connected for ' + timeString;
+    }
+}
+
+// Add message to log
+function addMessage(message, type = 'info') {
+    const container = document.getElementById('messagesContainer');
+    const messageItem = document.createElement('div');
+    
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+    
+    messageItem.className = `message-item ${type}`;
+    messageItem.innerHTML = `
+        <div class="message-time">
+            <span>${getMessageIcon(type)}</span>
+            <span>${timeString}</span>
+        </div>
+        <div class="message-content">${message}</div>
+    `;
+    
+    container.insertBefore(messageItem, container.firstChild);
+    
+    // Keep only last 50 messages
+    while (container.children.length > 50) {
+        container.removeChild(container.lastChild);
+    }
+}
+
+// Get icon for message type
+function getMessageIcon(type) {
+    switch(type) {
+        case 'success': return '✅';
+        case 'error': return '❌';
+        case 'warning': return '⚠️';
+        default: return 'ℹ️';
+    }
+}
+
+// Update latest data display
+function updateLatestData(data) {
+    // Update latest data text
+    const deviceName = data.device_name || data.device_id || 'Unknown Device';
+    const timestamp = new Date(data.timestamp).toLocaleString();
+    
+    document.getElementById('latestData').innerHTML = `
+        <div style="margin-bottom: 0.5rem;">
+            <strong>${deviceName}</strong>
+        </div>
+        <div style="font-size: 0.875rem; color: var(--gray-500);">
+            ${timestamp}
+        </div>
+    `;
+    
+    // Update reading displays
+    if (data.temperature !== null && data.temperature !== undefined) {
+        document.querySelector('.temp-value').textContent = data.temperature.toFixed(1);
+    }
+    
+    if (data.humidity !== null && data.humidity !== undefined) {
+        document.querySelector('.humidity-value').textContent = data.humidity.toFixed(0);
+    }
+    
+    if (data.soil_moisture !== null && data.soil_moisture !== undefined) {
+        document.querySelector('.soil-value').textContent = data.soil_moisture.toFixed(0);
+    }
+    
+    if (data.soil_raw !== null && data.soil_raw !== undefined) {
+        document.querySelector('.raw-value').textContent = data.soil_raw;
+    }
+}
+
+// Send test data
+async function sendTestData() {
+    const deviceId = document.getElementById('deviceId').value || 'WEBSOCKET-TEST';
+    const deviceName = document.getElementById('deviceName').value || 'WebSocket Test Device';
+    const location = document.getElementById('deviceLocation').value || 'Test Lab';
+    
+    // Prepare test data
+    const testData = {
+        device_id: deviceId,
+        device_name: deviceName,
+        device_type: 'multi',
+        location: location
+    };
+    
+    try {
+        addMessage('📤 Registering test device...', 'info');
+        
+        // Register device
+        const registerResponse = await fetch('{% url "sensors:api_register_device" %}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(testData)
+        });
+        
+        const registerData = await registerResponse.json();
+        
+        if (!registerData.success) {
+            throw new Error(registerData.error || 'Failed to register device');
         }
         
-        function updateLatest(data) {
-            const html = `
-                <strong>${data.device_name || data.device_id}</strong><br>
-                <span style="font-size: 0.9em; color: #666;">${new Date(data.timestamp).toLocaleString()}</span><br><br>
-                🌡️ Temperature: <strong>${data.temperature}°C</strong><br>
-                💧 Humidity: <strong>${data.humidity}%</strong><br>
-                🌱 Soil Moisture: <strong>${data.soil_moisture}%</strong>
-            `;
-            document.getElementById('latest').innerHTML = html;
+        addMessage('✅ Device registered successfully', 'success');
+        
+        // Prepare sensor data
+        const sensorData = {
+            device_id: deviceId,
+            api_key: registerData.api_key,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Add temperature if checked
+        if (document.getElementById('includeTemp').checked) {
+            sensorData.temperature = 25.5;
         }
         
-        function sendTestData() {
-            fetch('/api/register/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    device_id: 'WEBSOCKET-TEST',
-                    device_name: 'WebSocket Test Device',
-                    device_type: 'multi',
-                    location: 'Test Lab'
-                })
-            })
-            .then(r => r.json())
-            .then(data => {
-                console.log('Device registered:', data);
-                return fetch('/api/submit/', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        device_id: 'WEBSOCKET-TEST',
-                        api_key: data.api_key,
-                        temperature: 25.5,
-                        humidity: 65.0,
-                        soil_moisture: 45.0
-                    })
-                });
-            })
-            .then(r => r.json())
-            .then(data => {
-                console.log('Data submitted:', data);
-                addMessage('✅ Test data sent successfully!', 'green');
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                addMessage('❌ Error: ' + err, 'red');
-            });
+        // Add humidity if checked
+        if (document.getElementById('includeHumidity').checked) {
+            sensorData.humidity = 65.0;
         }
         
-        // Connect on page load
-        connect();
-    </script>
-</body>
-</html>
+        // Add soil moisture if checked
+        if (document.getElementById('includeSoil').checked) {
+            sensorData.soil_moisture = 45.0;
+            sensorData.soil_raw = Math.floor(Math.random() * 4096);
+        }
+        
+        // Add battery if checked
+        if (document.getElementById('includeBattery').checked) {
+            sensorData.battery_level = 85.0;
+            sensorData.signal_strength = -65;
+        }
+        
+        addMessage('📤 Sending test sensor data...', 'info');
+        
+        // Submit sensor reading
+        const submitResponse = await fetch('{% url "sensors:api_submit_reading" %}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(sensorData)
+        });
+        
+        const submitData = await submitResponse.json();
+        
+        if (!submitData.success) {
+            throw new Error(submitData.error || 'Failed to submit data');
+        }
+        
+        addMessage('✅ Test data sent successfully!', 'success');
+        
+        // Flash success animation
+        document.querySelectorAll('.btn-success')[0].style.animation = 'none';
+        setTimeout(() => {
+            document.querySelectorAll('.btn-success')[0].style.animation = 'pulse 0.5s';
+        }, 10);
+        
+    } catch (error) {
+        console.error('Error sending test data:', error);
+        addMessage('❌ Error: ' + error.message, 'error');
+    }
+}
+
+// Generate random test data
+function generateRandomData() {
+    const deviceId = document.getElementById('deviceId').value || 'WEBSOCKET-TEST';
+    const deviceName = document.getElementById('deviceName').value || 'WebSocket Test Device';
+    
+    // Generate random values
+    const randomData = {
+        type: 'sensor_update',
+        data: {
+            device_id: deviceId,
+            device_name: deviceName,
+            timestamp: new Date().toISOString(),
+            temperature: (Math.random() * 30 + 15).toFixed(1),
+            humidity: (Math.random() * 50 + 30).toFixed(0),
+            soil_moisture: (Math.random() * 100).toFixed(0),
+            soil_raw: Math.floor(Math.random() * 4096),
+            battery_level: (Math.random() * 100).toFixed(0),
+            signal_strength: -(Math.random() * 40 + 30).toFixed(0)
+        }
+    };
+    
+    // Simulate receiving this data
+    updateLatestData(randomData.data);
+    addMessage('🎲 Generated random test data', 'info');
+    
+    // Flash animation on random button
+    document.querySelectorAll('.btn-warning')[0].style.animation = 'none';
+    setTimeout(() => {
+        document.querySelectorAll('.btn-warning')[0].style.animation = 'pulse 0.5s';
+    }, 10);
+}
+
+// Clear all messages
+function clearMessages() {
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = `
+        <div class="message-item info">
+            <div class="message-time">
+                <span>ℹ️</span>
+                <span id="currentTime"></span>
+            </div>
+            <div class="message-content">Message log cleared</div>
+        </div>
+    `;
+    updateCurrentTime();
+    
+    // Flash animation on clear button
+    document.querySelectorAll('.btn-secondary')[2].style.animation = 'none';
+    setTimeout(() => {
+        document.querySelectorAll('.btn-secondary')[2].style.animation = 'pulse 0.5s';
+    }, 10);
+}
+
+// Add pulse animation style
+const style = document.createElement('style');
+style.textContent = `
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+    100% { opacity: 1; }
+}
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}
