@@ -618,11 +618,6 @@ class saveraAssignmentView(View):
 
 
 
-
-
-
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class saveMonitoringformView(View):
     def post(self, request):
@@ -631,8 +626,6 @@ class saveMonitoringformView(View):
         try:
             data = json.loads(request.body)
             staff_contact= data["agent"]
-
-            
             
             farmTbl_foreignkey= data["farmTbl_foreignkey"]
             activity= data["activity"]

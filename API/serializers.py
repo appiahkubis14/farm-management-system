@@ -69,3 +69,15 @@ class WbpFarmsSerializer(serializers.ModelSerializer):
         # fields = '__all__'
         fields =('geom','farm_id','farm_loc','farmer_nam','sex','age','id_number','name_ta','date','no_trees','coc_type',)
 
+
+
+
+######################################################################################################################
+
+
+# serializers.py
+from rest_framework import serializers
+
+class MobileLoginSerializer(serializers.Serializer):
+    telephone = serializers.CharField(required=True, max_length=20)
+    password = serializers.CharField(required=True, max_length=255)
