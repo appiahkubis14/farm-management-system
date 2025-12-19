@@ -843,8 +843,8 @@ class fetchfarmstatusView(View):
         data = json.loads(request.body)
         userid= data["userid"]
 
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
-        Farms = FarmdetailsTbl.objects.filter(districtTbl_foreignkey=dist)
+        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
+        Farms = FarmdetailsTbl.objects.filter(projectTbl_foreignkey=dist)
         data = []
 
         today = datetime.date.today()
