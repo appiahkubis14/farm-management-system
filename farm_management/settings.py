@@ -68,8 +68,31 @@ INSTALLED_APPS = [
 ]
 
 
-GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'  # or wherever GDAL is installed
-    # On Mac: '/usr/local/opt/gdal/lib/libgdal.dylib'
+
+
+# GDAL configuration for Ubuntu/Debian
+if os.name == 'posix':  # Linux
+    # Common GDAL library paths on Ubuntu/Debian
+    possible_paths = [
+        '/usr/lib/x86_64-linux-gnu/libgdal.so',
+        '/usr/lib/x86_64-linux-gnu/libgdal.so.32',  # GDAL 3.2
+        '/usr/lib/x86_64-linux-gnu/libgdal.so.34',  # GDAL 3.4
+        '/usr/lib/x86_64-linux-gnu/libgdal.so.36',  # GDAL 3.6
+        '/usr/lib/libgdal.so',
+        '/usr/lib/x86_64-linux-gnu/ogdi/4.1/libgdal.so',
+        '/usr/lib/x86_64-linux-gnu/libgdal.so.34.3.8.4',
+        '/usr/lib/x86_64-linux-gnu/libgdal.so.34',
+        '/usr/lib/x86_64-linux-gnu/libgdal.so'
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            GDAL_LIBRARY_PATH = path
+            print(f"Found GDAL at: {path}")
+            break
+    else:
+        GDAL_LIBRARY_PATH = ''
+        print("GDAL library not found")
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
