@@ -247,7 +247,7 @@ class staffTbl(timeStamp):
 	email_address = models.EmailField(max_length=250, blank=True)
 	uid= models.CharField(max_length=2500,blank=True, null=True)
 	fbase_code= models.CharField(max_length=2500,blank=True, null=True)
-	# district = models.CharField(max_length=250, blank=True, null=True)
+	district = models.CharField(max_length=250, blank=True, null=True)
 
 	staff_station = models.CharField(max_length=250,default="farm_services",choices=STATUS_CHOICES)
 
