@@ -367,14 +367,7 @@ class loginmobileV2View(View):
                         "user_id": f'{staff.id}',
                         "staff_id": staff.staffid if staff.staffid else "",
                         "group": f'{staff.designation.name}',
-                        # "assigned_farms": farm_data,
-                        # "total_assigned_farms": len(farm_data),
-                        # "contact": staff.contact or "",
-                        # "email": staff.email_address or "",
-                        # "gender": staff.gender or "",
-                        # "designation_id": staff.designation.id if staff.designation else None,
-                        # "designation_name": staff.designation.name if staff.designation else "",
-                        # "total_project_assignments": len(project_staff_ids)
+                       
                     }
 
                 else:
@@ -844,7 +837,7 @@ class fetchfarmstatusView(View):
         userid= data["userid"]
 
         dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
-        Farms = FarmdetailsTbl.objects.filter(projectTbl_foreignkey=dist)
+        Farms = FarmdetailsTbl.objects.filter(districtTbl_foreignkey=dist)
         data = []
 
         today = datetime.date.today()
@@ -1869,15 +1862,15 @@ class fetchpaymentReportView(View):
         week= data["week"]
         year= data["year"]
 
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"])
-        print(dist.districtTbl_foreignkey.district)
-        reports = paymentReport.objects.filter(district__iexact=dist.districtTbl_foreignkey.district,year=year,month__iexact=month,week=week)
+        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"])
+        print(dist.projectTbl_foreignkey.name)
+        reports = paymentReport.objects.filter(district__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week)
         print(reports.count())
         data = []
 
         for rep in reports:
             eok={}
-            eok["district"]=rep.district
+            # eok["district"]=rep.district
             eok["bank_name"]=rep.bank_name
             eok["bank_branch"]=rep.bank_branch
             eok["snnit_no"]=rep.snnit_no
@@ -1914,12 +1907,12 @@ class fetchpaymentdetailsReportView(View):
         year= data["year"]
         raid= data["raid"]
 
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"])
-
+        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"])
+        print(dist.projectTbl_foreignkey.name)
         if not raid:
-            reports = paymentdetailedReport.objects.filter(district__iexact=dist.districtTbl_foreignkey.district,year=year,month__iexact=month,week=week)
+            reports = paymentdetailedReport.objects.filter(project__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week)
         else:
-            reports = paymentdetailedReport.objects.filter(district__iexact=dist.districtTbl_foreignkey.district,year=year,month__iexact=month,week=week,ra_id=raid)
+            reports = paymentdetailedReport.objects.filter(project__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week,ra_id=raid)
 
         data = []
 
@@ -1970,8 +1963,8 @@ class rehabassistantsTblListView(ListAPIView):
 
         if self.request.query_params['userid']:
             print(self.request.query_params['userid'])
-            dist = districtStaffTbl.objects.filter(staffTbl_foreignkey=self.request.query_params['userid']).values_list("districtTbl_foreignkey__id", flat=True)
-            queryset = queryset.filter(districtTbl_foreignkey__in=dist)
+            dist = projectStaffTbl.objects.filter(staffTbl_foreignkey=self.request.query_params['userid']).values_list("districtTbl_foreignkey__id", flat=True)
+            queryset = queryset.filter(projectTbl_foreignkey__in=dist)
             print("dist")
             print(dist)
         return queryset
