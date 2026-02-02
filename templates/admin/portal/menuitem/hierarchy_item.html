@@ -1,0 +1,89 @@
+<!-- templates/admin/portal/menuitem/hierarchy_item.html -->
+{% load admin_urls %}
+
+<div class="hierarchy-item level-{{ item_data.level }}">
+    <div class="hierarchy-item-header">
+        <div class="item-indent" style="margin-left: {{ item_data.level|add:1|multiply:20 }}px;"></div>
+        <div class="item-content">
+            <div class="item-name">
+                <i class="{{ item_data.object.icon }}"></i>
+                <strong>{{ item_data.object.display_name }}</strong>
+                {% if item_data.object.url %}
+                    <span class="item-url"><code>{{ item_data.object.url }}</code></span>
+                {% endif %}
+                <span class="item-meta">
+                    {% if item_data.object.is_active %}
+                        <span class="status-active">● Active</span>
+                    {% else %}
+                        <span class="status-inactive">● Inactive</span>
+                    {% endif %}
+                    <span class="item-order">(Order: {{ item_data.object.order }})</span>
+                </span>
+            </div>
+            <div class="item-actions">
+                <a href="{% url opts|admin_urlname:'change' item_data.object.pk %}" class="button" title="Edit">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url opts|admin_urlname:'delete' item_data.object.pk %}" class="button" title="Delete">
+                    <i class="fas fa-trash"></i> Delete
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% if item_data.children %}
+        <div class="hierarchy-children">
+            {% for child_data in item_data.children %}
+                {% include "admin/portal/menuitem/hierarchy_item.html" with item_data=child_data %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.hierarchy-item {
+    margin: 5px 0;
+    border-left: 3px solid transparent;
+}
+.hierarchy-item.level-0 { border-color: #007bff; }
+.hierarchy-item.level-1 { border-color: #28a745; }
+.hierarchy-item.level-2 { border-color: #ffc107; }
+.hierarchy-item.level-3 { border-color: #dc3545; }
+.hierarchy-item.level-4 { border-color: #6f42c1; }
+.hierarchy-item-header {
+    display: flex;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+.item-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+.item-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.item-url {
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #666;
+}
+.item-meta {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+.status-active { color: #28a745; }
+.status-inactive { color: #dc3545; }
+.item-actions {
+    display: flex;
+    gap: 5px;
+}
+.hierarchy-children {
+    margin-left: 40px;
+}
+</style>

@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'portal',
     "sensors",
     "API",
+    'sidebar',
 
     'import_export',
     'dbbackup',

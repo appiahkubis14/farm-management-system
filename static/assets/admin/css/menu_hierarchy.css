@@ -1,0 +1,37 @@
+/* static/admin/css/menu_hierarchy.css */
+.menu-item-indent {
+    display: inline-block;
+    min-width: 20px;
+}
+
+.menu-item-level-0 .menu-item-name {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.menu-item-level-1 .menu-item-name {
+    margin-left: 20px;
+}
+
+.menu-item-level-2 .menu-item-name {
+    margin-left: 40px;
+}
+
+.menu-item-level-3 .menu-item-name {
+    margin-left: 60px;
+}
+
+.menu-item-level-4 .menu-item-name {
+    margin-left: 80px;
+}
+
+.menu-item-level-indicator {
+    color: #666;
+    font-size: 0.8em;
+    margin-left: 5px;
+}
+
+.arrow-icon {
+    margin-right: 5px;
+    color: #6c757d;
+}

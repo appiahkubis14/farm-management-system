@@ -375,6 +375,9 @@ class Farms(models.Model):
 class projectTbl(timeStamp):
 	name= models.CharField(max_length=250) 
 
+	def __str__(self):
+		return self.name
+
 
 class projectStaffTbl(timeStamp):
 	staffTbl_foreignkey = models.ForeignKey(staffTbl, on_delete=models.CASCADE)
@@ -1232,6 +1235,7 @@ class Equipment(timeStamp):
 	date_of_capturing=models.DateTimeField(max_length=254,blank=True, null=True)	
 	region= models.CharField(max_length=2500,blank=True, null=True)
 	district= models.CharField(max_length=2500,blank=True, null=True)
+	project = models.CharField(max_length=2500,blank=True, null=True)
 	equipment= models.CharField(max_length=2500,blank=True, null=True)
 	status= models.CharField(max_length=2500,blank=True, null=True)
 	serial_number= models.CharField(max_length=2500,blank=True, null=True)
@@ -1243,6 +1247,7 @@ class Equipment(timeStamp):
 	_uuid= models.CharField(max_length=2500,blank=True, null=True)
 	koboid= models.CharField(max_length=2500,blank=True, null=True)
 	staffTbl_foreignkey = models.ForeignKey(staffTbl, on_delete=models.CASCADE,blank=True, null=True)
+	projectStaffTbl_foreignkey = models.ForeignKey(projectStaffTbl, on_delete=models.CASCADE,blank=True, null=True)
 	districtTbl_foreignkey = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE,blank=True, null=True)
 
 	# def save(self, *args, **kwargs):
@@ -1355,6 +1360,8 @@ class paymentReport(timeStamp):
 	payment_option = models.CharField(max_length=2540, blank=True, null=True)	
 	snnit_no	= models.CharField(max_length=2540, blank=True, null=True)
 	salary	=models.CharField(max_length=2540, blank=True, null=True)
+	project= models.CharField(max_length=2540, blank=True, null=True)
+	projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE,blank=True, null=True)
 	districtTbl_foreignkey = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE,blank=True, null=True)
 	po_number= models.CharField(max_length=2540, blank=True, null=True)
 	month = models.CharField(max_length=2540, blank=False, null=True)
@@ -1447,6 +1454,7 @@ class paymentdetailedReport(timeStamp):
 	po_name	=models.CharField(max_length=2540, blank=True, null=True)
 	po_number=models.CharField(max_length=2540, blank=True, null=True)
 	district=models.CharField(max_length=2540, blank=True, null=True)
+	project = models.CharField(max_length=2540, blank=True, null=True)
 	farmhands_type=models.CharField(max_length=2540, blank=True, null=True)
 	farm_reference=models.CharField(max_length=2540, blank=True, null=True)
 	number_in_a_group=models.CharField(max_length=2540, blank=True, null=True)
@@ -1459,7 +1467,8 @@ class paymentdetailedReport(timeStamp):
 	year=models.CharField(max_length=2540, blank=True, null=True)
 	issue=models.CharField(max_length=2540, blank=True, null=True)
 	sector=models.CharField(max_length=2540, blank=True, null=True)
-	districtTbl_foreignkey = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE,blank=True, null=True)
+	projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE,blank=True, null=True)
+	# districtTbl_foreignkey = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE,blank=True, null=True)
 	staffTbl_foreignkey = models.ForeignKey(staffTbl, on_delete=models.CASCADE,blank=True, null=True)
 	code=models.CharField(max_length=3540, blank=True, null=True,unique=True)
 	act_code=models.CharField(max_length=2540, blank=True, null=True)
@@ -2087,3 +2096,191 @@ class staffFarmsAssignment(timeStamp):
 	class Meta:
 		verbose_name_plural = "Staff Farms Assignment"
 
+
+
+
+
+
+
+
+
+
+
+
+#########################################################################################################################################################################################
+# models.py
+# models.py
+from django.db import models
+from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
+
+class MenuItem(models.Model):
+    """Recursive menu item model - can have parent MenuItem for hierarchy"""
+    name = models.CharField(max_length=100)
+    display_name = models.CharField(max_length=100)
+    icon = models.CharField(
+        max_length=50, 
+        help_text="FontAwesome icon class (e.g., 'fas fa-chart-pie')"
+    )
+    url = models.CharField(
+        max_length=200, 
+        blank=True, 
+        null=True, 
+        help_text="URL pattern (e.g., '/dashboard/')"
+    )
+    
+    # Parent field for creating hierarchy
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        related_name='children',
+        null=True,
+        blank=True,
+        help_text="Parent menu item (leave blank for top-level menu)"
+    )
+    
+    order = models.PositiveIntegerField(
+        default=0, 
+        help_text="Display order (lower numbers appear first)"
+    )
+    is_active = models.BooleanField(default=True)
+    
+    # Permission groups that can see this item
+    allowed_groups = models.ManyToManyField(
+        Group, 
+        related_name='menu_items',
+        blank=True,
+        help_text="User groups that can access this menu item"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'display_name']
+        verbose_name = "Menu Item"
+        verbose_name_plural = "Menu Items"
+    
+    def __str__(self):
+        return self.display_name
+    
+    def clean(self):
+        """Validate the menu item structure"""
+        # Prevent circular references
+        if self.parent == self:
+            raise ValidationError("A menu item cannot be its own parent.")
+        
+        # Check for circular hierarchy
+        if self.parent:
+            current = self.parent
+            while current:
+                if current == self:
+                    raise ValidationError("Circular hierarchy detected.")
+                current = current.parent
+    
+    @property
+    def is_top_level(self):
+        """Check if this is a top-level menu item"""
+        return self.parent is None
+    
+    @property
+    def has_children(self):
+        """Check if this item has child items"""
+        return self.children.exists()
+    
+    @property
+    def child_count(self):
+        """Count of direct children"""
+        return self.children.count()
+    
+    @property
+    def level(self):
+        """Get the depth/level of this item in the hierarchy"""
+        if self.parent is None:
+            return 0
+        return self.parent.level + 1
+    
+    @property
+    def breadcrumb(self):
+        """Get breadcrumb trail from root to this item"""
+        if self.parent:
+            return self.parent.breadcrumb + [self]
+        return [self]
+    
+    @property
+    def full_path(self):
+        """Get full path as string"""
+        return " > ".join([item.display_name for item in self.breadcrumb])
+    
+    def get_descendants(self, include_self=False):
+        """Get all descendants of this menu item"""
+        descendants = []
+        
+        def collect_descendants(item):
+            for child in item.children.all():
+                descendants.append(child)
+                collect_descendants(child)
+        
+        if include_self:
+            descendants.append(self)
+        collect_descendants(self)
+        
+        return descendants
+    
+    def get_ancestors(self, include_self=False):
+        """Get all ancestors of this menu item"""
+        ancestors = []
+        current = self
+        
+        if include_self:
+            ancestors.append(self)
+        
+        while current.parent:
+            ancestors.insert(0, current.parent)
+            current = current.parent
+        
+        return ancestors
+    
+    def save(self, *args, **kwargs):
+        self.clean()  # Validate before saving
+        super().save(*args, **kwargs)
+
+class SidebarConfiguration(models.Model):
+    """Configuration settings for the sidebar"""
+    name = models.CharField(max_length=100, default="Default Configuration")
+    is_active = models.BooleanField(default=True)
+    show_icons = models.BooleanField(default=True)
+    expand_all = models.BooleanField(
+        default=False, 
+        help_text="Expand all menu items by default"
+    )
+    show_user_info = models.BooleanField(
+        default=True, 
+        help_text="Show user info in sidebar"
+    )
+    show_search = models.BooleanField(
+        default=False, 
+        help_text="Show search in sidebar"
+    )
+    theme = models.CharField(
+        max_length=20,
+        choices=[
+            ('light', 'Light'),
+            ('dark', 'Dark'),
+            ('auto', 'Auto (System)')
+        ],
+        default='light'
+    )
+    
+    class Meta:
+        verbose_name = "Sidebar Configuration"
+        verbose_name_plural = "Sidebar Configurations"
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one active configuration exists
+        if self.is_active:
+            SidebarConfiguration.objects.filter(is_active=True).update(is_active=False)
+        super().save(*args, **kwargs)

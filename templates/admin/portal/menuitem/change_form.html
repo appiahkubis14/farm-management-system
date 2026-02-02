@@ -1,0 +1,185 @@
+<!-- templates/admin/portal/menuitem/change_form.html -->
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block after_field_sets %}
+{% if show_hierarchy %}
+<div class="module hierarchy-module">
+    <h2>Menu Hierarchy</h2>
+    
+    {% if ancestors %}
+    <div class="breadcrumb">
+        <strong>Path:</strong>
+        {% for ancestor in ancestors %}
+            <a href="{% url opts|admin_urlname:'change' ancestor.pk %}">{{ ancestor.display_name }}</a>
+            {% if not forloop.last %} &gt; {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="hierarchy-tree">
+        {% if hierarchy_tree %}
+            <h3>Child Items ({{ hierarchy_tree|length }})</h3>
+            {% for item_data in hierarchy_tree %}
+                <div class="hierarchy-item level-{{ item_data.level }}">
+                    <div class="hierarchy-item-header">
+                        <div class="item-indent" style="margin-left: {% widthratio item_data.level|add:1 1 20 %}px;"></div>
+                        <div class="item-content">
+                            <div class="item-name">
+                                <i class="{{ item_data.object.icon }}"></i>
+                                <strong>{{ item_data.object.display_name }}</strong>
+                                {% if item_data.object.url %}
+                                    <span class="item-url"><code>{{ item_data.object.url }}</code></span>
+                                {% endif %}
+                                <span class="item-meta">
+                                    {% if item_data.object.is_active %}
+                                        <span class="status-active">● Active</span>
+                                    {% else %}
+                                        <span class="status-inactive">● Inactive</span>
+                                    {% endif %}
+                                    <span class="item-order">(Order: {{ item_data.object.order }})</span>
+                                </span>
+                            </div>
+                            <div class="item-actions">
+                                <a href="{% url opts|admin_urlname:'change' item_data.object.pk %}" class="button" title="Edit">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if item_data.children %}
+                        <div class="hierarchy-children">
+                            {% for child_data in item_data.children %}
+                                <div class="hierarchy-item level-{{ child_data.level }}">
+                                    <div class="hierarchy-item-header">
+                                        <div class="item-indent" style="margin-left: {% widthratio child_data.level|add:1 1 20 %}px;"></div>
+                                        <div class="item-content">
+                                            <div class="item-name">
+                                                <i class="{{ child_data.object.icon }}"></i>
+                                                <strong>{{ child_data.object.display_name }}</strong>
+                                                {% if child_data.object.url %}
+                                                    <span class="item-url"><code>{{ child_data.object.url }}</code></span>
+                                                {% endif %}
+                                                <span class="item-meta">
+                                                    {% if child_data.object.is_active %}
+                                                        <span class="status-active">● Active</span>
+                                                    {% else %}
+                                                        <span class="status-inactive">● Inactive</span>
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                            <div class="item-actions">
+                                                <a href="{% url opts|admin_urlname:'change' child_data.object.pk %}" class="button" title="Edit">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty-hierarchy">No child items.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+.hierarchy-module {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+}
+.hierarchy-module h2 {
+    margin-top: 0;
+    color: #333;
+}
+.breadcrumb {
+    background: #e9ecef;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+}
+.hierarchy-tree {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+}
+.empty-hierarchy {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+.hierarchy-item {
+    margin: 5px 0;
+    border-left: 3px solid transparent;
+}
+.hierarchy-item.level-0 { border-color: #007bff; }
+.hierarchy-item.level-1 { border-color: #28a745; }
+.hierarchy-item.level-2 { border-color: #ffc107; }
+.hierarchy-item.level-3 { border-color: #dc3545; }
+.hierarchy-item.level-4 { border-color: #6f42c1; }
+.hierarchy-item-header {
+    display: flex;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+.item-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+.item-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.item-url {
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #666;
+}
+.item-meta {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+.status-active { color: #28a745; }
+.status-inactive { color: #dc3545; }
+.item-actions {
+    display: flex;
+    gap: 5px;
+}
+.hierarchy-children {
+    margin-left: 40px;
+}
+.button {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+.button:hover {
+    background: #0056b3;
+}
+</style>
+{% endblock %}

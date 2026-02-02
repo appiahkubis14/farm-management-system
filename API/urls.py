@@ -33,7 +33,7 @@ urlpatterns = [
     path('v1/saverehabasssignment/', views.saveraAssignmentView.as_view()),
     path('v1/savefeedback/', views.savefeedbackView.as_view()),
     path('v1/version/', views.versionTblView.as_view()),
-    path('v1/fetchpayments/', views.fetchpaymentReportView.as_view()),
+    path('v1/fetchpayments/', views.FetchPaymentReportView.as_view()),
     path('v1/fetchpaymentdetailedreport/', views.fetchpaymentdetailsReportView.as_view()),
     path('v1/updatefirebase/', views.updatefirebaseView.as_view()),
     
@@ -48,7 +48,7 @@ urlpatterns = [
     # path('v1/saveobmonitoringform/', views.saveOBformView.as_view()),
     # path('v1/fetchoutbreafarmslist/', views.fetchoutbreaFarms.as_view()),
     # path('v1/fetchcontractor/', views.fetchcontractorView.as_view()),
-    # path('v1/fetchallequipment/', views.fetchallEquipmentView.as_view()),
+    path('v1/fetchallequipment/', views.fetchallEquipmentView.as_view()),
     # path('v1/saveequipmenteventory/', views.saveequipmentEventory.as_view()),
     # path('v1/fetchallfeedback/', views.fetchallFeedback.as_view()),
     # path('rehabassistantslist_drf/', views.rehabassistantsTblListView.as_view(), name='rehabassistantslist_drf'),

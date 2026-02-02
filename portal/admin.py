@@ -716,8 +716,20 @@ class EquipmentAdmin(ImportExportModelAdmin):
     list_display = ('equipment_code', 'equipment', 'serial_number', 'district', 'status', 'date_of_capturing')
     list_filter = ('status', 'district', 'region', 'date_of_capturing')
     search_fields = ('equipment_code', 'serial_number', 'manufacturer', 'telephone', 'staff_name')
-    readonly_fields = ('_uuid', 'koboid')
+    readonly_fields = ('_uuid', 'koboid', 'pic_serial_number', 'pic_equipment')
     list_per_page = 50
+    
+    def get_export_queryset(self, request):
+        """Override to use a queryset without image field processing"""
+        qs = super().get_export_queryset(request)
+        return qs.defer('pic_serial_number', 'pic_equipment')
+    
+    def get_import_form(self):
+        """Custom import form that excludes image fields"""
+        form = super().get_import_form()
+        form.base_fields.pop('pic_serial_number', None)
+        form.base_fields.pop('pic_equipment', None)
+        return form
 
 class chedcertficateofWorkdoneAdmin(ImportExportModelAdmin):
     resource_class = chedcertficateofWorkdoneResource
@@ -1035,7 +1047,7 @@ admin.site.register(allFarmqueryTbl, allFarmqueryTblAdmin)
 admin.site.register(staffFarmsAssignment, staffFarmsAssignmentAdmin)
 
 from django.contrib import admin
-from .models import projectStaffTbl
+from .models import projectStaffTbl,projectTbl
 
 @admin.register(projectStaffTbl)
 class projectStaffTblAdmin(admin.ModelAdmin):
@@ -1054,3 +1066,271 @@ admin.site.index_title = "System Administration"
 
 # Custom admin ordering
 admin.site._registry = dict(sorted(admin.site._registry.items(), key=lambda x: x[0].__name__))
+
+admin.site.register(projectTbl)
+
+
+
+
+
+
+##########################################################################################################################################
+# admin.py
+# admin.py
+# admin.py - COMPLETELY FIXED VERSION
+from django.contrib import admin
+from django import forms
+from django.utils.html import format_html, mark_safe
+from django.urls import reverse
+from django.contrib import messages
+from django.db.models import Count
+from .models import MenuItem, SidebarConfiguration
+
+# Form for MenuItem with validation
+class MenuItemForm(forms.ModelForm):
+    class Meta:
+        model = MenuItem
+        fields = '__all__'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = kwargs.get('instance')
+        
+        # Filter parent choices to exclude self and descendants
+        if instance and instance.pk:
+            # Get all descendants to exclude
+            descendants = instance.get_descendants()
+            exclude_ids = [instance.pk] + [d.pk for d in descendants]
+            self.fields['parent'].queryset = MenuItem.objects.exclude(id__in=exclude_ids)
+        else:
+            self.fields['parent'].queryset = MenuItem.objects.all()
+        
+        # Sort parent choices by full path for better readability
+        self.fields['parent'].queryset = self.fields['parent'].queryset.order_by('display_name')
+        
+        # Add help text for parent field
+        self.fields['parent'].help_text = "Select parent menu item. Leave blank for top-level menu."
+
+@admin.register(MenuItem)
+class MenuItemAdmin(admin.ModelAdmin):
+    form = MenuItemForm
+    
+    # List view configuration
+    list_display = (
+        'display_name_with_indent',
+        'icon_preview',
+        'parent_name',
+        'order',
+        'is_active_display',
+        'child_count_display',
+        'group_count',
+        'url_preview'
+    )
+    list_display_links = ('display_name_with_indent',)
+    list_editable = ('order',)
+    list_filter = ('is_active', 'parent', 'allowed_groups')
+    search_fields = ('display_name', 'name', 'url')
+    filter_horizontal = ('allowed_groups',)
+    readonly_fields = (
+        'created_at', 
+        'updated_at', 
+        'full_path_display',
+        'level_display',
+        'child_count_display'
+    )
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'display_name', 'icon', 'url', 'order', 'is_active')
+        }),
+        ('Hierarchy', {
+            'fields': ('parent',),
+            'description': 'Set the parent menu item to create a hierarchical structure'
+        }),
+        ('Permissions', {
+            'fields': ('allowed_groups',),
+            'description': 'User groups that can access this menu item'
+        }),
+        ('Hierarchy Information', {
+            'fields': ('full_path_display', 'level_display', 'child_count_display'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    actions = ['activate_items', 'deactivate_items', 'make_top_level']
+    
+    def get_queryset(self, request):
+        # Prefetch related data for better performance
+        return super().get_queryset(request).select_related(
+            'parent'
+        ).prefetch_related(
+            'children',
+            'allowed_groups'
+        )
+    
+    # Custom display methods - ALL FIXED
+    def display_name_with_indent(self, obj):
+        """Display name with indentation based on level"""
+        if obj.level > 0:
+            # For child items, show with indentation
+            indent_px = obj.level * 20
+            level_indicator = f'(Level {obj.level})'
+            
+            return format_html(
+                '<div style="margin-left: {}px; display: flex; align-items: center;">'
+                '<span style="margin-right: 5px;">↳</span>'
+                '<strong>{}</strong>'
+                '<span style="color: #666; font-size: 0.8em; margin-left: 5px;">{}</span>'
+                '</div>',
+                indent_px,
+                obj.display_name,
+                level_indicator
+            )
+        else:
+            # For top-level items
+            return format_html(
+                '<strong>{}</strong>',
+                obj.display_name
+            )
+    display_name_with_indent.short_description = 'Menu Item'
+    display_name_with_indent.admin_order_field = 'display_name'
+    
+    def icon_preview(self, obj):
+        if obj.icon:
+            return format_html('<i class="{}" title="{}"></i>', obj.icon, obj.icon)
+        return "—"
+    icon_preview.short_description = 'Icon'
+    
+    def parent_name(self, obj):
+        """Safe way to display parent name"""
+        if obj.parent:
+            try:
+                return obj.parent.display_name
+            except:
+                return "(Parent)"
+        return "(Top Level)"
+    parent_name.short_description = 'Parent'
+    parent_name.admin_order_field = 'parent__display_name'
+    
+    def is_active_display(self, obj):
+        """Color-coded status - FIXED VERSION"""
+        if obj.is_active:
+            # CORRECT: Pass HTML content as a template string and variables
+            return format_html(
+                '<span style="color: #28a745; font-weight: bold;">{}</span>',
+                '● Active'  # This is the content that replaces {}
+            )
+        else:
+            return format_html(
+                '<span style="color: #dc3545; font-weight: bold;">{}</span>',
+                '○ Inactive'  # This is the content that replaces {}
+            )
+    is_active_display.short_description = 'Status'
+    
+    def child_count_display(self, obj):
+        count = obj.children.count()
+        if count > 0:
+            url = reverse('admin:portal_menuitem_changelist') + f'?parent__id__exact={obj.id}'
+            return format_html('<a href="{}">{}</a>', url, count)
+        return count
+    child_count_display.short_description = 'Children'
+    
+    def group_count(self, obj):
+        return obj.allowed_groups.count()
+    group_count.short_description = 'Groups'
+    
+    def url_preview(self, obj):
+        if obj.url:
+            return format_html('<code style="font-size: 0.8em;">{}</code>', obj.url)
+        return "—"
+    url_preview.short_description = 'URL'
+    
+    # Read-only fields for display
+    def full_path_display(self, obj):
+        return obj.full_path
+    full_path_display.short_description = 'Full Path'
+    
+    def level_display(self, obj):
+        return obj.level
+    level_display.short_description = 'Level'
+    
+    # Custom actions
+    def activate_items(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'{updated} menu items activated.')
+    activate_items.short_description = "Activate selected items"
+    
+    def deactivate_items(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} menu items deactivated.')
+    deactivate_items.short_description = "Deactivate selected items"
+    
+    def make_top_level(self, request, queryset):
+        """Make selected items top-level (remove parent)"""
+        updated = queryset.update(parent=None)
+        self.message_user(request, f'{updated} items set as top-level.')
+    make_top_level.short_description = "Make selected items top-level"
+    
+    # Custom change view to show hierarchy
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        obj = self.get_object(request, object_id)
+        
+        # Get all descendants for display
+        def get_descendants_tree(item, level=0):
+            children_data = []
+            for child in item.children.all().order_by('order'):
+                child_data = {
+                    'object': child,
+                    'level': level,
+                    'children': get_descendants_tree(child, level + 1)
+                }
+                children_data.append(child_data)
+            return children_data
+        
+        tree_data = get_descendants_tree(obj)
+        
+        extra_context = extra_context or {}
+        extra_context['hierarchy_tree'] = tree_data
+        extra_context['show_hierarchy'] = True
+        extra_context['ancestors'] = obj.get_ancestors()
+        
+        return super().change_view(request, object_id, form_url, extra_context)
+    
+    # Custom changelist view with filters for hierarchy
+    def changelist_view(self, request, extra_context=None):
+        # Add filter for top-level items
+        extra_context = extra_context or {}
+        extra_context['title'] = 'Menu Items'
+        extra_context['subtitle'] = 'Manage sidebar navigation hierarchy'
+        
+        # Get parent filter from request
+        parent_id = request.GET.get('parent__id__exact')
+        if parent_id:
+            try:
+                parent = MenuItem.objects.get(id=parent_id)
+                extra_context['current_parent'] = parent
+                extra_context['breadcrumb'] = parent.get_ancestors(include_self=True)
+            except MenuItem.DoesNotExist:
+                pass
+        
+        return super().changelist_view(request, extra_context=extra_context)
+
+@admin.register(SidebarConfiguration)
+class SidebarConfigurationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active', 'get_theme_display', 'show_icons', 'expand_all')
+    list_editable = ('is_active', 'show_icons', 'expand_all')
+    fieldsets = (
+        ('General Settings', {
+            'fields': ('name', 'is_active', 'theme')
+        }),
+        ('Display Options', {
+            'fields': ('show_icons', 'expand_all', 'show_user_info', 'show_search'),
+        }),
+    )
+    
+    def get_theme_display(self, obj):
+        """Simple display of theme choice"""
+        return obj.get_theme_display()
+    get_theme_display.short_description = 'Theme'

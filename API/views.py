@@ -1722,7 +1722,7 @@ class fetchallEquipmentView(View):
         status["status"] =False
         data = json.loads(request.body)
         userid= data["userid"]
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
+        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
         # print(dist)
         # equips = Equipment.objects.filter(districtTbl_foreignkey=dist)
         equips = Equipment.objects.all()
@@ -1851,99 +1851,400 @@ class saveequipmentEventory(View):
 
 
 # fetch all Equipment
+import json
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+# from .models import projectStaffTbl, paymentReport
+
 @method_decorator(csrf_exempt, name='dispatch')
-class fetchpaymentReportView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-        month= data["month"]
-        week= data["week"]
-        year= data["year"]
-
-        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"])
-        print(dist.projectTbl_foreignkey.name)
-        reports = paymentReport.objects.filter(district__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week)
-        print(reports.count())
-        data = []
-
-        for rep in reports:
-            eok={}
-            # eok["district"]=rep.district
-            eok["bank_name"]=rep.bank_name
-            eok["bank_branch"]=rep.bank_branch
-            eok["snnit_no"]=rep.snnit_no
-            eok["salary"]=rep.salary
-            eok["year"]=rep.year
-            eok["po_number"]= rep.po_number
-            eok["month"]= rep.month
-            eok["week"]=rep.week
-            eok["payment_option"]=rep.payment_option
-            eok["momo_acc"]=rep.momo_acc
-            eok["ra_id"]=rep.ra_id
-            eok["ra_name"]=rep.ra_name
-            
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
+class FetchPaymentReportView(View):
+    """
+    API endpoint to fetch payment reports based on user, month, week, and year
+    """
     
+    def post(self, request):
+        """
+        Handle POST request to fetch payment reports
+        
+        Expected JSON payload:
+        {
+            "userid": user_id,
+            "month": month,
+            "week": week,
+            "year": year
+        }
+        
+        Returns:
+            JSON response with status, message, and data
+        """
+        try:
+            # Initialize response structure
+            response_data = {
+                "status": False,
+                "message": "",
+                "data": []
+            }
+            
+            # Parse JSON data from request body
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                response_data["message"] = "Invalid JSON payload"
+                return JsonResponse(response_data, status=400)
+            
+            # Validate required fields
+            required_fields = ["userid", "month", "week", "year"]
+            for field in required_fields:
+                if field not in data or not data[field]:
+                    response_data["message"] = f"Missing required field: {field}"
+                    return JsonResponse(response_data, status=400)
+            
+            # Extract data from request
+            userid = data["userid"]
+            month = data["month"]
+            week = data["week"]
+            year = data["year"]
+            
+            # Get user's project information
+            try:
+                user_project = projectStaffTbl.objects.get(staffTbl_foreignkey=userid)
+                project_name = user_project.projectTbl_foreignkey.name if user_project.projectTbl_foreignkey else None
+                
+                if not project_name:
+                    response_data["message"] = "User is not assigned to any project"
+                    return JsonResponse(response_data, status=404)
+                    
+            except projectStaffTbl.DoesNotExist:
+                response_data["message"] = "User not found or not assigned to any project"
+                return JsonResponse(response_data, status=404)
+            
+            # Fetch payment reports for the project
+            reports = paymentReport.objects.filter(
+                project__iexact=project_name,
+                year=year,
+                month__iexact=month,
+                week=week
+            )
+            
+            # Prepare response data
+            if reports.exists():
+                payment_data = []
+                
+                for report in reports:
+                    report_dict = {
+                        "id": report.id,
+                        "district": report.district,
+                        "bank_name": report.bank_name,
+                        "bank_branch": report.bank_branch,
+                        "snnit_no": report.snnit_no,
+                        "salary": report.salary,
+                        "project": report.project,
+                        "po_number": report.po_number,
+                        "month": report.month,
+                        "week": report.week,
+                        "year": report.year,
+                        "payment_option": report.payment_option,
+                        "momo_acc": report.momo_acc,
+                        "ra_id": report.ra_id,
+                        "ra_name": report.ra_name,
+                        "code": report.code,
+                        "created_at": report.created_date.strftime("%Y-%m-%d %H:%M:%S") if report.created_date else None,
+                        # "updated_at": report.updated_at.strftime("%Y-%m-%d %H:%M:%S") if report.updated_at else None
+                    }
+                    
+                    # Add project foreign key info if available
+                    if report.projectTbl_foreignkey:
+                        report_dict["project_id"] = report.projectTbl_foreignkey.id
+                        report_dict["project_name"] = report.projectTbl_foreignkey.name
+                    
+                    # Add district foreign key info if available
+                    if report.districtTbl_foreignkey:
+                        report_dict["district_id"] = report.districtTbl_foreignkey.id
+                        report_dict["district_name"] = report.districtTbl_foreignkey.district
+                    
+                    payment_data.append(report_dict)
+                
+                response_data["status"] = True
+                response_data["message"] = f"Successfully retrieved {len(payment_data)} payment report(s)"
+                response_data["data"] = payment_data
+                response_data["metadata"] = {
+                    "total_records": len(payment_data),
+                    "project": project_name,
+                    "month": month,
+                    "week": week,
+                    "year": year
+                }
+                
+            else:
+                response_data["message"] = "No payment reports found for the specified criteria"
+                response_data["metadata"] = {
+                    "total_records": 0,
+                    "project": project_name,
+                    "month": month,
+                    "week": week,
+                    "year": year
+                }
+            
+            return JsonResponse(response_data, safe=False)
+            
+        except Exception as e:
+            # Handle unexpected errors
+            error_response = {
+                "status": False,
+                "message": f"An error occurred: {str(e)}",
+                "data": []
+            }
+            return JsonResponse(error_response, status=500)
+
 
 
 # fetch all Equipment
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchpaymentdetailsReportView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-        month= data["month"]
-        week= data["week"]
-        year= data["year"]
-        raid= data["raid"]
+# @method_decorator(csrf_exempt, name='dispatch')
+# class fetchpaymentdetailsReportView(View):
+#     def post(self, request):	
+#         status ={}
+#         status["status"] =False
+#         data = json.loads(request.body)
+#         userid= data["userid"]
+#         month= data["month"]
+#         week= data["week"]
+#         year= data["year"]
+#         raid= data["raid"]
 
-        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"])
-        print(dist.projectTbl_foreignkey.name)
-        if not raid:
-            reports = paymentdetailedReport.objects.filter(project__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week)
-        else:
-            reports = paymentdetailedReport.objects.filter(project__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week,ra_id=raid)
+#         dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"])
+#         print(dist.projectTbl_foreignkey.name)
+#         if not raid:
+#             reports = paymentdetailedReport.objects.filter(project__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week)
+#         else:
+#             reports = paymentdetailedReport.objects.filter(project__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week,ra_id=raid)
 
-        data = []
+#         data = []
 
-        for rep in reports:
-            eok={}
-            eok["group_code"]=rep.group_code
-            eok["ra_id"]=rep.ra_id
-            eok["ra_name"]=rep.ra_name
-            eok["po_name"]=rep.po_name
-            eok["po_number"]=rep.po_number
-            eok["district"]=rep.district
-            eok["farmhands_type"]= rep.farmhands_type
-            eok["farm_reference"]= rep.farm_reference
-            eok["number_in_a_group"]= rep.number_in_a_group
-            eok["activity"]=rep.activity
-            eok["achievement"]=rep.achievement
-            eok["amount"]=rep.amount
-            eok["week"]=rep.week
-            eok["month"]=rep.month
-            eok["year"]=rep.year
-            eok["issue"]=rep.issue
+#         for rep in reports:
+#             eok={}
+#             eok["group_code"]=rep.group_code
+#             eok["ra_id"]=rep.ra_id
+#             eok["ra_name"]=rep.ra_name
+#             eok["po_name"]=rep.po_name
+#             eok["po_number"]=rep.po_number
+#             eok["district"]=rep.district
+#             eok["farmhands_type"]= rep.farmhands_type
+#             eok["farm_reference"]= rep.farm_reference
+#             eok["number_in_a_group"]= rep.number_in_a_group
+#             eok["activity"]=rep.activity
+#             eok["achievement"]=rep.achievement
+#             eok["amount"]=rep.amount
+#             eok["week"]=rep.week
+#             eok["month"]=rep.month
+#             eok["year"]=rep.year
+#             eok["issue"]=rep.issue
             
 
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
+#             data.append(eok)
+#             status["status"] =  True
+#             status["msg"] = "Success!"
 
-        status["data"] = data
-        return JsonResponse(status, safe=False)
+#         status["data"] = data
+#         return JsonResponse(status, safe=False)
     
 
+
+import json
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
+# from .models import projectStaffTbl, paymentdetailedReport
+
+@method_decorator(csrf_exempt, name='dispatch')
+class fetchpaymentdetailsReportView(View):
+    """
+    API endpoint to fetch detailed payment reports
+    Supports filtering by user, month, week, year, and RA ID
+    """
+    
+    def post(self, request):
+        """
+        Handle POST request to fetch payment details
+        
+        Expected JSON payload:
+        {
+            "userid": user_id (required),
+            "month": month (required),
+            "week": week (required),
+            "year": year (required),
+            "raid": ra_id (optional)
+        }
+        
+        Returns:
+            JSON response with detailed payment report data
+        """
+        try:
+            # Parse request data
+            try:
+                request_data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    "status": False,
+                    "message": "Invalid JSON format in request body",
+                    "data": []
+                }, status=400)
+            
+            # Validate required fields
+            required_fields = ["userid", "month", "week", "year"]
+            missing_fields = [field for field in required_fields if field not in request_data or not request_data[field]]
+            
+            if missing_fields:
+                return JsonResponse({
+                    "status": False,
+                    "message": f"Missing required fields: {', '.join(missing_fields)}",
+                    "data": []
+                }, status=400)
+            
+            # Extract parameters
+            userid = request_data["userid"]
+            month = request_data["month"]
+            week = request_data["week"]
+            year = request_data["year"]
+            raid = request_data.get("raid", "")  # Optional parameter
+            
+            # Get user's project
+            try:
+                user_project = projectStaffTbl.objects.get(staffTbl_foreignkey=userid)
+                project_name = user_project.projectTbl_foreignkey.name if user_project.projectTbl_foreignkey else None
+                
+                if not project_name:
+                    return JsonResponse({
+                        "status": False,
+                        "message": "User is not assigned to any project",
+                        "data": []
+                    }, status=404)
+                    
+            except projectStaffTbl.DoesNotExist:
+                return JsonResponse({
+                    "status": False,
+                    "message": "User not found or not assigned to any project",
+                    "data": []
+                }, status=404)
+            
+            # Build query filters
+            filters = {
+                "project__iexact": project_name,
+                "year": year,
+                "month__iexact": month,
+                "week": week
+            }
+            
+            # Add RA ID filter if provided and not empty
+            if raid:
+                filters["ra_id"] = raid
+            
+            # Fetch reports
+            reports = paymentdetailedReport.objects.filter(**filters)
+            
+            # Prepare response data
+            report_data = []
+            for report in reports:
+                report_item = {
+                    "id": report.id,
+                    "group_code": report.group_code,
+                    "ra_id": report.ra_id,
+                    "ra_name": report.ra_name,
+                    "ra_account": report.ra_account,
+                    "po_id": report.po_id,
+                    "po_name": report.po_name,
+                    "po_number": report.po_number,
+                    "district": report.district,
+                    "farmhands_type": report.farmhands_type,
+                    "farm_reference": report.farm_reference,
+                    "number_in_a_group": report.number_in_a_group,
+                    "activity": report.activity,
+                    "farmsize": report.farmsize,
+                    "achievement": report.achievement,
+                    "amount": report.amount,
+                    "week": report.week,
+                    "month": report.month,
+                    "year": report.year,
+                    "issue": report.issue,
+                    "sector": report.sector,
+                    "act_code": report.act_code,
+                    "code": report.code,
+                    "created_at": report.created_date.strftime("%Y-%m-%d %H:%M:%S") if report.created_date else None,
+                    # "updated_at": report.updated_at.strftime("%Y-%m-%d %H:%M:%S") if report.updated_at else None
+                }
+                
+                # Add foreign key relationships if they exist
+                if report.projectTbl_foreignkey:
+                    report_item["project_id"] = report.projectTbl_foreignkey.id
+                    report_item["project_name"] = report.projectTbl_foreignkey.name
+                
+                if report.staffTbl_foreignkey:
+                    report_item["staff_id"] = report.staffTbl_foreignkey.id
+                    report_item["staff_name"] = f"{report.staffTbl_foreignkey.firstname} {report.staffTbl_foreignkey.lastname}"
+                
+                # Calculate derived fields
+                try:
+                    if report.achievement and report.farmsize:
+                        percentage = (float(report.achievement) / float(report.farmsize)) * 100 if float(report.farmsize) > 0 else 0
+                        report_item["completion_percentage"] = round(percentage, 2)
+                except (ValueError, TypeError):
+                    report_item["completion_percentage"] = None
+                
+                report_data.append(report_item)
+            
+            # Prepare metadata
+            metadata = {
+                "total_records": len(report_data),
+                "project": project_name,
+                "month": month,
+                "week": week,
+                "year": year,
+                "filters_applied": {
+                    "has_raid_filter": bool(raid)
+                }
+            }
+            
+            # If RA ID was provided, add it to metadata
+            if raid:
+                metadata["ra_id"] = raid
+            
+            # Calculate summary statistics if there's data
+            if report_data:
+                try:
+                    total_amount = sum(float(item["amount"]) for item in report_data if item["amount"] and item["amount"].replace('.', '', 1).isdigit())
+                    total_achievement = sum(float(item["achievement"]) for item in report_data if item["achievement"])
+                    total_farmsize = sum(float(item["farmsize"]) for item in report_data if item["farmsize"])
+                    
+                    metadata["summary"] = {
+                        "total_amount": total_amount,
+                        "total_achievement": total_achievement,
+                        "total_farmsize": total_farmsize,
+                        "average_completion": round((total_achievement / total_farmsize * 100), 2) if total_farmsize > 0 else 0
+                    }
+                except (ValueError, TypeError):
+                    metadata["summary"] = "Unable to calculate summary statistics"
+            
+            response = {
+                "status": True,
+                "message": f"Successfully retrieved {len(report_data)} detailed payment report(s)",
+                "data": report_data,
+                "metadata": metadata
+            }
+            
+            return JsonResponse(response, safe=False)
+            
+        except Exception as e:
+            # Log the error for debugging (you can add proper logging here)
+            print(f"Error in PaymentDetailsReportView: {str(e)}")
+            
+            return JsonResponse({
+                "status": False,
+                "message": f"An unexpected error occurred: {str(e)}",
+                "data": []
+            }, status=500)
 
 
 

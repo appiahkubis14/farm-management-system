@@ -283,7 +283,7 @@ def farm_assignment_api(request):
     
     # Base query
     assignments = projectStaffTbl.objects.all().select_related(
-        'staffTbl_foreignkey', 'farms'
+        'staffTbl_foreignkey'
     ).order_by('-id')
     
     # Apply search filter
@@ -372,7 +372,7 @@ def farm_assignment_api(request):
 def get_available_farms(request):
     """Get farms that are not assigned to any staff"""
     # Get IDs of farms that are already assigned
-    assigned_farm_ids = projectStaffTbl.objects.values_list('farms_id', flat=True)
+    assigned_farm_ids = projectStaffTbl.objects.values_list(flat=True)
     
     # Get available farms (not assigned and not expunged)
     available_farms = FarmdetailsTbl.objects.filter(
