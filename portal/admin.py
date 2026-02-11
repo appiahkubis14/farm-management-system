@@ -1,57 +1,329 @@
-# admin.py
+# admin.py - UPDATED VERSION
 from django.contrib import admin
 from django.contrib.gis import admin as gis_admin
 from import_export import resources, fields
-from import_export.admin import ImportExportModelAdmin, ImportExportActionModelAdmin
+from import_export.admin import ImportExportModelAdmin
 from import_export.widgets import ForeignKeyWidget, DateWidget
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
-from django.db.models import Count, Sum, Avg
-from django.contrib.gis.db import models as gis_models
-from django.forms import TextInput, Textarea
 from django.db import models
-from django.contrib.gis.geos import GEOSGeometry, Point
-from django.contrib.auth.models import User, Group
-import json
+from django.forms import TextInput, Textarea, Select
+from django.contrib.auth.models import Group
 from .models import *
 
 # ============================================
 # RESOURCE CLASSES FOR IMPORT-EXPORT
 # ============================================
 
-class timeStampResource(resources.ModelResource):
+# GIS Models Resources
+class FarmsResource(resources.ModelResource):
     class Meta:
-        model = timeStamp
-        abstract = True
-        exclude = ('created_date',)
+        model = Farms
+        fields = '__all__'
+
+# Region & District Resources
+from import_export import resources, fields
+from django.contrib.gis.geos import GEOSGeometry
+import re
+
+class RegionResource(resources.ModelResource):
+    # Map your CSV columns correctly
+    # Your CSV has 'reg_code' not 'reg_code'
+    region = fields.Field(attribute='region', column_name='region')
+    reg_code = fields.Field(attribute='reg_code', column_name='reg_code')  # Map to your CSV column
+    geom = fields.Field(attribute='geom', column_name='geom')
+    
+    class Meta:
+        model = Region
+        fields = ('id', 'region', 'reg_code', 'geom')
+        # Don't include id in fields since we're not importing it
+        # import_id_fields = []  # Don't use import_id_fields
         skip_unchanged = True
-        report_skipped = False
-        import_id_fields = []
+        report_skipped = True
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Don't include id field in the import
+        self.fields.pop('id', None)
+    
+    def before_import(self, dataset, **kwargs):
+        """Check dataset structure before import"""
+        headers = dataset.headers
+        print(f"Dataset headers: {headers}")
+        
+        # Rename 'reg_code' to 'reg_code' if needed
+        if 'reg_code' in headers and 'reg_code' not in headers:
+            idx = headers.index('reg_code')
+            headers[idx] = 'reg_code'
+            dataset.headers = headers
+        
+        return dataset
+    
+    def before_import_row(self, row, **kwargs):
+        """Process each row before import"""
+        try:
+            # Debug info
+            print(f"Processing row: {dict(row)}")
+            
+            # Handle the reg_code -> reg_code mapping
+            if 'reg_code' in row and 'reg_code' not in row:
+                row['reg_code'] = row['reg_code']
+            
+            # Ensure reg_code exists and is valid
+            reg_code = str(row.get('reg_code', '')).strip()
+            if not reg_code:
+                # Generate from region name
+                region_name = str(row.get('region', '')).strip()
+                if region_name:
+                    if ' ' in region_name:
+                        code = ''.join([word[0] for word in region_name.split() if word])
+                    else:
+                        code = region_name[:2]
+                    row['reg_code'] = code.upper()
+                else:
+                    raise ValueError("Missing both region and reg_code")
+            
+            # Process geometry - handle empty/invalid WKT
+            self._process_geometry(row)
+            
+            # Remove id field if present - we don't want to import IDs
+            if 'id' in row:
+                row.pop('id')
+            
+        except Exception as e:
+            print(f"Error processing row: {e}")
+            raise ValueError(f"Row processing failed: {e}")
+    
+    def _process_geometry(self, row):
+        """Process geometry data - handle empty/incomplete WKT"""
+        if 'geom' not in row:
+            return
+        
+        geom_data = str(row['geom']).strip()
+        
+        # Handle empty/null geometry
+        if not geom_data or geom_data.upper() in ['NULL', 'NONE', '', 'NAN']:
+            row['geom'] = None
+            return
+        
+        # Check if it's a valid WKT string
+        if self._is_valid_wkt(geom_data):
+            try:
+                geom = GEOSGeometry(geom_data)
+                row['geom'] = geom.wkt
+                return
+            except Exception as e:
+                print(f"Invalid WKT geometry (trying to fix): {e}")
+        
+        # Try to fix common WKT issues
+        fixed_wkt = self._fix_wkt_string(geom_data)
+        if fixed_wkt:
+            try:
+                geom = GEOSGeometry(fixed_wkt)
+                row['geom'] = geom.wkt
+                return
+            except Exception as e:
+                print(f"Could not fix WKT: {e}")
+        
+        # If all else fails, set to None
+        print(f"Setting geometry to None for region: {row.get('region')}")
+        row['geom'] = None
+    
+    def _is_valid_wkt(self, wkt_string):
+        """Check if string looks like valid WKT"""
+        wkt = wkt_string.upper().strip()
+        valid_prefixes = ['MULTIPOLYGON', 'POLYGON', 'POINT', 'LINESTRING', 'GEOMETRYCOLLECTION']
+        
+        for prefix in valid_prefixes:
+            if wkt.startswith(prefix + '(') or wkt.startswith(prefix + ' (('):
+                # Check basic structure
+                if wkt.count('(') == wkt.count(')'):
+                    return True
+        return False
+    
+    def _fix_wkt_string(self, wkt_string):
+        """Try to fix common WKT issues"""
+        wkt = wkt_string.strip()
+        
+        # Fix 1: Ensure proper parentheses
+        open_count = wkt.count('(')
+        close_count = wkt.count(')')
+        
+        if open_count != close_count:
+            # Add missing closing parentheses
+            wkt += ')' * (open_count - close_count)
+        
+        # Fix 2: Handle incomplete MULTIPOLYGON/POLYGON
+        if wkt.upper().startswith('MULTIPOLYGON') and '(((' not in wkt:
+            # Try to convert to POLYGON if MULTIPOLYGON is malformed
+            wkt = wkt.replace('MULTIPOLYGON', 'POLYGON', 1)
+        
+        # Fix 3: Ensure proper coordinate format
+        # Remove any non-numeric characters except parentheses, commas, and dots
+        lines = wkt.split('(')
+        if len(lines) > 1:
+            coords_part = lines[-1].rsplit(')', 1)[0]
+            # Clean coordinates
+            coords_clean = re.sub(r'[^\d\s.,-]', '', coords_part)
+            # Reconstruct WKT
+            wkt = f"{'('.join(lines[:-1])}({coords_clean}))"
+        
+        # Fix 4: Check for missing closing
+        if not wkt.endswith(')'):
+            wkt += ')'
+        
+        return wkt if self._is_valid_wkt(wkt) else None
+    
+    def get_or_init_instance(self, instance_loader, row):
+        """Handle instance lookup - fix for NoneType error"""
+        try:
+            # Use reg_code as the lookup field
+            if 'reg_code' in row and row['reg_code']:
+                reg_code = str(row['reg_code']).strip().upper()
+                existing = Region.objects.filter(reg_code=reg_code).first()
+                if existing:
+                    print(f"Updating existing region: {reg_code}")
+                    return existing, False  # Update existing
+            
+            # Fallback: use region name
+            if 'region' in row and row['region']:
+                region_name = str(row['region']).strip()
+                existing = Region.objects.filter(region=region_name).first()
+                if existing:
+                    print(f"Updating existing region by name: {region_name}")
+                    return existing, False  # Update existing
+            
+            # Create new instance
+            print(f"Creating new region: {row.get('reg_code', 'Unknown')}")
+            return Region(), True  # Create new
+            
+        except Exception as e:
+            print(f"Error in get_or_init_instance: {e}")
+            # Always return a new instance on error
+            return Region(), True
+    
+    def after_import_instance(self, instance, new, row, **kwargs):
+        """Additional processing after instance is created/updated"""
+        if new:
+            print(f"Successfully created region: {instance.region}")
+        else:
+            print(f"Successfully updated region: {instance.region}")
+    
+    # def import_data(self, dataset, dry_run=False, raise_errors=False, **kwargs):
+    #     """Override to handle import errors gracefully"""
+    #     # First, clean the dataset
+    #     cleaned_dataset = self.before_import(dataset, True, dry_run, **kwargs)
+        
+    #     # Import with error handling
+    #     result = super().import_data(
+    #         cleaned_dataset,
+    #         dry_run=dry_run,
+    #         raise_errors=False,  # Collect errors instead of raising immediately
+    #         **kwargs
+    #     )
+        
+    #     # Report results
+    #     if not dry_run:
+    #         print(f"Import completed: {result.totals}")
+        
+    #     return result
 
-class groupTblResource(resources.ModelResource):
+
+# Alternative: Simple working version if above is too complex
+class SimpleRegionResource(resources.ModelResource):
+    """Simplified version that should work with your data"""
+    
     class Meta:
-        model = groupTbl
-        exclude = ('created_date', 'delete_field')
-        import_id_fields = ['name']
+        model = Region
+        fields = ('region', 'reg_code')
+        import_id_fields = ['reg_code']
+        skip_unchanged = True
+    
+    def __init__(self):
+        super().__init__()
+        # Map your CSV columns
+        self.fields['reg_code'].column_name = 'reg_code'
+    
+    def before_import_row(self, row, **kwargs):
+        """Simple preprocessing"""
+        # Map reg_code to reg_code
+        if 'reg_code' in row:
+            row['reg_code'] = row['reg_code']
+        
+        # Ensure reg_code is uppercase
+        if 'reg_code' in row and row['reg_code']:
+            row['reg_code'] = str(row['reg_code']).strip().upper()
+        
+        # Skip geometry for now
+        if 'geom' in row:
+            row.pop('geom')
+        
+        # Skip id
+        if 'id' in row:
+            row.pop('id')
 
-class staffTblResource(resources.ModelResource):
+class cocoaDistrictResource(resources.ModelResource):
+    region = fields.Field(
+        column_name='region',
+        attribute='region',
+        widget=ForeignKeyWidget(Region, 'name')
+    )
+    
     class Meta:
-        model = staffTbl
-        exclude = ('created_date', 'delete_field')
-        import_id_fields = ['contact']
-        export_order = ('id', 'first_name', 'last_name', 'gender', 'dob', 'contact', 
-                       'designation', 'email_address', 'district', 'staffid', 'staffidnum')
+        model = cocoaDistrict
+        fields = ('name', 'district_code', 'region', 'shape_area')
 
-class regionStaffTblResource(resources.ModelResource):
+class CommunityResource(resources.ModelResource):
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = Community
+        fields = ('name', 'district', 'operational_area')
+
+# Project Resources
+class projectTblResource(resources.ModelResource):
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = projectTbl
+        fields = ('name', 'district')
+
+class projectStaffTblResource(resources.ModelResource):
     staffTbl_foreignkey = fields.Field(
         column_name='staff',
         attribute='staffTbl_foreignkey',
         widget=ForeignKeyWidget(staffTbl, 'contact')
     )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
     
     class Meta:
-        model = regionStaffTbl
-        exclude = ('created_date', 'delete_field')
+        model = projectStaffTbl
+        fields = ('staffTbl_foreignkey', 'projectTbl_foreignkey')
+
+# Staff Resources
+class staffTblResource(resources.ModelResource):
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    
+    class Meta:
+        model = staffTbl
+        fields = ('first_name', 'last_name', 'gender', 'dob', 'contact', 
+                 'email_address', 'staffid', 'staffidnum', 'projectTbl_foreignkey')
+        import_id_fields = ['contact']
 
 class districtStaffTblResource(resources.ModelResource):
     staffTbl_foreignkey = fields.Field(
@@ -62,456 +334,565 @@ class districtStaffTblResource(resources.ModelResource):
     districtTbl_foreignkey = fields.Field(
         column_name='district',
         attribute='districtTbl_foreignkey',
-        widget=ForeignKeyWidget(cocoaDistrict, 'district')
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
     )
     
     class Meta:
         model = districtStaffTbl
-        exclude = ('created_date', 'delete_field')
+        fields = ('staffTbl_foreignkey', 'districtTbl_foreignkey')
 
-class usergroupTblResource(resources.ModelResource):
-    class Meta:
-        model = usergroupTbl
-        exclude = ('created_date', 'delete_field')
-
+# Activity Resources
 class ActivitiesResource(resources.ModelResource):
     class Meta:
         model = Activities
-        import_id_fields = ['activity_code']
+        fields = ('main_activity', 'sub_activity', 'activity_code', 'required_equipment')
 
-class rehabassistantsTblResource(resources.ModelResource):
-    staffTbl_foreignkey = fields.Field(
-        column_name='project_officer',
-        attribute='staffTbl_foreignkey',
-        widget=ForeignKeyWidget(staffTbl, 'contact')
-    )
-    districtTbl_foreignkey = fields.Field(
-        column_name='district',
-        attribute='districtTbl_foreignkey',
-        widget=ForeignKeyWidget(cocoaDistrict, 'district')
-    )
-    
-    class Meta:
-        model = rehabassistantsTbl
-        exclude = ('created_date', 'delete_field', 'uid', 'fbase_code', 'passportpic', 
-                   'sigcode', 'kobocode', 'comments')
-        import_id_fields = ['phone_number']
-
+# Farm Resources
 class FarmdetailsTblResource(resources.ModelResource):
-    districtTbl_foreignkey = fields.Field(
+    region = fields.Field(
+        column_name='region',
+        attribute='region',
+        widget=ForeignKeyWidget(Region, 'name')
+    )
+    district = fields.Field(
         column_name='district',
-        attribute='districtTbl_foreignkey',
-        widget=ForeignKeyWidget(cocoaDistrict, 'district')
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    community = fields.Field(
+        column_name='community',
+        attribute='community',
+        widget=ForeignKeyWidget(Community, 'name')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
     )
     
     class Meta:
         model = FarmdetailsTbl
-        exclude = ('created_date', 'delete_field')
+        fields = ('farm_reference', 'region', 'district', 'farmername', 'location', 
+                 'community', 'farm_size', 'projectTbl_foreignkey', 'sector', 'year_of_establishment',
+                 'status', 'expunge', 'reason4expunge')
         import_id_fields = ['farm_reference']
 
-class rehabassistantsAssignmentTblResource(resources.ModelResource):
-    farmTbl_foreignkey = fields.Field(
-        column_name='farm_reference',
-        attribute='farmTbl_foreignkey',
-        widget=ForeignKeyWidget(Farms, 'farm_id')
+# Contractor Resources
+class contractorsTblResource(resources.ModelResource):
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
     )
-    rehabassistantsTbl_foreignkey = fields.Field(
-        column_name='rehab_assistant',
-        attribute='rehabassistantsTbl_foreignkey',
-        widget=ForeignKeyWidget(rehabassistantsTbl, 'phone_number')
+    
+    class Meta:
+        model = contractorsTbl
+        fields = ('contractor_name', 'contact_person', 'address', 'contact_number',
+                 'interested_services', 'target', 'district')
+
+class contratorDistrictAssignmentResource(resources.ModelResource):
+    contractor = fields.Field(
+        column_name='contractor',
+        attribute='contractor',
+        widget=ForeignKeyWidget(contractorsTbl, 'contractor_name')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = contratorDistrictAssignment
+        fields = ('contractor', 'projectTbl_foreignkey', 'district')
+
+# Job Order Resources
+class JoborderResource(resources.ModelResource):
+    region = fields.Field(
+        column_name='region',
+        attribute='region',
+        widget=ForeignKeyWidget(Region, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    community = fields.Field(
+        column_name='community',
+        attribute='community',
+        widget=ForeignKeyWidget(Community, 'name')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    
+    class Meta:
+        model = Joborder
+        fields = ('farm_reference', 'region', 'district', 'farmername', 'farm_size', 'location',
+                 'community', 'projectTbl_foreignkey', 'sector', 'year_of_establishment',
+                 'job_order_code')
+
+# API Structure Models Resources
+class PersonnelModelResource(resources.ModelResource):
+    community = fields.Field(
+        column_name='community',
+        attribute='community',
+        widget=ForeignKeyWidget(Community, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    
+    class Meta:
+        model = PersonnelModel
+        fields = ('first_name', 'surname', 'other_names', 'gender', 'date_of_birth',
+                 'primary_phone_number', 'id_type', 'id_number', 'address',
+                 'community', 'district', 'projectTbl_foreignkey', 'personnel_type', 'date_joined')
+
+class PersonnelAssignmentModelResource(resources.ModelResource):
+    po = fields.Field(
+        column_name='po',
+        attribute='po',
+        widget=ForeignKeyWidget(staffTbl, 'contact')
+    )
+    ra = fields.Field(
+        column_name='ra',
+        attribute='ra',
+        widget=ForeignKeyWidget(PersonnelModel, 'primary_phone_number')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    community = fields.Field(
+        column_name='community',
+        attribute='community',
+        widget=ForeignKeyWidget(Community, 'name')
+    )
+    
+    class Meta:
+        model = PersonnelAssignmentModel
+        fields = ('uid', 'po', 'ra', 'projectTbl_foreignkey', 'district', 'community',
+                 'date_assigned', 'status')
+
+class DailyReportingModelResource(resources.ModelResource):
+    agent = fields.Field(
+        column_name='agent',
+        attribute='agent',
+        widget=ForeignKeyWidget(staffTbl, 'contact')
+    )
+    main_activity = fields.Field(
+        column_name='main_activity',
+        attribute='main_activity',
+        widget=ForeignKeyWidget(Activities, 'main_activity')
     )
     activity = fields.Field(
         column_name='activity',
         attribute='activity',
-        widget=ForeignKeyWidget(Activities, 'activity_code')
+        widget=ForeignKeyWidget(Activities, 'sub_activity')
     )
-    staffTbl_foreignkey = fields.Field(
-        column_name='project_officer',
-        attribute='staffTbl_foreignkey',
-        widget=ForeignKeyWidget(staffTbl, 'contact')
+    farm = fields.Field(
+        column_name='farm',
+        attribute='farm',
+        widget=ForeignKeyWidget(FarmdetailsTbl, 'farm_reference')
+    )
+    community = fields.Field(
+        column_name='community',
+        attribute='community',
+        widget=ForeignKeyWidget(Community, 'name')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
     )
     
     class Meta:
-        model = rehabassistantsAssignmentTbl
-        exclude = ('created_date', 'delete_field', 'uid')
+        model = DailyReportingModel
+        fields = ('uid', 'agent', 'completion_date', 'reporting_date', 'main_activity',
+                 'activity', 'no_rehab_assistants', 'area_covered_ha', 'remark',
+                 'status', 'farm', 'farm_ref_number', 'farm_size_ha', 'community',
+                 'number_of_people_in_group', 'group_work', 'sector',
+                 'projectTbl_foreignkey', 'district')
 
-class weeklyMontoringTblResource(resources.ModelResource):
-    staffTbl_foreignkey = fields.Field(
-        column_name='project_officer',
-        attribute='staffTbl_foreignkey',
+class GrowthMonitoringModelResource(resources.ModelResource):
+    agent = fields.Field(
+        column_name='agent',
+        attribute='agent',
         widget=ForeignKeyWidget(staffTbl, 'contact')
     )
-    farmTbl_foreignkey = fields.Field(
-        column_name='farm_reference',
-        attribute='farmTbl_foreignkey',
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = GrowthMonitoringModel
+        fields = ('uid', 'plant_uid', 'number_of_leaves', 'height', 'stem_size',
+                 'leaf_color', 'date', 'lat', 'lng', 'agent', 'projectTbl_foreignkey', 'district')
+
+class OutbreakFarmModelResource(resources.ModelResource):
+    community = fields.Field(
+        column_name='community',
+        attribute='community',
+        widget=ForeignKeyWidget(Community, 'name')
+    )
+    reported_by = fields.Field(
+        column_name='reported_by',
+        attribute='reported_by',
+        widget=ForeignKeyWidget(staffTbl, 'contact')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    region = fields.Field(
+        column_name='region',
+        attribute='region',
+        widget=ForeignKeyWidget(Region, 'name')
+    )
+    
+    class Meta:
+        model = OutbreakFarmModel
+        fields = ('uid', 'farmer_name', 'farm_location', 'community', 'farm_size',
+                 'disease_type', 'date_reported', 'reported_by', 'status',
+                 'coordinates', 'projectTbl_foreignkey', 'district', 'region')
+
+class ContractorCertificateModelResource(resources.ModelResource):
+    contractor = fields.Field(
+        column_name='contractor',
+        attribute='contractor',
+        widget=ForeignKeyWidget(contractorsTbl, 'contractor_name')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = ContractorCertificateModel
+        fields = ('uid', 'contractor', 'work_type', 'start_date', 'end_date',
+                 'status', 'remarks', 'projectTbl_foreignkey', 'district')
+
+class ContractorCertificateVerificationModelResource(resources.ModelResource):
+    certificate = fields.Field(
+        column_name='certificate',
+        attribute='certificate',
+        widget=ForeignKeyWidget(ContractorCertificateModel, 'uid')
+    )
+    verified_by = fields.Field(
+        column_name='verified_by',
+        attribute='verified_by',
+        widget=ForeignKeyWidget(staffTbl, 'contact')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = ContractorCertificateVerificationModel
+        fields = ('uid', 'certificate', 'verified_by', 'verification_date',
+                 'is_verified', 'comments', 'projectTbl_foreignkey', 'district')
+
+class IssueModelResource(resources.ModelResource):
+    user = fields.Field(
+        column_name='user',
+        attribute='user',
+        widget=ForeignKeyWidget(staffTbl, 'contact')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = IssueModel
+        fields = ('uid', 'user', 'issue_type', 'description', 'date_reported',
+                 'status', 'projectTbl_foreignkey', 'district')
+
+class IrrigationModelResource(resources.ModelResource):
+    farm = fields.Field(
+        column_name='farm',
+        attribute='farm',
+        widget=ForeignKeyWidget(FarmdetailsTbl, 'farm_reference')
+    )
+    agent = fields.Field(
+        column_name='agent',
+        attribute='agent',
+        widget=ForeignKeyWidget(staffTbl, 'contact')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = IrrigationModel
+        fields = ('uid', 'farm', 'farm_id', 'irrigation_type', 'water_volume', 'date',
+                 'agent', 'projectTbl_foreignkey', 'district')
+
+class VerifyRecordResource(resources.ModelResource):
+    farm = fields.Field(
+        column_name='farm',
+        attribute='farm',
+        widget=ForeignKeyWidget(FarmdetailsTbl, 'farm_reference')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = VerifyRecord
+        fields = ('uid', 'farm', 'farmRef', 'timestamp', 'status', 'projectTbl_foreignkey', 'district')
+
+class CalculatedAreaResource(resources.ModelResource):
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = CalculatedArea
+        fields = ('date', 'title', 'value', 'projectTbl_foreignkey', 'district')
+
+# Payment Models Resources
+class PaymentReportResource(resources.ModelResource):
+    ra = fields.Field(
+        column_name='ra',
+        attribute='ra',
+        widget=ForeignKeyWidget(PersonnelModel, 'primary_phone_number')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    
+    class Meta:
+        model = PaymentReport
+        fields = ('uid', 'ra', 'ra_name', 'district', 'bank_name', 'bank_branch',
+                 'snnit_no', 'salary', 'year', 'po_number', 'month', 'week',
+                 'payment_option', 'momo_acc', 'projectTbl_foreignkey')
+
+class DetailedPaymentReportResource(resources.ModelResource):
+    ra = fields.Field(
+        column_name='ra',
+        attribute='ra',
+        widget=ForeignKeyWidget(PersonnelModel, 'primary_phone_number')
+    )
+    po = fields.Field(
+        column_name='po',
+        attribute='po',
+        widget=ForeignKeyWidget(staffTbl, 'contact')
+    )
+    farm = fields.Field(
+        column_name='farm',
+        attribute='farm',
         widget=ForeignKeyWidget(FarmdetailsTbl, 'farm_reference')
     )
     activity = fields.Field(
         column_name='activity',
         attribute='activity',
-        widget=ForeignKeyWidget(Activities, 'activity_code')
+        widget=ForeignKeyWidget(Activities, 'sub_activity')
     )
-    districtTbl_foreignkey = fields.Field(
+    district = fields.Field(
         column_name='district',
-        attribute='districtTbl_foreignkey',
-        widget=ForeignKeyWidget(cocoaDistrict, 'district')
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
     )
-    monitoring_date = fields.Field(
-        column_name='monitoring_date',
-        attribute='monitoring_date',
-        widget=DateWidget(format='%Y-%m-%d')
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
     )
     
     class Meta:
-        model = weeklyMontoringTbl
-        exclude = ('created_date', 'delete_field', 'uid', 'current_farm_pic', 'geom', 'code')
-        export_order = ('id', 'monitoring_date', 'farm_ref_number', 'farm_size_ha', 
-                       'activity', 'area_covered_ha', 'status', 'remark')
-
-class currentstatusFarmTblResource(resources.ModelResource):
-    class Meta:
-        model = currentstatusFarmTbl
-        exclude = ('created_date', 'delete_field')
-
-class weeklyMontoringrehabassistTblResource(resources.ModelResource):
-    class Meta:
-        model = weeklyMontoringrehabassistTbl
-        exclude = ('created_date', 'delete_field')
-
-class fuelMontoringTblResource(resources.ModelResource):
-    class Meta:
-        model = fuelMontoringTbl
-        exclude = ('created_date', 'delete_field', 'uid')
-
-class odkUrlModelResource(resources.ModelResource):
-    class Meta:
-        model = odkUrlModel
-        exclude = ('created_date', 'delete_field')
-
-class communityTblResource(resources.ModelResource):
-    districtTbl_foreignkey = fields.Field(
-        column_name='district',
-        attribute='districtTbl_foreignkey',
-        widget=ForeignKeyWidget(cocoaDistrict, 'district')
-    )
-    
-    class Meta:
-        model = communityTbl
-        import_id_fields = ['community']
-
-class POdailyreportTblResource(resources.ModelResource):
-    class Meta:
-        model = POdailyreportTbl
-        exclude = ('created_date', 'delete_field', 'code')
-
-class activateRateResource(resources.ModelResource):
-    class Meta:
-        model = activateRate
-        exclude = ('created_date', 'delete_field')
-
-class contractorsTblResource(resources.ModelResource):
-    class Meta:
-        model = contractorsTbl
-        exclude = ('created_date', 'delete_field')
-        import_id_fields = ['contractor_name']
-
-class contratorDistrictAssignmentResource(resources.ModelResource):
-    class Meta:
-        model = contratorDistrictAssignment
-        exclude = ('created_date', 'delete_field')
-
-class monitorbackroundtaskTblResource(resources.ModelResource):
-    class Meta:
-        model = monitorbackroundtaskTbl
-        exclude = ('created_date', 'delete_field')
-
-class LayersResource(resources.ModelResource):
-    class Meta:
-        model = Layers
-        exclude = ('created_date',)
-        import_id_fields = ['name']
-
-class posRoutemonitoringResource(resources.ModelResource):
-    class Meta:
-        model = posRoutemonitoring
-        exclude = ('created_date', 'delete_field', 'uid', 'geom')
-
-class FeedbackResource(resources.ModelResource):
-    class Meta:
-        model = Feedback
-        exclude = ('created_date', 'delete_field', 'uid')
-
-class maintenanceReportResource(resources.ModelResource):
-    class Meta:
-        model = maintenanceReport
-        exclude = ('created_date', 'delete_field', 'uuid', 'formid', 'instanceID', 
-                   'submission_time', 'submitted_by', 'Take_farm_picture', 'Please_Sign_Here')
-
-class EquipmentResource(resources.ModelResource):
-    class Meta:
-        model = Equipment
-        exclude = ('created_date', 'delete_field', '_uuid', 'koboid', 'pic_serial_number', 
-                   'pic_equipment')
-        import_id_fields = ['equipment_code']
-
-class chedcertficateofWorkdoneResource(resources.ModelResource):
-    class Meta:
-        model = chedcertficateofWorkdone
-        exclude = ('created_date', 'delete_field', 'code')
-
-class paymentReportResource(resources.ModelResource):
-    class Meta:
-        model = paymentReport
-        exclude = ('created_date', 'delete_field', 'code')
-
-class weeklyreportSummaryResource(resources.ModelResource):
-    class Meta:
-        model = weeklyreportSummary
-        exclude = ('created_date', 'delete_field')
-
-class farmDatabaseResource(resources.ModelResource):
-    class Meta:
-        model = farmDatabase
-        exclude = ('created_date', 'delete_field')
-        import_id_fields = ['farm_ref']
-
-class paymentdetailedReportResource(resources.ModelResource):
-    class Meta:
-        model = paymentdetailedReport
-        exclude = ('created_date', 'delete_field', 'code')
-
-class versionTblResource(resources.ModelResource):
-    class Meta:
-        model = versionTbl
-        exclude = ('created_date', 'delete_field')
-
-class mobileMaintenanceResource(resources.ModelResource):
-    class Meta:
-        model = mobileMaintenance
-        exclude = ('created_date', 'delete_field', 'uid', 'current_farm_pic')
-
-class mobileMaintenancerehabassistTblResource(resources.ModelResource):
-    class Meta:
-        model = mobileMaintenancerehabassistTbl
-        exclude = ('created_date', 'delete_field')
-
-class verificationWorkdoneResource(resources.ModelResource):
-    class Meta:
-        model = verificationWorkdone
-        exclude = ('created_date', 'delete_field', 'code', 'current_farm_pic', 'geom', 'uuid')
-
-class sectorResource(resources.ModelResource):
-    class Meta:
-        model = sector
-        exclude = ('created_date', 'delete_field')
-
-class sectorDistrictResource(resources.ModelResource):
-    class Meta:
-        model = sectorDistrict
-        exclude = ('created_date', 'delete_field')
-
-class sectorStaffassignmentResource(resources.ModelResource):
-    class Meta:
-        model = sectorStaffassignment
-        exclude = ('created_date', 'delete_field')
-
-class seedlingEnumerationResource(resources.ModelResource):
-    class Meta:
-        model = seedlingEnumeration
-        exclude = ('created_date', 'delete_field', 'field_uri', 'instanceID', 
-                   'field_submission_date', 'summary_sheet_pic')
-
-class seedlingenumworkdoneRaResource(resources.ModelResource):
-    class Meta:
-        model = seedlingenumworkdoneRa
-        exclude = ('created_date', 'delete_field')
-
-class seedlingenumworkdonePoResource(resources.ModelResource):
-    class Meta:
-        model = seedlingenumworkdonePo
-        exclude = ('created_date', 'delete_field')
-
-class HQcertificateRecieptResource(resources.ModelResource):
-    class Meta:
-        model = HQcertificateReciept
-        exclude = ('created_date', 'delete_field')
-
-class SectorcertificateRecieptResource(resources.ModelResource):
-    class Meta:
-        model = SectorcertificateReciept
-        exclude = ('created_date', 'delete_field')
-
-class SidebarResource(resources.ModelResource):
-    class Meta:
-        model = Sidebar
-        exclude = ('created_date', 'delete_field')
-
-class GroupSidebarResource(resources.ModelResource):
-    class Meta:
-        model = GroupSidebar
-        exclude = ('created_date', 'delete_field')
-
-class mappedFarmsResource(resources.ModelResource):
-    class Meta:
-        model = mappedFarms
-        exclude = ('created_date', 'delete_field', 'uuid', 'geom', 'farmboundary')
-
-class seedlingEnumerationCheckResource(resources.ModelResource):
-    class Meta:
-        model = seedlingEnumerationCheck
-        exclude = ('created_date', 'delete_field', 'field_uri')
-
-class powerbiReportResource(resources.ModelResource):
-    class Meta:
-        model = powerbiReport
-        exclude = ('created_date', 'delete_field')
-
-class FarmValidationResource(resources.ModelResource):
-    class Meta:
-        model = FarmValidation
-        exclude = ('created_date', 'delete_field', 'field_uri')
-
-class FarmValidationCheckResource(resources.ModelResource):
-    class Meta:
-        model = FarmValidationCheck
-        exclude = ('created_date', 'delete_field', 'field_uri')
-
-class weeklyActivityReportResource(resources.ModelResource):
-    class Meta:
-        model = weeklyActivityReport
-        exclude = ('created_date', 'delete_field', 'code')
-
-class calbankmomoTransactionResource(resources.ModelResource):
-    class Meta:
-        model = calbankmomoTransaction
-        exclude = ('created_date', 'delete_field')
-        import_id_fields = ['TransactionReference']
-
-class JoborderResource(resources.ModelResource):
-    class Meta:
-        model = Joborder
-        exclude = ('created_date', 'delete_field', 'job_order_code')
-        import_id_fields = ['farm_reference']
-
-class activityReportingResource(resources.ModelResource):
-    class Meta:
-        model = activityReporting
-        exclude = ('created_date', 'delete_field', 'uid')
-
-class activityreportingrehabassistTblResource(resources.ModelResource):
-    class Meta:
-        model = activityreportingrehabassistTbl
-        exclude = ('created_date', 'delete_field')
-
-class specialprojectfarmsTblResource(resources.ModelResource):
-    class Meta:
-        model = specialprojectfarmsTbl
-        exclude = ('created_date', 'delete_field', 'code')
-
-class odkfarmsvalidationTblResource(resources.ModelResource):
-    class Meta:
-        model = odkfarmsvalidationTbl
-        exclude = ('created_date', 'delete_field', 'code', 'instanceID', 'deviceId', 
-                   'ex_video_widget')
-
-class odkdailyreportingTblResource(resources.ModelResource):
-    class Meta:
-        model = odkdailyreportingTbl
-        exclude = ('created_date', 'delete_field', 'code', 'instanceID', 'deviceId')
-
-class allFarmqueryTblResource(resources.ModelResource):
-    class Meta:
-        model = allFarmqueryTbl
-        exclude = ('created_date', 'delete_field', 'code')
-
-class staffFarmsAssignmentResource(resources.ModelResource):
-    class Meta:
-        model = staffFarmsAssignment
-        exclude = ('created_date', 'delete_field')
+        model = DetailedPaymentReport
+        fields = ('uid', 'group_code', 'ra', 'ra_id', 'ra_name', 'ra_account',
+                 'po', 'po_name', 'po_number', 'district', 'projectTbl_foreignkey',
+                 'farmhands_type', 'farm', 'farm_reference', 'number_in_a_group',
+                 'activity', 'farmsize', 'achievement', 'amount', 'week', 'month',
+                 'year', 'issue', 'sector', 'act_code')
 
 # ============================================
-# ADMIN CLASSES WITH IMPORT-EXPORT
+# GIS ADMIN CLASSES
 # ============================================
-
-# GIS Models Admin
-class MajorRoadsAdmin(gis_admin.GISModelAdmin):
-    list_display = ('segment', 'road_num', 'length_km_field', 'class_code')
-    list_filter = ('reg_code', 'class_code')
-    search_fields = ('segment', 'road_num')
-    gis_widget_kwargs = {
-        'attrs': {
-            'default_lon': -1.023194,
-            'default_lat': 7.946527,
-            'default_zoom': 7,
-        }
-    }
-
-class DistrictOfficesAdmin(gis_admin.GISModelAdmin):
-    list_display = ('town_name',)
-    search_fields = ('town_name',)
 
 class FarmsAdmin(gis_admin.GISModelAdmin):
+    resource_class = FarmsResource
     list_display = ('farm_id',)
     search_fields = ('farm_id',)
     list_per_page = 50
 
-class cocoaDistrictAdmin(gis_admin.GISModelAdmin):
-    list_display = ('district', 'district_code', 'shape_area')
-    search_fields = ('district', 'district_code')
-    list_filter = ('district_code',)
+# ============================================
+# NON-GIS ADMIN CLASSES
+# ============================================
+
+from django.contrib.gis.admin import GISModelAdmin
+
+from django.contrib import admin
+from import_export.admin import ImportExportModelAdmin
+from leaflet.admin import LeafletGeoAdmin  # Now this will work
+from .models import Region
+# from .resources import RegionResource
+
+@admin.register(Region)
+class RegionAdmin(ImportExportModelAdmin, LeafletGeoAdmin):
+    resource_class = RegionResource
+    list_display = ('region', 'reg_code', 'created_date')
+    search_fields = ('region', 'reg_code')
+    list_per_page = 50
+    
+    # Leaflet settings
+    settings_overrides = {
+        'DEFAULT_CENTER': (7.9465, -1.0232),
+        'DEFAULT_ZOOM': 6,
+    }
+
+@admin.register(cocoaDistrict)
+class cocoaDistrictAdmin(ImportExportModelAdmin):
+    resource_class = cocoaDistrictResource
+    list_display = ('name', 'district_code', 'region', 'shape_area', 'created_date')
+    list_filter = ('region',)
+    search_fields = ('name', 'district_code')
     list_per_page = 50
 
-# Non-GIS Models Admin
-class groupTblAdmin(ImportExportModelAdmin):
-    resource_class = groupTblResource
-    list_display = ('name', 'created_date')
+@admin.register(Community)
+class CommunityAdmin(ImportExportModelAdmin):
+    resource_class = CommunityResource
+    list_display = ('name', 'district', 'operational_area')
+    list_filter = ('district',)
+    search_fields = ('name', 'operational_area')
+    list_per_page = 50
+
+@admin.register(projectTbl)
+class projectTblAdmin(ImportExportModelAdmin):
+    resource_class = projectTblResource
+    list_display = ('name', 'district', 'created_date')
+    list_filter = ('district',)
     search_fields = ('name',)
     list_per_page = 50
 
+@admin.register(projectStaffTbl)
+class projectStaffTblAdmin(ImportExportModelAdmin):
+    resource_class = projectStaffTblResource
+    list_display = ('staffTbl_foreignkey', 'projectTbl_foreignkey')
+    list_filter = ('projectTbl_foreignkey',)
+    search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name',
+                    'projectTbl_foreignkey__name')
+    list_per_page = 50
+
+@admin.register(districtStaffTbl)
+class districtStaffTblAdmin(ImportExportModelAdmin):
+    resource_class = districtStaffTblResource
+    list_display = ('staffTbl_foreignkey', 'districtTbl_foreignkey')
+    list_filter = ('districtTbl_foreignkey',)
+    search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name',
+                    'districtTbl_foreignkey__name')
+    list_per_page = 50
+
+@admin.register(staffTbl)
 class staffTblAdmin(ImportExportModelAdmin):
     resource_class = staffTblResource
-    list_display = ('first_name', 'last_name', 'contact', 'designation', 'district', 'staffid')
-    list_filter = ('designation', 'district', 'gender')
+    list_display = ('first_name', 'last_name', 'contact', 'staffid', 'projectTbl_foreignkey','password')
+    list_filter = ('gender', 'projectTbl_foreignkey')
     search_fields = ('first_name', 'last_name', 'contact', 'staffid', 'email_address')
-    readonly_fields = ('staffid', 'staffidnum')
+    readonly_fields = ('staffid', 'staffidnum', 'uid', 'fbase_code')
     fieldsets = (
         ('Personal Information', {
-            'fields': ('first_name', 'last_name', 'gender', 'dob', 'contact', 'email_address')
+            'fields': ('user', 'first_name', 'last_name', 'gender', 'dob', 'contact', 'email_address', 'password')
         }),
         ('Professional Information', {
-            'fields': ('designation', 'district', 'staff_station', 'nursery')
+            'fields': ('projectTbl_foreignkey',)
         }),
         ('System Information', {
-            'fields': ('user', 'staffid', 'staffidnum', 'crmpassword', 'uid', 'fbase_code')
+            'fields': ('staffid', 'staffidnum', 'uid', 'fbase_code')
         }),
     )
     list_per_page = 50
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('designation')
-
-class regionStaffTblAdmin(ImportExportModelAdmin):
-    resource_class = regionStaffTblResource
-    list_display = ('staffTbl_foreignkey', 'created_date')
-    list_filter = ('created_date',)
-    search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name')
-    list_per_page = 50
-
-class districtStaffTblAdmin(ImportExportModelAdmin):
-    resource_class = districtStaffTblResource
-    list_display = ('staffTbl_foreignkey', 'created_date')
-    list_filter = ('created_date',)
-    search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name', 
-                     'districtTbl_foreignkey__district')
-    list_per_page = 50
-
-class usergroupTblAdmin(ImportExportModelAdmin):
-    resource_class = usergroupTblResource
-    list_display = ('staffTbl_foreignkey', 'group_location', 'created_date')
-    list_filter = ('group_location', 'created_date')
-    search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name')
-    list_per_page = 50
-
+@admin.register(Activities)
 class ActivitiesAdmin(ImportExportModelAdmin):
     resource_class = ActivitiesResource
     list_display = ('main_activity', 'sub_activity', 'activity_code', 'required_equipment')
@@ -519,41 +900,11 @@ class ActivitiesAdmin(ImportExportModelAdmin):
     search_fields = ('main_activity', 'sub_activity', 'activity_code')
     list_per_page = 50
 
-class rehabassistantsTblAdmin(ImportExportModelAdmin):
-    resource_class = rehabassistantsTblResource
-    list_display = ('name', 'phone_number', 'district', 'designation', 'staffTbl_foreignkey')
-    list_filter = ('designation', 'district', 'region', 'gender')
-    search_fields = ('name', 'phone_number', 'staff_code', 'id_number')
-    readonly_fields = ('staff_code', 'computcode', 'uid', 'code')
-    fieldsets = (
-        ('Personal Information', {
-            'fields': ('name', 'gender', 'dob', 'phone_number', 'photo_staff', 'passportpic')
-        }),
-        ('Employment Details', {
-            'fields': ('designation', 'district', 'region', 'staffTbl_foreignkey')
-        }),
-        ('Identification', {
-            'fields': ('id_type', 'id_number', 'ssnit_number')
-        }),
-        ('Payment Information', {
-            'fields': ('salary_bank_name', 'bank_branch', 'bank_account_number', 
-                      'payment_option', 'owner_momo', 'momo_account_name', 'momo_number',
-                      'po', 'po_number')
-        }),
-        ('System Information', {
-            'fields': ('staff_code', 'new_staff_code', 'computcode', 'uid', 'sigcode', 
-                      'kobocode', 'code', 'comments')
-        }),
-    )
-    list_per_page = 50
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('districtTbl_foreignkey', 'staffTbl_foreignkey')
-
+@admin.register(FarmdetailsTbl)
 class FarmdetailsTblAdmin(ImportExportModelAdmin):
     resource_class = FarmdetailsTblResource
-    list_display = ('farm_reference', 'farmername', 'district', 'farm_size', 'status', 'year_of_establishment')
-    list_filter = ('status', 'district', 'region', 'sector', 'expunge')
+    list_display = ('farm_reference', 'farmername', 'region', 'district', 'community', 'farm_size', 'status', 'projectTbl_foreignkey')
+    list_filter = ('status', 'region', 'district', 'sector', 'expunge', 'projectTbl_foreignkey')
     search_fields = ('farm_reference', 'farmername', 'location')
     list_per_page = 50
     actions = ['mark_as_expunged']
@@ -563,530 +914,221 @@ class FarmdetailsTblAdmin(ImportExportModelAdmin):
         self.message_user(request, f"{queryset.count()} farms marked as expunged")
     mark_as_expunged.short_description = "Mark selected farms as expunged"
 
-class rehabassistantsAssignmentTblAdmin(ImportExportModelAdmin):
-    resource_class = rehabassistantsAssignmentTblResource
-    list_display = ('farmTbl_foreignkey', 'rehabassistantsTbl_foreignkey', 'activity', 'assigned_date')
-    list_filter = ('assigned_date', 'activity')
-    search_fields = ('farmTbl_foreignkey__farm_id', 'rehabassistantsTbl_foreignkey__name')
-    
-    list_per_page = 50
-
-class weeklyMontoringTblAdmin(ImportExportModelAdmin):
-    resource_class = weeklyMontoringTblResource
-    list_display = ('monitoring_date', 'farm_ref_number', 'activity', 'area_covered_ha', 'status', 'staffTbl_foreignkey')
-    list_filter = ('status', 'monitoring_date', 'district', 'activity')
-    search_fields = ('farm_ref_number', 'remark', 'name_po', 'name_ras')
-    readonly_fields = ('code', 'geom')
-  
-    list_per_page = 50
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('monitoring_date', 'staffTbl_foreignkey', 'farmTbl_foreignkey', 'activity')
-        }),
-        ('Monitoring Details', {
-            'fields': ('no_rehab_assistants', 'no_rehab_technicians', 'original_farm_size', 
-                      'area_covered_ha', 'status', 'remark')
-        }),
-        ('Location Information', {
-            'fields': ('lat', 'lng', 'accuracy', 'geom')
-        }),
-        ('Additional Details', {
-            'fields': ('current_farm_pic', 'name_ra_rt', 'contractor', 'uid', 'date_purchased',
-                      'date', 'qty_purchased', 'name_operator_receiving', 'quantity_ltr',
-                      'red_oil_ltr', 'engine_oil_ltr', 'rate', 'remarks')
-        }),
-        ('Farm Information', {
-            'fields': ('farm_ref_number', 'community', 'Operational_area', 'main_activity',
-                      'sub_activity', 'district', 'name_ras', 'name_po', 'po_id',
-                      'quantity_plantain_suckers', 'quantity_plantain_seedling',
-                      'quantity_cocoa_seedling', 'quantity')
-        }),
-        ('System Information', {
-            'fields': ('code', 'weeddingcycle')
-        }),
-    )
-
-class currentstatusFarmTblAdmin(ImportExportModelAdmin):
-    resource_class = currentstatusFarmTblResource
-    list_display = ('farmTbl_foreignkey', 'activity', 'status', 'monitoring_date', 'year')
-    list_filter = ('status', 'year', 'activity')
-    search_fields = ('farmTbl_foreignkey__farm_reference',)
-  
-    list_per_page = 50
-
-class weeklyMontoringrehabassistTblAdmin(ImportExportModelAdmin):
-    resource_class = weeklyMontoringrehabassistTblResource
-    list_display = ('weeklyMontoringTbl_foreignkey', 'rehabassistants', 'area_covered_ha')
-    list_filter = ('weeklyMontoringTbl_foreignkey__monitoring_date',)
-    search_fields = ('rehabassistants',)
-    list_per_page = 50
-
-class fuelMontoringTblAdmin(ImportExportModelAdmin):
-    resource_class = fuelMontoringTblResource
-    list_display = ('date_received', 'farmdetailstbl_foreignkey', 'rehabassistantsTbl_foreignkey', 'fuel_ltr')
-    list_filter = ('date_received',)
-    search_fields = ('farmdetailstbl_foreignkey__farm_reference', 'remarks')
-   
-    list_per_page = 50
-
-class odkUrlModelAdmin(ImportExportModelAdmin):
-    resource_class = odkUrlModelResource
-    list_display = ('form_name', 'urlname', 'csvname', 'csvtype')
-    list_filter = ('csvtype',)
-    search_fields = ('form_name', 'urlname', 'csvname')
-    list_per_page = 50
-
-class communityTblAdmin(ImportExportModelAdmin):
-    resource_class = communityTblResource
-    list_display = ('district', 'Operational_area', 'community')
-    list_filter = ('district', 'Operational_area')
-    search_fields = ('district', 'Operational_area', 'community')
-    list_per_page = 50
-
-class POdailyreportTblAdmin(ImportExportModelAdmin):
-    resource_class = POdailyreportTblResource
-    list_display = ('reporting_date', 'farm_reference', 'activity', 'percentage_of_workdone', 'status')
-    list_filter = ('status', 'reporting_date')
-    search_fields = ('farm_reference', 'location', 'activity_code')
-   
-    list_per_page = 50
-
-class activateRateAdmin(ImportExportModelAdmin):
-    resource_class = activateRateResource
-    list_display = ('activate_foreignkey', 'rate')
-    list_filter = ('activate_foreignkey',)
-    search_fields = ('activate_foreignkey__sub_activity',)
-    list_per_page = 50
-
+@admin.register(contractorsTbl)
 class contractorsTblAdmin(ImportExportModelAdmin):
     resource_class = contractorsTblResource
-    list_display = ('contractor_name', 'contact_person', 'contact_number', 'interested_services')
+    list_display = ('contractor_name', 'contact_person', 'district', 'contact_number', 'interested_services')
+    list_filter = ('district',)
     search_fields = ('contractor_name', 'contact_person', 'contact_number')
     list_per_page = 50
 
+@admin.register(contratorDistrictAssignment)
 class contratorDistrictAssignmentAdmin(ImportExportModelAdmin):
     resource_class = contratorDistrictAssignmentResource
-    list_display = ('contractor',)
-    list_filter = ('districtTbl_foreignkey',)
-    search_fields = ('contractor__contractor_name', 'districtTbl_foreignkey__district')
+    list_display = ('contractor', 'projectTbl_foreignkey', 'district')
+    list_filter = ('projectTbl_foreignkey', 'district')
+    search_fields = ('contractor__contractor_name', 'projectTbl_foreignkey__name', 'district__name')
     list_per_page = 50
 
-class monitorbackroundtaskTblAdmin(ImportExportModelAdmin):
-    resource_class = monitorbackroundtaskTblResource
-    list_display = ('name', 'start', 'finish')
-    search_fields = ('name',)
-    list_per_page = 50
-
-class LayersAdmin(ImportExportModelAdmin):
-    resource_class = LayersResource
-    list_display = ('name', 'layername', 'layer_type', 'created_date')
-    list_filter = ('layer_type', 'created_date')
-    search_fields = ('name', 'layername')
-    list_per_page = 50
-
-class posRoutemonitoringAdmin(ImportExportModelAdmin):
-    resource_class = posRoutemonitoringResource
-    list_display = ('staffTbl_foreignkey', 'inspection_date', 'lat', 'lng', 'accuracy')
-    list_filter = ('inspection_date',)
-    search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name')
-   
-    list_per_page = 50
-
-class FeedbackAdmin(ImportExportModelAdmin):
-    resource_class = FeedbackResource
-    list_display = ('title', 'staffTbl_foreignkey', 'Status', 'sent_date', 'farm_reference')
-    list_filter = ('Status', 'sent_date', 'week', 'month')
-    search_fields = ('title', 'feedback', 'farm_reference')
-    readonly_fields = ('sent_date', 'uid', 'week', 'month')
-    list_per_page = 50
-
-class maintenanceReportAdmin(ImportExportModelAdmin):
-    resource_class = maintenanceReportResource
-    list_display = ('report_date', 'Farm_ID', 'District', 'Project_Officer', 'Farm_Size')
-    list_filter = ('District', 'report_date', 'Region')
-    search_fields = ('Farm_ID', 'Farm_Location', 'Project_Officer')
-    readonly_fields = ('formid', 'uuid', 'instanceID', 'submission_time', 'submitted_by', 
-                      'signid', 'version', 'status')
-   
-    list_per_page = 50
-
-class EquipmentAdmin(ImportExportModelAdmin):
-    resource_class = EquipmentResource
-    list_display = ('equipment_code', 'equipment', 'serial_number', 'district', 'status', 'date_of_capturing')
-    list_filter = ('status', 'district', 'region', 'date_of_capturing')
-    search_fields = ('equipment_code', 'serial_number', 'manufacturer', 'telephone', 'staff_name')
-    readonly_fields = ('_uuid', 'koboid', 'pic_serial_number', 'pic_equipment')
-    list_per_page = 50
-    
-    def get_export_queryset(self, request):
-        """Override to use a queryset without image field processing"""
-        qs = super().get_export_queryset(request)
-        return qs.defer('pic_serial_number', 'pic_equipment')
-    
-    def get_import_form(self):
-        """Custom import form that excludes image fields"""
-        form = super().get_import_form()
-        form.base_fields.pop('pic_serial_number', None)
-        form.base_fields.pop('pic_equipment', None)
-        return form
-
-class chedcertficateofWorkdoneAdmin(ImportExportModelAdmin):
-    resource_class = chedcertficateofWorkdoneResource
-    list_display = ('reference_number', 'district', 'farmer_name', 'farm_reference', 'activity', 'month', 'year')
-    list_filter = ('district', 'month', 'year', 'activity')
-    search_fields = ('reference_number', 'farm_reference', 'farmer_name')
-    readonly_fields = ('code',)
-    list_per_page = 50
-
-class paymentReportAdmin(ImportExportModelAdmin):
-    resource_class = paymentReportResource
-    list_display = ('district', 'bank_name', 'salary', 'month', 'week', 'year', 'ra_name')
-    list_filter = ('district', 'month', 'year', 'payment_option')
-    search_fields = ('district', 'bank_name', 'ra_name', 'po_number')
-    readonly_fields = ('code',)
-    list_per_page = 50
-
-class weeklyreportSummaryAdmin(ImportExportModelAdmin):
-    resource_class = weeklyreportSummaryResource
-    list_display = ('region', 'district', 'month', 'week', 'year')
-    list_filter = ('region', 'district', 'month', 'year')
-    search_fields = ('region', 'district')
-    list_per_page = 50
-
-class farmDatabaseAdmin(ImportExportModelAdmin):
-    resource_class = farmDatabaseResource
-    list_display = ( 'farmer_name', 'district', 'farm_size', 'po_name')
-    list_filter = ('district', 'region')
-    search_fields = ( 'farmer_name', 'location')
-    list_per_page = 50
-
-class paymentdetailedReportAdmin(ImportExportModelAdmin):
-    resource_class = paymentdetailedReportResource
-    list_display = ('ra_name', 'farm_reference', 'activity', 'achievement', 'amount', 'week', 'month', 'year')
-    list_filter = ('district', 'month', 'year', 'activity')
-    search_fields = ('ra_name', 'farm_reference', 'po_name', 'group_code')
-    readonly_fields = ('code',)
-    list_per_page = 50
-
-class versionTblAdmin(ImportExportModelAdmin):
-    resource_class = versionTblResource
-    list_display = ('version', 'created_date')
-    list_per_page = 50
-
-class mobileMaintenanceAdmin(ImportExportModelAdmin):
-    resource_class = mobileMaintenanceResource
-    list_display = ('monitoring_date', 'farm_ref_number', 'activity', 'area_covered_ha', 'staffTbl_foreignkey')
-    list_filter = ('monitoring_date', 'activity')
-    search_fields = ('farm_ref_number', 'remark', 'name_of_ched_ta')
-  
-    list_per_page = 50
-
-class mobileMaintenancerehabassistTblAdmin(ImportExportModelAdmin):
-    resource_class = mobileMaintenancerehabassistTblResource
-    list_display = ('mobileMaintenance_foreignkey', 'rehabassistantsTbl_foreignkey', 'area_covered_ha')
-    list_per_page = 50
-
-class verificationWorkdoneAdmin(ImportExportModelAdmin):
-    resource_class = verificationWorkdoneResource
-    list_display = ('reporting_date', 'district', 'farmer_ref_number', 'activity', 'farm_size', 'project_officer')
-    list_filter = ('district', 'month', 'year', 'reporting_date')
-    search_fields = ('farmer_ref_number', 'community', 'project_officer')
-    readonly_fields = ('code', 'geom', 'uuid')
-   
-    list_per_page = 50
-
-class sectorAdmin(ImportExportModelAdmin):
-    resource_class = sectorResource
-    list_display = ('sector',)
-    search_fields = ('sector',)
-    list_per_page = 50
-
-class sectorDistrictAdmin(ImportExportModelAdmin):
-    resource_class = sectorDistrictResource
-    list_display = ('sector',)
-    list_filter = ('sector',)
-    list_per_page = 50
-
-class sectorStaffassignmentAdmin(ImportExportModelAdmin):
-    resource_class = sectorStaffassignmentResource
-    list_display = ('sector', 'staffTbl_foreignkey')
-    list_filter = ('sector',)
-    search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name')
-    list_per_page = 50
-
-class seedlingEnumerationAdmin(ImportExportModelAdmin):
-    resource_class = seedlingEnumerationResource
-    list_display = ('Farm_ID', 'District', 'sector_no', 'Farmer_Name', 'Location', 'reporting_date')
-    list_filter = ('District', 'sector_no', 'reporting_date')
-    search_fields = ('Farm_ID', 'Farmer_Name', 'Location')
-    readonly_fields = ('field_uri', 'instanceID', 'field_submission_date')
-   
-    list_per_page = 50
-
-class seedlingenumworkdoneRaAdmin(ImportExportModelAdmin):
-    resource_class = seedlingenumworkdoneRaResource
-    list_display = ('seedlingEnumeration_foreignkey', 'rehabassistantsTbl_foreignkey')
-    list_per_page = 50
-
-class seedlingenumworkdonePoAdmin(ImportExportModelAdmin):
-    resource_class = seedlingenumworkdonePoResource
-    list_display = ('seedlingEnumeration_foreignkey', 'staffTbl_foreignkey')
-    list_per_page = 50
-
-class HQcertificateRecieptAdmin(ImportExportModelAdmin):
-    resource_class = HQcertificateRecieptResource
-    list_display = ('reference_number', 'company_name', 'activity', 'total_workdone', 'status', 'certified_date')
-    list_filter = ('status', 'activity', 'certified_date')
-    search_fields = ('reference_number', 'company_name', 'serialNumber')
-  
-    list_per_page = 50
-
-class SectorcertificateRecieptAdmin(ImportExportModelAdmin):
-    resource_class = SectorcertificateRecieptResource
-    list_display = ('reference_number', 'company_name', 'activity', 'total_workdone', 'sector', 'certified_date')
-    list_filter = ('sector', 'activity', 'certified_date')
-    search_fields = ('reference_number', 'company_name', 'serialNumber')
-  
-    list_per_page = 50
-
-class SidebarAdmin(ImportExportModelAdmin):
-    resource_class = SidebarResource
-    list_display = ('name',)
-    search_fields = ('name',)
-    list_per_page = 50
-
-class GroupSidebarAdmin(ImportExportModelAdmin):
-    resource_class = GroupSidebarResource
-    list_display = ('assigned_group',)
-    filter_horizontal = ('hidden_sidebars',)
-    list_per_page = 50
-
-class mappedFarmsAdmin(ImportExportModelAdmin):
-    resource_class = mappedFarmsResource
-    list_display = ('farm_reference', 'farmer_name', 'location', 'farm_area', 'contact')
-    search_fields = ('farm_reference', 'farmer_name', 'location')
-    readonly_fields = ('uuid', 'geom', 'farmboundary')
-    list_per_page = 50
-
-class seedlingEnumerationCheckAdmin(ImportExportModelAdmin):
-    resource_class = seedlingEnumerationCheckResource
-    list_display = ('field_uri', 'created_date')
-    readonly_fields = ('field_uri',)
-    list_per_page = 50
-
-class powerbiReportAdmin(ImportExportModelAdmin):
-    resource_class = powerbiReportResource
-    list_display = ('menu_label', 'url', 'last_updated')
-    search_fields = ('menu_label', 'url')
-    list_per_page = 50
-
-class FarmValidationAdmin(ImportExportModelAdmin):
-    resource_class = FarmValidationResource
-    list_display = ( 'district', 'farm_size', 'farmer_name', 'reporting_date')
-    list_filter = ('district', 'reporting_date')
-    search_fields = ( 'farmer_name', 'farm_loc')
-    readonly_fields = ('field_uri',)
-   
-    list_per_page = 50
-
-class FarmValidationCheckAdmin(ImportExportModelAdmin):
-    resource_class = FarmValidationCheckResource
-    list_display = ('field_uri', 'created_date')
-    readonly_fields = ('field_uri',)
-    list_per_page = 50
-
-class weeklyActivityReportAdmin(ImportExportModelAdmin):
-    resource_class = weeklyActivityReportResource
-    list_display = ('completion_date', 'farm_reference', 'activity', 'farm_size', 'rate', 'po_name')
-    list_filter = ('district', 'month', 'report_week', 'activity')
-    search_fields = ('farm_reference', 'farmer_name', 'community', 'po_name')
-    readonly_fields = ('code',)
-    
-    list_per_page = 50
-
-class calbankmomoTransactionAdmin(ImportExportModelAdmin):
-    resource_class = calbankmomoTransactionResource
-    list_display = ('TransactionReference', 'Name', 'PhoneNumber', 'Amount', 'Month', 'Week', 'year')
-    list_filter = ('Month', 'Week', 'year', 'PaymentMode', 'BeneficiaryBank')
-    search_fields = ('TransactionReference', 'Name', 'PhoneNumber', 'BeneficiaryAccount')
-    readonly_fields = ('TransactionReference',)
-    list_per_page = 50
-
+@admin.register(Joborder)
 class JoborderAdmin(ImportExportModelAdmin):
     resource_class = JoborderResource
-    list_display = ('farm_reference', 'farmername', 'district', 'farm_size', 'sector', 'year_of_establishment')
-    list_filter = ('district', 'sector', 'year_of_establishment')
+    list_display = ('farm_reference', 'farmername', 'region', 'district', 'community', 'farm_size', 'sector', 'projectTbl_foreignkey')
+    list_filter = ('region', 'district', 'sector', 'projectTbl_foreignkey')
     search_fields = ('farm_reference', 'farmername', 'location')
     readonly_fields = ('job_order_code',)
     list_per_page = 50
 
-class activityReportingAdmin(ImportExportModelAdmin):
-    resource_class = activityReportingResource
-    list_display = ('completed_date', 'farm_ref_number', 'activity', 'area_covered_ha', 'sector', 'staffTbl_foreignkey')
-    list_filter = ('districtTbl_foreignkey', 'sector', 'completed_date', 'activity')
-    search_fields = ('farm_ref_number', 'community', 'remark')
-    
+@admin.register(versionTbl)
+class versionTblAdmin(ImportExportModelAdmin):
+    list_display = ('version', 'created_date')
+    search_fields = ('version',)
     list_per_page = 50
 
-class activityreportingrehabassistTblAdmin(ImportExportModelAdmin):
-    resource_class = activityreportingrehabassistTblResource
-    list_display = ('activityreporting_foreignkey', 'rehabassistantsTbl_foreignkey', 'area_covered_ha')
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('title', 'staffTbl_foreignkey', 'Status', 'sent_date', 'farm_reference')
+    list_filter = ('Status', 'sent_date')
+    search_fields = ('title', 'feedback', 'farm_reference')
     list_per_page = 50
 
-class specialprojectfarmsTblAdmin(ImportExportModelAdmin):
-    resource_class = specialprojectfarmsTblResource
-    list_display = ('plot_name', 'plot_reference_number', 'district', 'activity', 'achievement', 'name_of_po')
-    list_filter = ('district', 'month', 'report_week', 'main_activity')
-    search_fields = ('plot_name', 'plot_reference_number', 'name_of_po', 'mne_name')
-    readonly_fields = ('code',)
+@admin.register(posRoutemonitoring)
+class posRoutemonitoringAdmin(admin.ModelAdmin):
+    list_display = ('staffTbl_foreignkey', 'inspection_date', 'lat', 'lng', 'accuracy')
+    list_filter = ('inspection_date',)
+    search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name')
     list_per_page = 50
 
-class odkfarmsvalidationTblAdmin(ImportExportModelAdmin):
-    resource_class = odkfarmsvalidationTblResource
-    list_display = ( 'farmer_name', 'farm_loc', 'farm_size', 'farm_sector', 'poid', 'mne_validated')
-    list_filter = ('mne_validated', 'farm_sector')
-    search_fields = ( 'farmer_name', 'farm_loc', 'poid')
-    readonly_fields = ('instanceID', 'deviceId',)
+@admin.register(mappedFarms)
+class mappedFarmsAdmin(admin.ModelAdmin):
+    list_display = ('farm_reference', 'farmer_name', 'location', 'farm_area', 'contact')
+    search_fields = ('farm_reference', 'farmer_name', 'location')
     list_per_page = 50
 
-class odkdailyreportingTblAdmin(ImportExportModelAdmin):
-    resource_class = odkdailyreportingTblResource
-    list_display = ( 'farmer_name', 'main_activity', 'date_completion', 'poid', 'delete_check')
-    list_filter = ('main_activity', 'date_completion', 'delete_check')
-    search_fields = ( 'farmer_name', 'farm_loc', 'poid')
-    readonly_fields = ('instanceID', 'deviceId',)
-    
-    list_per_page = 50
-
-class allFarmqueryTblAdmin(ImportExportModelAdmin):
-    resource_class = allFarmqueryTblResource
-    list_display = ('farm_reference', 'district', 'sector', 'activity', 'farm_size', 'completion_date')
-    list_filter = ('district', 'sector', 'month', 'week', 'year', 'activity')
-    search_fields = ('farm_reference', 'ranrt', 'name_of_po', 'po_id')
-    readonly_fields = ('code',)
-    
-    list_per_page = 50
-
-class staffFarmsAssignmentAdmin(ImportExportModelAdmin):
-    resource_class = staffFarmsAssignmentResource
-    list_display = ('joborder_foreignkey', 'staffTbl_foreignkey')
-    list_filter = ('staffTbl_foreignkey',)
-    search_fields = ('joborder_foreignkey__farm_reference', 'staffTbl_foreignkey__first_name')
+@admin.register(FarmValidation)
+class FarmValidationAdmin(admin.ModelAdmin):
+    list_display = ('region', 'farm_size', 'farmer_name', 'reporting_date')
+    list_filter = ('region', 'reporting_date')
+    search_fields = ('farmer_name', 'location')
     list_per_page = 50
 
 # ============================================
-# REGISTER ALL MODELS
+# API STRUCTURE MODELS ADMIN
 # ============================================
 
-# GIS Models
-admin.site.register(MajorRoads, MajorRoadsAdmin)
-admin.site.register(DistrictOffices, DistrictOfficesAdmin)
-admin.site.register(Farms, FarmsAdmin)
-admin.site.register(cocoaDistrict, cocoaDistrictAdmin)
+@admin.register(PersonnelModel)
+class PersonnelModelAdmin(ImportExportModelAdmin):
+    resource_class = PersonnelModelResource
+    list_display = ('first_name', 'surname', 'gender', 'district', 'community', 'primary_phone_number', 'personnel_type', 'projectTbl_foreignkey')
+    list_filter = ('gender', 'personnel_type', 'district', 'projectTbl_foreignkey')
+    search_fields = ('first_name', 'surname', 'id_number', 'primary_phone_number')
+    readonly_fields = ('uid',)
+    fieldsets = (
+        ('Personal Information', {
+            'fields': ('first_name', 'surname', 'other_names', 'gender', 'date_of_birth',
+                      'primary_phone_number', 'secondary_phone_number', 'momo_number')
+        }),
+        ('Identification', {
+            'fields': ('emergency_contact_person', 'emergency_contact_number',
+                      'id_type', 'id_number', 'address')
+        }),
+        ('Location Information', {
+            'fields': ('community', 'district')
+        }),
+        ('Employment Information', {
+            'fields': ('projectTbl_foreignkey', 'education_level', 'marital_status',
+                      'personnel_type', 'date_joined', 'supervisor_id')
+        }),
+        ('Banking Information', {
+            'fields': ('bank_id', 'account_number', 'branch_id', 'sort_code', 'ezwich_number'),
+            'classes': ('collapse',)
+        }),
+        ('Documentation', {
+            'fields': ('image', 'id_image_front', 'id_image_back', 'consent_form_image'),
+            'classes': ('collapse',)
+        }),
+        ('System Information', {
+            'fields': ('uid',),
+            'classes': ('collapse',)
+        }),
+    )
+    list_per_page = 50
 
-# Non-GIS Models
-admin.site.register(groupTbl, groupTblAdmin)
-admin.site.register(staffTbl, staffTblAdmin)
-admin.site.register(regionStaffTbl, regionStaffTblAdmin)
-admin.site.register(districtStaffTbl, districtStaffTblAdmin)
-admin.site.register(usergroupTbl, usergroupTblAdmin)
-admin.site.register(Activities, ActivitiesAdmin)
-admin.site.register(rehabassistantsTbl, rehabassistantsTblAdmin)
-admin.site.register(FarmdetailsTbl, FarmdetailsTblAdmin)
-admin.site.register(rehabassistantsAssignmentTbl, rehabassistantsAssignmentTblAdmin)
-admin.site.register(weeklyMontoringTbl, weeklyMontoringTblAdmin)
-admin.site.register(currentstatusFarmTbl, currentstatusFarmTblAdmin)
-admin.site.register(weeklyMontoringrehabassistTbl, weeklyMontoringrehabassistTblAdmin)
-admin.site.register(fuelMontoringTbl, fuelMontoringTblAdmin)
-admin.site.register(odkUrlModel, odkUrlModelAdmin)
-admin.site.register(communityTbl, communityTblAdmin)
-admin.site.register(POdailyreportTbl, POdailyreportTblAdmin)
-admin.site.register(activateRate, activateRateAdmin)
-admin.site.register(contractorsTbl, contractorsTblAdmin)
-admin.site.register(contratorDistrictAssignment, contratorDistrictAssignmentAdmin)
-admin.site.register(monitorbackroundtaskTbl, monitorbackroundtaskTblAdmin)
-admin.site.register(Layers, LayersAdmin)
-admin.site.register(posRoutemonitoring, posRoutemonitoringAdmin)
-admin.site.register(Feedback, FeedbackAdmin)
-admin.site.register(maintenanceReport, maintenanceReportAdmin)
-admin.site.register(Equipment, EquipmentAdmin)
-admin.site.register(chedcertficateofWorkdone, chedcertficateofWorkdoneAdmin)
-admin.site.register(paymentReport, paymentReportAdmin)
-admin.site.register(weeklyreportSummary, weeklyreportSummaryAdmin)
-admin.site.register(farmDatabase, farmDatabaseAdmin)
-admin.site.register(paymentdetailedReport, paymentdetailedReportAdmin)
-admin.site.register(versionTbl, versionTblAdmin)
-admin.site.register(mobileMaintenance, mobileMaintenanceAdmin)
-admin.site.register(mobileMaintenancerehabassistTbl, mobileMaintenancerehabassistTblAdmin)
-admin.site.register(verificationWorkdone, verificationWorkdoneAdmin)
-admin.site.register(sector, sectorAdmin)
-admin.site.register(sectorDistrict, sectorDistrictAdmin)
-admin.site.register(sectorStaffassignment, sectorStaffassignmentAdmin)
-admin.site.register(seedlingEnumeration, seedlingEnumerationAdmin)
-admin.site.register(seedlingenumworkdoneRa, seedlingenumworkdoneRaAdmin)
-admin.site.register(seedlingenumworkdonePo, seedlingenumworkdonePoAdmin)
-admin.site.register(HQcertificateReciept, HQcertificateRecieptAdmin)
-admin.site.register(SectorcertificateReciept, SectorcertificateRecieptAdmin)
-admin.site.register(Sidebar, SidebarAdmin)
-admin.site.register(GroupSidebar, GroupSidebarAdmin)
-admin.site.register(mappedFarms, mappedFarmsAdmin)
-admin.site.register(seedlingEnumerationCheck, seedlingEnumerationCheckAdmin)
-admin.site.register(powerbiReport, powerbiReportAdmin)
-admin.site.register(FarmValidation, FarmValidationAdmin)
-admin.site.register(FarmValidationCheck, FarmValidationCheckAdmin)
-admin.site.register(weeklyActivityReport, weeklyActivityReportAdmin)
-admin.site.register(calbankmomoTransaction, calbankmomoTransactionAdmin)
-admin.site.register(Joborder, JoborderAdmin)
-admin.site.register(activityReporting, activityReportingAdmin)
-admin.site.register(activityreportingrehabassistTbl, activityreportingrehabassistTblAdmin)
-admin.site.register(specialprojectfarmsTbl, specialprojectfarmsTblAdmin)
-admin.site.register(odkfarmsvalidationTbl, odkfarmsvalidationTblAdmin)
-admin.site.register(odkdailyreportingTbl, odkdailyreportingTblAdmin)
-admin.site.register(allFarmqueryTbl, allFarmqueryTblAdmin)
-admin.site.register(staffFarmsAssignment, staffFarmsAssignmentAdmin)
+@admin.register(PersonnelAssignmentModel)
+class PersonnelAssignmentModelAdmin(ImportExportModelAdmin):
+    resource_class = PersonnelAssignmentModelResource
+    list_display = ('po', 'ra', 'district', 'community', 'date_assigned', 'status', 'projectTbl_foreignkey')
+    list_filter = ('status', 'date_assigned', 'district', 'projectTbl_foreignkey')
+    search_fields = ('po__first_name', 'po__last_name', 'ra__first_name', 'ra__surname', 'community__name')
+    readonly_fields = ('uid',)
+    list_per_page = 50
 
-from django.contrib import admin
-from .models import projectStaffTbl,projectTbl
+@admin.register(DailyReportingModel)
+class DailyReportingModelAdmin(ImportExportModelAdmin):
+    resource_class = DailyReportingModelResource
+    list_display = ('reporting_date', 'agent', 'district', 'farm_ref_number', 'activity', 'area_covered_ha', 'status')
+    list_filter = ('status', 'reporting_date', 'main_activity', 'district', 'projectTbl_foreignkey')
+    search_fields = ('agent__first_name', 'agent__last_name', 'farm_ref_number', 'community__name', 'remark')
+    readonly_fields = ('uid',)
+    list_per_page = 50
 
-@admin.register(projectStaffTbl)
-class projectStaffTblAdmin(admin.ModelAdmin):
-    list_display = ['id', 'staffTbl_foreignkey', 'projectTbl_foreignkey',]
-    # list_filter = ['create_date']
-    search_fields = ['staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name', 'projectTbl_foreignkey__project_name']
-    # ordering = ['-create_date']
+@admin.register(GrowthMonitoringModel)
+class GrowthMonitoringModelAdmin(ImportExportModelAdmin):
+    resource_class = GrowthMonitoringModelResource
+    list_display = ('plant_uid', 'date', 'district', 'height', 'number_of_leaves', 'agent', 'projectTbl_foreignkey')
+    list_filter = ('date', 'leaf_color', 'district', 'projectTbl_foreignkey')
+    search_fields = ('plant_uid', 'agent__first_name', 'agent__last_name')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(OutbreakFarmModel)
+class OutbreakFarmModelAdmin(ImportExportModelAdmin):
+    resource_class = OutbreakFarmModelResource
+    list_display = ('farmer_name', 'district', 'region', 'community', 'farm_size', 'disease_type', 'date_reported', 'status', 'projectTbl_foreignkey')
+    list_filter = ('status', 'disease_type', 'date_reported', 'district', 'region', 'projectTbl_foreignkey')
+    search_fields = ('farmer_name', 'farm_location', 'community__name')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(ContractorCertificateModel)
+class ContractorCertificateModelAdmin(ImportExportModelAdmin):
+    resource_class = ContractorCertificateModelResource
+    list_display = ('contractor', 'work_type', 'district', 'start_date', 'end_date', 'status', 'projectTbl_foreignkey')
+    list_filter = ('status', 'work_type', 'start_date', 'district', 'projectTbl_foreignkey')
+    search_fields = ('contractor__contractor_name', 'remarks')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(ContractorCertificateVerificationModel)
+class ContractorCertificateVerificationModelAdmin(ImportExportModelAdmin):
+    resource_class = ContractorCertificateVerificationModelResource
+    list_display = ('certificate', 'district', 'verified_by', 'verification_date', 'is_verified', 'projectTbl_foreignkey')
+    list_filter = ('is_verified', 'verification_date', 'district', 'projectTbl_foreignkey')
+    search_fields = ('certificate__contractor__contractor_name', 'verified_by__first_name', 'verified_by__last_name', 'comments')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(IssueModel)
+class IssueModelAdmin(ImportExportModelAdmin):
+    resource_class = IssueModelResource
+    list_display = ('user', 'district', 'issue_type', 'date_reported', 'status', 'projectTbl_foreignkey')
+    list_filter = ('status', 'issue_type', 'date_reported', 'district', 'projectTbl_foreignkey')
+    search_fields = ('user__first_name', 'user__last_name', 'description')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(IrrigationModel)
+class IrrigationModelAdmin(ImportExportModelAdmin):
+    resource_class = IrrigationModelResource
+    list_display = ('farm', 'district', 'irrigation_type', 'water_volume', 'date', 'agent', 'projectTbl_foreignkey')
+    list_filter = ('irrigation_type', 'date', 'district', 'projectTbl_foreignkey')
+    search_fields = ('farm__farm_reference', 'farm_id', 'agent__first_name', 'agent__last_name')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(VerifyRecord)
+class VerifyRecordAdmin(ImportExportModelAdmin):
+    resource_class = VerifyRecordResource
+    list_display = ('farm', 'district', 'timestamp', 'status', 'projectTbl_foreignkey')
+    list_filter = ('status', 'timestamp', 'district', 'projectTbl_foreignkey')
+    search_fields = ('farm__farm_reference', 'farmRef')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(CalculatedArea)
+class CalculatedAreaAdmin(ImportExportModelAdmin):
+    resource_class = CalculatedAreaResource
+    list_display = ('title', 'district', 'value', 'date', 'projectTbl_foreignkey')
+    list_filter = ('date', 'district', 'projectTbl_foreignkey')
+    search_fields = ('title',)
+    list_per_page = 50
+
+@admin.register(PaymentReport)
+class PaymentReportAdmin(ImportExportModelAdmin):
+    resource_class = PaymentReportResource
+    list_display = ('ra', 'district', 'month', 'year', 'week', 'salary', 'payment_option', 'projectTbl_foreignkey')
+    list_filter = ('month', 'year', 'week', 'district', 'projectTbl_foreignkey')
+    search_fields = ('ra__first_name', 'ra__surname', 'ra_name', 'po_number')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(DetailedPaymentReport)
+class DetailedPaymentReportAdmin(ImportExportModelAdmin):
+    resource_class = DetailedPaymentReportResource
+    list_display = ('ra', 'district', 'farm', 'activity', 'month', 'year', 'achievement', 'amount', 'projectTbl_foreignkey')
+    list_filter = ('month', 'year', 'district', 'farmhands_type', 'projectTbl_foreignkey')
+    search_fields = ('ra__first_name', 'ra__surname', 'ra_name', 'po_name', 'farm_reference')
+    readonly_fields = ('uid',)
+    list_per_page = 50
 
 # ============================================
-# ADMIN SITE CUSTOMIZATION
+# MENU MANAGEMENT ADMIN
 # ============================================
 
-admin.site.site_header = "Cocoa Rehabilitation System Administration"
-admin.site.site_title = "Cocoa Rehab System"
-admin.site.index_title = "System Administration"
-
-# Custom admin ordering
-admin.site._registry = dict(sorted(admin.site._registry.items(), key=lambda x: x[0].__name__))
-
-admin.site.register(projectTbl)
-
-
-
-
-
-
-##########################################################################################################################################
-# admin.py
-# admin.py
-# admin.py - COMPLETELY FIXED VERSION
-from django.contrib import admin
 from django import forms
-from django.utils.html import format_html, mark_safe
+from django.utils.html import format_html
 from django.urls import reverse
-from django.contrib import messages
-from django.db.models import Count
-from .models import MenuItem, SidebarConfiguration
 
-# Form for MenuItem with validation
 class MenuItemForm(forms.ModelForm):
     class Meta:
         model = MenuItem
@@ -1098,46 +1140,26 @@ class MenuItemForm(forms.ModelForm):
         
         # Filter parent choices to exclude self and descendants
         if instance and instance.pk:
-            # Get all descendants to exclude
             descendants = instance.get_descendants()
             exclude_ids = [instance.pk] + [d.pk for d in descendants]
             self.fields['parent'].queryset = MenuItem.objects.exclude(id__in=exclude_ids)
         else:
             self.fields['parent'].queryset = MenuItem.objects.all()
         
-        # Sort parent choices by full path for better readability
         self.fields['parent'].queryset = self.fields['parent'].queryset.order_by('display_name')
-        
-        # Add help text for parent field
-        self.fields['parent'].help_text = "Select parent menu item. Leave blank for top-level menu."
 
 @admin.register(MenuItem)
 class MenuItemAdmin(admin.ModelAdmin):
     form = MenuItemForm
-    
-    # List view configuration
-    list_display = (
-        'display_name_with_indent',
-        'icon_preview',
-        'parent_name',
-        'order',
-        'is_active_display',
-        'child_count_display',
-        'group_count',
-        'url_preview'
-    )
+    list_display = ('display_name_with_indent', 'icon_preview', 'parent_name', 'order', 
+                   'is_active_display', 'child_count_display', 'group_count', 'url_preview')
     list_display_links = ('display_name_with_indent',)
     list_editable = ('order',)
     list_filter = ('is_active', 'parent', 'allowed_groups')
     search_fields = ('display_name', 'name', 'url')
     filter_horizontal = ('allowed_groups',)
-    readonly_fields = (
-        'created_at', 
-        'updated_at', 
-        'full_path_display',
-        'level_display',
-        'child_count_display'
-    )
+    readonly_fields = ('created_at', 'updated_at', 'full_path_display', 
+                      'level_display', 'child_count_display')
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'display_name', 'icon', 'url', 'order', 'is_active')
@@ -1161,39 +1183,20 @@ class MenuItemAdmin(admin.ModelAdmin):
     )
     actions = ['activate_items', 'deactivate_items', 'make_top_level']
     
-    def get_queryset(self, request):
-        # Prefetch related data for better performance
-        return super().get_queryset(request).select_related(
-            'parent'
-        ).prefetch_related(
-            'children',
-            'allowed_groups'
-        )
-    
-    # Custom display methods - ALL FIXED
     def display_name_with_indent(self, obj):
         """Display name with indentation based on level"""
         if obj.level > 0:
-            # For child items, show with indentation
             indent_px = obj.level * 20
-            level_indicator = f'(Level {obj.level})'
-            
             return format_html(
                 '<div style="margin-left: {}px; display: flex; align-items: center;">'
                 '<span style="margin-right: 5px;">↳</span>'
                 '<strong>{}</strong>'
-                '<span style="color: #666; font-size: 0.8em; margin-left: 5px;">{}</span>'
                 '</div>',
                 indent_px,
-                obj.display_name,
-                level_indicator
-            )
-        else:
-            # For top-level items
-            return format_html(
-                '<strong>{}</strong>',
                 obj.display_name
             )
+        else:
+            return format_html('<strong>{}</strong>', obj.display_name)
     display_name_with_indent.short_description = 'Menu Item'
     display_name_with_indent.admin_order_field = 'display_name'
     
@@ -1204,29 +1207,17 @@ class MenuItemAdmin(admin.ModelAdmin):
     icon_preview.short_description = 'Icon'
     
     def parent_name(self, obj):
-        """Safe way to display parent name"""
         if obj.parent:
-            try:
-                return obj.parent.display_name
-            except:
-                return "(Parent)"
+            return obj.parent.display_name
         return "(Top Level)"
     parent_name.short_description = 'Parent'
     parent_name.admin_order_field = 'parent__display_name'
     
     def is_active_display(self, obj):
-        """Color-coded status - FIXED VERSION"""
         if obj.is_active:
-            # CORRECT: Pass HTML content as a template string and variables
-            return format_html(
-                '<span style="color: #28a745; font-weight: bold;">{}</span>',
-                '● Active'  # This is the content that replaces {}
-            )
+            return format_html('<span style="color: #28a745; font-weight: bold;">{}</span>', '● Active')
         else:
-            return format_html(
-                '<span style="color: #dc3545; font-weight: bold;">{}</span>',
-                '○ Inactive'  # This is the content that replaces {}
-            )
+            return format_html('<span style="color: #dc3545; font-weight: bold;">{}</span>', '○ Inactive')
     is_active_display.short_description = 'Status'
     
     def child_count_display(self, obj):
@@ -1247,7 +1238,6 @@ class MenuItemAdmin(admin.ModelAdmin):
         return "—"
     url_preview.short_description = 'URL'
     
-    # Read-only fields for display
     def full_path_display(self, obj):
         return obj.full_path
     full_path_display.short_description = 'Full Path'
@@ -1256,7 +1246,6 @@ class MenuItemAdmin(admin.ModelAdmin):
         return obj.level
     level_display.short_description = 'Level'
     
-    # Custom actions
     def activate_items(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(request, f'{updated} menu items activated.')
@@ -1268,54 +1257,9 @@ class MenuItemAdmin(admin.ModelAdmin):
     deactivate_items.short_description = "Deactivate selected items"
     
     def make_top_level(self, request, queryset):
-        """Make selected items top-level (remove parent)"""
         updated = queryset.update(parent=None)
         self.message_user(request, f'{updated} items set as top-level.')
     make_top_level.short_description = "Make selected items top-level"
-    
-    # Custom change view to show hierarchy
-    def change_view(self, request, object_id, form_url='', extra_context=None):
-        obj = self.get_object(request, object_id)
-        
-        # Get all descendants for display
-        def get_descendants_tree(item, level=0):
-            children_data = []
-            for child in item.children.all().order_by('order'):
-                child_data = {
-                    'object': child,
-                    'level': level,
-                    'children': get_descendants_tree(child, level + 1)
-                }
-                children_data.append(child_data)
-            return children_data
-        
-        tree_data = get_descendants_tree(obj)
-        
-        extra_context = extra_context or {}
-        extra_context['hierarchy_tree'] = tree_data
-        extra_context['show_hierarchy'] = True
-        extra_context['ancestors'] = obj.get_ancestors()
-        
-        return super().change_view(request, object_id, form_url, extra_context)
-    
-    # Custom changelist view with filters for hierarchy
-    def changelist_view(self, request, extra_context=None):
-        # Add filter for top-level items
-        extra_context = extra_context or {}
-        extra_context['title'] = 'Menu Items'
-        extra_context['subtitle'] = 'Manage sidebar navigation hierarchy'
-        
-        # Get parent filter from request
-        parent_id = request.GET.get('parent__id__exact')
-        if parent_id:
-            try:
-                parent = MenuItem.objects.get(id=parent_id)
-                extra_context['current_parent'] = parent
-                extra_context['breadcrumb'] = parent.get_ancestors(include_self=True)
-            except MenuItem.DoesNotExist:
-                pass
-        
-        return super().changelist_view(request, extra_context=extra_context)
 
 @admin.register(SidebarConfiguration)
 class SidebarConfigurationAdmin(admin.ModelAdmin):
@@ -1331,6 +1275,41 @@ class SidebarConfigurationAdmin(admin.ModelAdmin):
     )
     
     def get_theme_display(self, obj):
-        """Simple display of theme choice"""
         return obj.get_theme_display()
     get_theme_display.short_description = 'Theme'
+
+# ============================================
+# SIMPLE ADMIN CLASSES
+# ============================================
+
+class SimpleAdmin(admin.ModelAdmin):
+    list_per_page = 50
+
+# Register remaining simple models
+@admin.register(Sidebar)
+class SidebarAdmin(SimpleAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+
+@admin.register(GroupSidebar)
+class GroupSidebarAdmin(SimpleAdmin):
+    list_display = ('assigned_group',)
+    filter_horizontal = ('hidden_sidebars',)
+
+# ============================================
+# ADMIN SITE CUSTOMIZATION
+# ============================================
+
+admin.site.site_header = "Cocoa Rehabilitation System Administration"
+admin.site.site_title = "Cocoa Rehab System"
+admin.site.index_title = "System Administration"
+
+# Register GIS models
+admin.site.register(Farms, FarmsAdmin)
+
+# ============================================
+# UNREGISTER DEFAULT USER/GROUP IF NEEDED
+# ============================================
+# If you want to customize the default User/Group admin:
+# admin.site.unregister(User)
+# admin.site.unregister(Group)

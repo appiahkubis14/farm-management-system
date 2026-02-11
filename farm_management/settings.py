@@ -68,6 +68,16 @@ INSTALLED_APPS = [
 
 
 
+# Optional: Configure Leaflet
+LEAFLET_CONFIG = {
+    'DEFAULT_CENTER': (7.9465, -1.0232),  # Ghana coordinates
+    'DEFAULT_ZOOM': 6,
+    'MIN_ZOOM': 3,
+    'MAX_ZOOM': 18,
+    'RESET_VIEW': False,
+    'SCALE': 'both',
+    'ATTRIBUTION_PREFIX': 'Powered by django-leaflet',
+}
 
 # GDAL configuration for Ubuntu/Debian
 if os.name == 'posix':  # Linux

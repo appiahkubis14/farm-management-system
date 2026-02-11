@@ -24,12 +24,12 @@
 
     <!-- Sidebar Hover Menu Toggle Button -->
     <div class="button-sm-hover" data-bs-toggle="tooltip" data-bs-placement="right" title="Show Full Sidebar">
-        <i class="ri-checkbox-blank-circle-line align-middle"></i>
+        <i class="fas fa-circle align-middle sidebar-icon"></i>
     </div>
 
     <!-- Full Sidebar Menu Close Button -->
     <div class="button-close-fullsidebar">
-        <i class="ri-close-fill align-middle"></i>
+        <i class="fas fa-times align-middle sidebar-icon"></i>
     </div>
 
     <!-- Sidebar -left -->
@@ -70,9 +70,9 @@
                         {% if item.sub_items %}
                             <!-- Parent item with children -->
                             <a data-bs-toggle="collapse" href="#nav-{{ forloop.counter }}" aria-expanded="false" aria-controls="nav-{{ forloop.counter }}" class="side-nav-link fw-semibold">
-                                <i class="{{ item.icon|default:'ri-circle-fill' }} me-2"></i>
+                                <i class="{{ item.icon|default:'fas fa-circle' }} me-2 sidebar-icon"></i>
                                 <span>{{ name }}</span>
-                                <span class="menu-arrow"><i class="ri-arrow-right-s-line"></i></span>
+                                <span class="menu-arrow"><i class="fas fa-chevron-right"></i></span>
                             </a>
                             
                             <!-- Children items -->
@@ -83,9 +83,9 @@
                                             {% if child_item.sub_items %}
                                                 <!-- Child item with its own children -->
                                                 <a data-bs-toggle="collapse" href="#nav-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" aria-expanded="false" aria-controls="nav-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="fw-medium">
-                                                    <i class="{{ child_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                    <i class="{{ child_item.icon|default:'far fa-circle' }} me-2 sidebar-icon"></i>
                                                     <span>{{ child_name }}</span>
-                                                    <span class="menu-arrow"><i class="ri-arrow-right-s-line"></i></span>
+                                                    <span class="menu-arrow"><i class="fas fa-chevron-right"></i></span>
                                                 </a>
                                                 
                                                 <!-- Grandchildren items -->
@@ -96,9 +96,9 @@
                                                                 {% if grandchild_item.sub_items %}
                                                                     <!-- Grandchild item with its own children -->
                                                                     <a data-bs-toggle="collapse" href="#nav-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" aria-expanded="false" aria-controls="nav-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="fw-normal">
-                                                                        <i class="{{ grandchild_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                                        <i class="{{ grandchild_item.icon|default:'far fa-circle' }} me-2 sidebar-icon"></i>
                                                                         <span>{{ grandchild_name }}</span>
-                                                                        <span class="menu-arrow"><i class="ri-arrow-right-s-line"></i></span>
+                                                                        <span class="menu-arrow"><i class="fas fa-chevron-right"></i></span>
                                                                     </a>
                                                                     
                                                                     <!-- Great-grandchildren items -->
@@ -107,7 +107,7 @@
                                                                             {% for great_grandchild_name, great_grandchild_item in grandchild_item.sub_items.items %}
                                                                                 <li>
                                                                                     <a href="{{ great_grandchild_item.url }}" class="fw-light">
-                                                                                        <i class="{{ great_grandchild_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                                                        <i class="{{ great_grandchild_item.icon|default:'far fa-circle' }} me-2 sidebar-icon"></i>
                                                                                         <span>{{ great_grandchild_name }}</span>
                                                                                     </a>
                                                                                 </li>
@@ -117,7 +117,7 @@
                                                                 {% else %}
                                                                     <!-- Grandchild item without children -->
                                                                     <a href="{{ grandchild_item.url }}" class="fw-normal">
-                                                                        <i class="{{ grandchild_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                                        <i class="{{ grandchild_item.icon|default:'far fa-circle' }} me-2 sidebar-icon"></i>
                                                                         <span>{{ grandchild_name }}</span>
                                                                     </a>
                                                                 {% endif %}
@@ -128,7 +128,7 @@
                                             {% else %}
                                                 <!-- Child item without children -->
                                                 <a href="{{ child_item.url }}" class="fw-medium">
-                                                    <i class="{{ child_item.icon|default:'ri-circle-line' }} me-2"></i>
+                                                    <i class="{{ child_item.icon|default:'far fa-circle' }} me-2 sidebar-icon"></i>
                                                     <span>{{ child_name }}</span>
                                                 </a>
                                             {% endif %}
@@ -139,7 +139,7 @@
                         {% else %}
                             <!-- Single item without children -->
                             <a href="{{ item.url }}" class="side-nav-link fw-semibold">
-                                <i class="{{ item.icon|default:'ri-circle-fill' }} me-2"></i>
+                                <i class="{{ item.icon|default:'fas fa-circle' }} me-2 sidebar-icon"></i>
                                 {% if item.badge %}
                                     <span class="badge {{ item.badge_class|default:'bg-success' }} float-end">{{ item.badge }}</span>
                                 {% endif %}
@@ -152,15 +152,15 @@
                 <!-- Show login prompt for non-authenticated users -->
                 <li class="side-nav-item">
                     <a href="/admin/login/?next=/" class="side-nav-link fw-semibold text-primary">
-                        <i class="ri-login-box-fill me-2"></i>
+                        <i class="fas fa-sign-in-alt me-2 sidebar-icon"></i>
                         <span>{% trans "Login to access menu" %}</span>
                     </a>
                 </li>
             {% else %}
                 <!-- Show message if no sidebar items are available -->
                 <li class="side-nav-item">
-                    <a href="#" class="side-nav-link text-muted">
-                        <i class="ri-information-line me-2"></i>
+                    <a href="javascript:void(0)" class="side-nav-link text-muted">
+                        <i class="fas fa-info-circle me-2 sidebar-icon"></i>
                         <span>{% trans "No menu items available for your role" %}</span>
                     </a>
                 </li>
@@ -171,7 +171,7 @@
                 <li class="side-nav-title mt-3 fs-13 text-uppercase fw-semibold letter-spacing-1">{% trans "Administration" %}</li>
                 <li class="side-nav-item">
                     <a href="/admin/" class="side-nav-link fw-semibold" target="_blank">
-                        <i class="ri-shield-user-fill me-2"></i>
+                        <i class="fas fa-user-shield me-2 sidebar-icon"></i>
                         <span>{% trans "Admin Panel" %}</span>
                     </a>
                 </li>
@@ -184,6 +184,22 @@
 </div>
 
 <style>
+    /* Load Font Awesome via CDN */
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+    
+    /* Base icon styling - applied to ALL icons with !important */
+    .sidebar-icon {
+        display: inline-block !important;
+        width: 1rem !important;
+        min-width: 1rem !important;
+        text-align: center !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        font-style: normal !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+    }
+    
     /* Sidebar styling improvements */
     .side-nav {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -202,6 +218,15 @@
         font-size: 14px !important;
         transition: all 0.2s ease;
         border-left: 3px solid transparent;
+        display: flex !important;
+        align-items: center !important;
+        cursor: pointer !important;
+    }
+    
+    .side-nav-link i.sidebar-icon {
+        font-size: 16px !important;
+        margin-right: 8px !important;
+        opacity: 1 !important;
     }
     
     .side-nav-link:hover {
@@ -224,10 +249,20 @@
         font-size: 13.5px !important;
         color: #adb5bd !important;
         border-left: 2px solid transparent;
+        display: flex !important;
+        align-items: center !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
     }
     
-    .side-nav-second-level a:hover {
-        /* color: #ffffff !important; */
+    .side-nav-second-level a i.sidebar-icon {
+        font-size: 14px !important;
+        opacity: 1 !important;
+    }
+    
+    .side-nav-second-level a:hover,
+    .side-nav-second-level a.active {
+        color: #348110 !important;
         background-color: rgba(255, 255, 255, 0.03);
         border-left-color: #3e70c9;
     }
@@ -241,10 +276,20 @@
         font-size: 13px !important;
         color: #8a94a6 !important;
         border-left: 1px solid transparent;
+        display: flex !important;
+        align-items: center !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
     }
     
-    .side-nav-third-level a:hover {
-        /* color: #dee2e6 !important; */
+    .side-nav-third-level a i.sidebar-icon {
+        font-size: 13px !important;
+        opacity: 1 !important;
+    }
+    
+    .side-nav-third-level a:hover,
+    .side-nav-third-level a.active {
+        color: #348110 !important;
         background-color: rgba(255, 255, 255, 0.02);
         border-left-color: #3e70c9;
     }
@@ -257,10 +302,20 @@
         padding: 5px 15px !important;
         font-size: 12.5px !important;
         color: #6c757d !important;
+        display: flex !important;
+        align-items: center !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
     }
     
-    .side-nav-forth-level a:hover {
-        color: #adb5bd !important;
+    .side-nav-forth-level a i.sidebar-icon {
+        font-size: 12px !important;
+        opacity: 1 !important;
+    }
+    
+    .side-nav-forth-level a:hover,
+    .side-nav-forth-level a.active {
+        color: #348110 !important;
         background-color: rgba(255, 255, 255, 0.01);
     }
     
@@ -284,8 +339,9 @@
     /* Menu arrow styling */
     .menu-arrow {
         transition: transform 0.2s ease;
-        float: right;
-        margin-top: 2px;
+        margin-left: auto;
+        display: flex;
+        align-items: center;
     }
     
     .menu-arrow i {
@@ -296,13 +352,14 @@
         transform: rotate(90deg);
     }
     
-    /* Icon spacing */
+    /* Ensure all sidebar icons are immediately visible */
     .side-nav-link i,
     .side-nav-second-level a i,
     .side-nav-third-level a i,
     .side-nav-forth-level a i {
-        min-width: 20px;
-        text-align: center;
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: inline-block !important;
     }
     
     /* Better spacing for collapsed items */
@@ -315,4 +372,316 @@
         background-color: rgba(255, 255, 255, 0.05);
         border-left-color: #3e70c9;
     }
+    
+    /* Fix for icon loading delay */
+    .side-nav i:empty::before {
+        content: " ";
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+    }
+    
+    /* Preload icon styling to prevent FOUC */
+    .leftside-menu i {
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Font Awesome specific adjustments */
+    .fa-circle, .fa-sign-in-alt, .fa-info-circle, .fa-user-shield, .fa-times, .fa-chevron-right {
+        font-family: 'Font Awesome 6 Free' !important;
+        font-weight: 900 !important;
+    }
+    
+    .far.fa-circle {
+        font-weight: 400 !important;
+    }
+    
+    /* Prevent text selection on sidebar items */
+    .side-nav-link, .side-nav-second-level a, .side-nav-third-level a, .side-nav-forth-level a {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
 </style>
+
+<script>
+// Initialize sidebar functionality with Font Awesome
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Sidebar initialization with Font Awesome started');
+    
+    // Ensure all sidebar icons have consistent styling IMMEDIATELY
+    const sidebarIcons = document.querySelectorAll('.sidebar-icon');
+    console.log('Found', sidebarIcons.length, 'sidebar icons');
+    
+    // Immediately set styles to prevent any delay
+    sidebarIcons.forEach(icon => {
+        icon.style.fontSize = '16px';
+        icon.style.width = '1rem';
+        icon.style.minWidth = '1rem';
+        icon.style.opacity = '1';
+        icon.style.visibility = 'visible';
+        icon.style.display = 'inline-block';
+        icon.style.fontStyle = 'normal';
+        icon.style.fontWeight = '900';
+        icon.style.lineHeight = '1';
+    });
+    
+    // Load Font Awesome if not already loaded (double safety)
+    if (!document.querySelector('link[href*="font-awesome"]')) {
+        console.log('Loading Font Awesome CSS');
+        const faLink = document.createElement('link');
+        faLink.rel = 'stylesheet';
+        faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+        faLink.onload = function() {
+            console.log('Font Awesome loaded successfully');
+            // Force icon visibility
+            sidebarIcons.forEach(icon => {
+                icon.style.opacity = '1';
+                icon.style.visibility = 'visible';
+            });
+        };
+        document.head.appendChild(faLink);
+    } else {
+        console.log('Font Awesome already loaded');
+        // Force icon visibility immediately
+        sidebarIcons.forEach(icon => {
+            icon.style.opacity = '1';
+            icon.style.visibility = 'visible';
+        });
+    }
+    
+    // FIX: Prevent page refresh when clicking on collapse items
+    function preventRefreshOnCollapse() {
+        const collapseTriggers = document.querySelectorAll('[data-bs-toggle="collapse"]');
+        
+        collapseTriggers.forEach(trigger => {
+            // Prevent default behavior on click to avoid page refresh
+            trigger.addEventListener('click', function(e) {
+                // Only prevent default if it's a collapse trigger (has href starting with #)
+                const href = this.getAttribute('href');
+                if (href && href.startsWith('#')) {
+                    e.preventDefault();
+                    
+                    // Manually toggle the collapse if Bootstrap isn't handling it
+                    const targetId = href.substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    
+                    if (targetElement) {
+                        // Toggle the collapse manually
+                        const isCollapsed = targetElement.classList.contains('show');
+                        
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                            // Use Bootstrap's Collapse if available
+                            const bsCollapse = new bootstrap.Collapse(targetElement, {
+                                toggle: true
+                            });
+                        } else {
+                            // Manual toggle
+                            if (isCollapsed) {
+                                targetElement.classList.remove('show');
+                                this.classList.add('collapsed');
+                                this.setAttribute('aria-expanded', 'false');
+                            } else {
+                                targetElement.classList.add('show');
+                                this.classList.remove('collapsed');
+                                this.setAttribute('aria-expanded', 'true');
+                            }
+                        }
+                        
+                        // Update chevron
+                        const chevron = this.querySelector('.menu-arrow i');
+                        if (chevron) {
+                            setTimeout(() => {
+                                if (targetElement.classList.contains('show')) {
+                                    chevron.style.transform = 'rotate(90deg)';
+                                } else {
+                                    chevron.style.transform = 'rotate(0deg)';
+                                }
+                            }, 50);
+                        }
+                    }
+                }
+            });
+        });
+    }
+    
+    // Initialize sidebar collapse functionality
+    function initSidebarCollapse() {
+        const collapseTriggers = document.querySelectorAll('[data-bs-toggle="collapse"]');
+        
+        collapseTriggers.forEach(trigger => {
+            const targetSelector = trigger.getAttribute('href');
+            if (targetSelector) {
+                const targetElement = document.querySelector(targetSelector);
+                
+                if (targetElement) {
+                    // Initialize chevron position based on current state
+                    const chevron = trigger.querySelector('.menu-arrow i');
+                    if (chevron) {
+                        if (targetElement.classList.contains('show')) {
+                            trigger.classList.remove('collapsed');
+                            trigger.setAttribute('aria-expanded', 'true');
+                            chevron.style.transform = 'rotate(90deg)';
+                        } else {
+                            trigger.classList.add('collapsed');
+                            trigger.setAttribute('aria-expanded', 'false');
+                            chevron.style.transform = 'rotate(0deg)';
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Apply the refresh prevention
+    preventRefreshOnCollapse();
+    
+    // Initialize collapse functionality
+    initSidebarCollapse();
+    
+    // Re-initialize after a short delay to ensure everything is loaded
+    setTimeout(initSidebarCollapse, 100);
+    
+    // Set active menu item based on current URL
+    function setActiveMenuItem() {
+        const currentPath = window.location.pathname;
+        const allLinks = document.querySelectorAll('.side-nav a[href]');
+        
+        // Remove active class from all links first
+        allLinks.forEach(link => link.classList.remove('active'));
+        
+        // Find and activate the current link
+        allLinks.forEach(link => {
+            const linkPath = link.getAttribute('href');
+            if (linkPath && (currentPath === linkPath || 
+                (linkPath !== '/' && currentPath.startsWith(linkPath)))) {
+                link.classList.add('active');
+                
+                // Expand parent collapse elements
+                let parentCollapse = link.closest('.collapse');
+                while (parentCollapse) {
+                    const collapseId = parentCollapse.id;
+                    const trigger = document.querySelector(`[href="#${collapseId}"]`);
+                    if (trigger) {
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                            const bsCollapse = new bootstrap.Collapse(parentCollapse, {toggle: false});
+                            bsCollapse.show();
+                        } else {
+                            parentCollapse.classList.add('show');
+                        }
+                        trigger.classList.remove('collapsed');
+                        trigger.setAttribute('aria-expanded', 'true');
+                        
+                        // Update chevron
+                        const chevron = trigger.querySelector('.menu-arrow i');
+                        if (chevron) {
+                            chevron.style.transform = 'rotate(90deg)';
+                        }
+                    }
+                    parentCollapse = parentCollapse.parentElement.closest('.collapse');
+                }
+            }
+        });
+    }
+    
+    // Set active menu on page load
+    setActiveMenuItem();
+    
+    // Fix for links that should navigate (not collapse items)
+    document.querySelectorAll('.side-nav a').forEach(link => {
+        const href = link.getAttribute('href');
+        
+        // Only prevent click events on collapse triggers
+        if (!link.hasAttribute('data-bs-toggle') || link.getAttribute('data-bs-toggle') !== 'collapse') {
+            // These are regular navigation links, let them work normally
+            link.addEventListener('click', function(e) {
+                // Update active state for navigation links
+                document.querySelectorAll('.side-nav a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        }
+    });
+    
+    // Force icon visibility after everything loads
+    setTimeout(() => {
+        sidebarIcons.forEach(icon => {
+            icon.style.opacity = '1';
+            icon.style.visibility = 'visible';
+            // Double check Font Awesome classes
+            if (icon.className.includes('fa-')) {
+                icon.style.fontFamily = "'Font Awesome 6 Free'";
+                if (icon.className.includes('far ')) {
+                    icon.style.fontWeight = '400';
+                } else {
+                    icon.style.fontWeight = '900';
+                }
+            }
+        });
+    }, 50);
+    
+    // Listen for Font Awesome loading
+    document.addEventListener('fontawesome-loaded', function() {
+        console.log('Font Awesome fully loaded event');
+        sidebarIcons.forEach(icon => {
+            icon.style.opacity = '1';
+            icon.style.visibility = 'visible';
+        });
+    });
+});
+
+// Add a simple icon fallback in case Font Awesome fails
+window.addEventListener('load', function() {
+    const testIcon = document.createElement('i');
+    testIcon.className = 'fas fa-circle';
+    testIcon.style.position = 'absolute';
+    testIcon.style.left = '-9999px';
+    document.body.appendChild(testIcon);
+    
+    setTimeout(() => {
+        const computedStyle = window.getComputedStyle(testIcon, ':before');
+        const content = computedStyle.content;
+        
+        if (content === 'none' || content === '""') {
+            console.log('Font Awesome not rendering, using fallback');
+            // Use Unicode fallback for critical icons
+            const iconFallbacks = {
+                'fa-circle': '●',
+                'fa-sign-in-alt': '↪',
+                'fa-info-circle': 'ⓘ',
+                'fa-user-shield': '⚔',
+                'fa-times': '×',
+                'fa-chevron-right': '›'
+            };
+            
+            document.querySelectorAll('.sidebar-icon').forEach(icon => {
+                for (const [faClass, unicode] of Object.entries(iconFallbacks)) {
+                    if (icon.className.includes(faClass)) {
+                        icon.textContent = unicode;
+                        icon.style.fontFamily = 'Arial, sans-serif';
+                        icon.style.fontSize = '14px';
+                        break;
+                    }
+                }
+            });
+        }
+        document.body.removeChild(testIcon);
+    }, 100);
+});
+
+// Additional fix: Prevent any accidental refresh from sidebar clicks
+document.addEventListener('click', function(e) {
+    // Check if the click is on a sidebar link with href="#"
+    if (e.target.closest('.side-nav')) {
+        const link = e.target.closest('a');
+        if (link && link.getAttribute('href') === '#') {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    }
+}, true);
+</script>

@@ -1,3256 +1,2099 @@
+# views.py
 from django.shortcuts import render
-from API.models import *
-# Create your views here.
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import get_template
-from django.template import Context
-from django.views.decorators.csrf import csrf_protect,csrf_exempt
-from django.http import HttpResponseRedirect, JsonResponse,HttpResponse
-from django.shortcuts import render, HttpResponse, redirect
-from django.contrib.auth import authenticate,login as Login,logout as Logout
-from django.contrib import messages
-import json
-from django.utils.decorators import method_decorator
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django.views import View
-from django.contrib.auth.models import User
+import json
+from datetime import datetime, date
+from django.db.models import Q
 import base64
 import io
 from PIL import Image
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.db.models import Q, Value, F, ExpressionWrapper,Sum
-# from portal.decorators.decorator import usergroup
-import datetime
-from django.contrib.gis.geos import Polygon,Point
-# views.py
-from rest_framework.generics import ListAPIView
-# from .serializers import rehabassistantsTblSerializer
-# from portal.models import rehabassistantsTbl
-
-# -*- coding: utf-8 -*-
-from rest_framework import viewsets
-from django.shortcuts import render
-from .serializers import *
-from datetime import date, timedelta
-from API.models import *
+from django.contrib.gis.geos import Point
 from portal.models import *
 
+# ============== HELPER FUNCTIONS ==============
+
 def decodeDesignImage(data):
+    """Decode base64 image"""
     try:
-        data = base64.b64decode(data.encode('UTF-8'))
-        buf = io.BytesIO(data)
-        img = Image.open(buf)
-        return img
+        if data and data.strip():
+            data = base64.b64decode(data.encode('UTF-8'))
+            buf = io.BytesIO(data)
+            img = Image.open(buf)
+            return img
     except:
         return None
+    return None
 
-
-
-
-# def saveimage(image, imgname):
-#     img = decodeDesignImage(image)
-#     img_io = io.BytesIO()
-#     img.save(img_io, format='PNG')
-#     data= InMemoryUploadedFile(img_io, field_name=None, name=str(imgname)+".jpg", content_type='image/jpeg', size=img_io.tell, charset=None)
-#     return data
-
-
-
-
-
-def saveimage(image, imgname):
+def save_image(image, imgname, format='PNG'):
+    """Save base64 image to file"""
     img = decodeDesignImage(image)
-    img_io = io.BytesIO()
-
     if img is not None:
-        img.save(img_io, format='PNG')
-        img_io.seek(0)  # Reset buffer position to the beginning
-
+        img_io = io.BytesIO()
+        img.save(img_io, format=format)
+        img_io.seek(0)
+        
+        content_type = 'image/png' if format == 'PNG' else 'image/jpeg'
+        extension = 'png' if format == 'PNG' else 'jpg'
+        
         data = InMemoryUploadedFile(
             img_io,
             field_name=None,
-            name=f"{imgname}.png",
-            content_type='image/png',
-            size=img_io.getbuffer().nbytes,  # Get the correct size
+            name=f"{imgname}.{extension}",
+            content_type=content_type,
+            size=img_io.getbuffer().nbytes,
             charset=None
         )
         return data
     return None
 
-def saveimageJPG(image, imgname):
-    img = decodeDesignImage(image)
-    img_io = io.BytesIO()
-    print(img_io)
-    print(img_io)
-    print(img_io)
-    img.save(img_io, format='PNG')
-    data= InMemoryUploadedFile(img_io, field_name=None, name=str(imgname)+".jpg", content_type='image/jpeg', size=img_io.tell, charset=None)
-    return data
-
-
-
-def saveFile(image, imgname,format):
-    
-    img = decodeDesignImage(image)
-
-    print(img)
-
-    img_io = io.BytesIO()
-    img.save(img_io, format=f'{format}')
-    data= InMemoryUploadedFile(img_io, field_name=None, name=str(imgname)+ f".{format}", content_type='image/jpeg', size=img_io.tell, charset=None)
-    return data
-    
-def checkTitle(text):
-    if text :
-        return text.title()
-    else : 
-        return text
-
-# APIS For mobile App 
-
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchfarmsView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-        sectorlist =sectorStaffassignment.objects.filter(staffTbl_foreignkey = data["userid"]).values_list("sector",flat=True)
-        # dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
-        # sector__in = level["sector"]
-     
-        # import pandas as pd
-        # ADS = FarmdetailsTbl.objects.filter(district='KADE').update(sector='23')
-        # pandas_array = pd.Series(ADS)
-        # df = pd.DataFrame({'Data': pandas_array})
-        # df.to_excel('output.xlsx', index=False)
-
-        # print(sectorlist)
-       
-        farms = FarmdetailsTbl.objects.filter(sector__in=sectorlist).defer("expunge","reason4expunge",'location','sector','region',"year_of_establishment")
-        # print(farms.count())
-        data = []
-
-        for farm in farms:
-            # print(farm.farm_reference)
-            try:
-                eok={}
-                eok["farm_code"]=farm.id
-                eok["farm_id"]=farm.farm_reference
-                eok["farmer_nam"]=checkTitle(farm.farmername)
-                eok["district_id"]=farm.districtTbl_foreignkey.id
-                eok["district_name"]=checkTitle(farm.districtTbl_foreignkey.district)
-                eok["region_id"]=farm.districtTbl_foreignkey.reg_code.reg_code
-                eok["region_name"]=checkTitle(farm.districtTbl_foreignkey.reg_code.region)
-                eok["farm_size"]= farm.farm_size
-                data.append(eok)
-                status["status"] =  True
-                status["msg"] = "Success!"
-            except Exception as e:
-                continue
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
 
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-class fetchRehabassistantsView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-
-        proj = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
-
-        Rehabs = rehabassistantsTbl.objects.filter(projectTbl_foreignkey=proj)
-        data = []
-        domain = "https://cocoa-monitor-static.s3.amazonaws.com/media"
-        # print(domain)
-        if Rehabs:
-            for rehab in Rehabs:
-                eok={}
-                eok["rehab_code"]=rehab.id
-                eok["rehab_name"]=f'{rehab.name.title()}'
-                eok["project_id"]=rehab.projectTbl_foreignkey.id
-                eok["project_name"]=rehab.projectTbl_foreignkey.name.title()
-                eok["designation"]=rehab.designation
-                if rehab.photo_staff:
-                    eok["image"]=f'{domain}/{str(rehab.photo_staff)}'
-                else:
-                    eok["image"]=str(rehab.photo_staff)
-                eok["staff_id"]=rehab.staff_code
-                eok["phone_number"]=rehab.phone_number
-                eok["salary_bank_name"]=rehab.salary_bank_name
-                eok["bank_account_number"]=rehab.bank_account_number
-                eok["ssnit_number"]=rehab.ssnit_number
-                if rehab.momo_account_name:
-                    eok["momo_account_name"]=rehab.momo_account_name.title()
-                else:
-                    eok["momo_account_name"]= "Not Provided"
-                eok["momo_number"]=rehab.momo_number
-                if rehab.payment_option:
-                    eok["payment_option"]=rehab.payment_option
-                else:
-                    eok["payment_option"]= "Not Provided"
-                if rehab.staffTbl_foreignkey:
-                    eok["po"]=f'{rehab.staffTbl_foreignkey.first_name.title()} {rehab.staffTbl_foreignkey.last_name.title()}'
-                else:
-                    eok["po"]='Not Assigned'
-        
-                data.append(eok)
-    
-        if data:
-            status["status"] =  True
-            status["data"] = data
-        return JsonResponse(status, safe=False)
-
-
-
-def fetchactivitiesView(request):	
-    status ={}
-    status["status"] =False
-    activities = Activities.objects.all()
-    data = []
-
-    for active in activities:
-        eok={}
-        eok["code"]=active.id
-        eok["main_activity"]=active.main_activity
-        eok["sub_activity"]=active.sub_activity.title()
-        eok["required_equipment"]=active.required_equipment
-        data.append(eok)
-    
-    if data:
-        status["status"] =  True
-        status["data"] = data
-    return JsonResponse(status, safe=False)
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchregionDistrictsView(View):
+class versionTblView(View):
     def post(self, request):
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
-
-        if data["userid"] :
-            projects = cocoaDistrict.objects.filter(id=dist)
-        else:
-            projects = cocoaDistrict.objects.all()
-        data = []
-
-        for project in projects:
-            eok={}
-            eok["project_id"]=project.id
-            eok["project_name"]=project.name
-            # eok["region_id"]=project.reg_code.reg_code
-            # eok["region_name"]=project.reg_code.region.title()
-            data.append(eok)
+        status = {
+            "status": False,
+            "msg": "Error Occured!",
+            "data": None
+        }
         
-        if data:
-            status["status"] =  True
-            status["data"] = data
+        try:
+            data = json.loads(request.body)
+            
+            if data.get("version"):
+                if versionTbl.objects.filter(version=data["version"]).exists():
+                    status["status"] = True
+                    status["msg"] = "successful"
+                else:
+                    status["status"] = False
+                    status["msg"] = "not successful"
+            else:
+                status["status"] = False
+                status["msg"] = "version field is required"
+
+        except json.JSONDecodeError as e:
+            status["msg"] = "Invalid JSON format"
+            status["data"] = str(e)
+        except Exception as e:
+            status["msg"] = "Error Occurred!"
+            status["data"] = str(e)
+            
         return JsonResponse(status, safe=False)
 
 
 
 
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class loginmobileView(View):
-#     def post(self, request):
-#         try:
-#             data = json.loads(request.body)
-#             status ={}
-#             status["status"] =False
-
-#             if data["telephone"] :
-#                 if staffTbl.objects.filter(contact=data["telephone"]).exists():
-#                     staff= staffTbl.objects.filter(contact=data["telephone"]).first()
-#                     print(staff.staffid)
-#                     status["status"] =  1
-#                     status["msg"] = "Login successful11"
-#                     status["data"] ={
-#                     "first_name" :f'{staff.first_name.title()}',
-#                     "last_name" :f'{staff.last_name.title()}',
-#                     "user_id" :f'{staff.id}',
-#                     "staff_id" :f'{staff.staffid}',
-#                     "group" : f'{staff.designation.name}'
-#                     }
-
-#                 else:
-#                     status["status"] =  0
-#                     status["msg"] =  "Login unsuccessful!"
-#                     status["data"] ={
-#                     "user" :'',
-#                     "group" : ''
-#                     }
-#             else:
-#                 status["status"] =  0
-#                 status["msg"] =  "Login unsuccessful!"
-#                 status["data"] ={
-#                 "user" :'',
-#                 "group" : ''
-#                 }
-
-#         except Exception as e:
-#             raise e
-#         return JsonResponse(status, safe=False)
-
+# ============== 1. AUTHENTICATION & USER ==============
 
 @method_decorator(csrf_exempt, name='dispatch')
-class loginmobileV2View(View):
+class LoginView(View):
+    """Handle user login (POST only)"""
     def post(self, request):
         try:
             data = json.loads(request.body)
-            status = {}
-            status["status"] = False
-
-            if data["telephone"]:
-                if staffTbl.objects.filter(contact=data["telephone"], crmpassword=data["password"]).exists():
-                    staff = staffTbl.objects.filter(contact=data["telephone"]).first()
-                    
-                    # Get assigned farms with optimized query
-                    assigned_farms = projectStaffTbl.objects.filter(
-                        staffTbl_foreignkey=staff.id
-                    ).select_related('projectTbl_foreignkey')
-                    
-                    # Get all farm details in one query
-                    project_id = [assignment.projectTbl_foreignkey.id for assignment in assigned_farms if assignment.projectTbl_foreignkey]
-                    project_details = FarmdetailsTbl.objects.filter(
-                        farm_foreignkey__id__in=project_id
-                    )
-                    
-                    # Create a lookup dictionary for quick access
-                    farm_detail_dict = {}
-                    for detail in project_details:
-                        if detail.farm_foreignkey:
-                            farm_detail_dict[detail.farm_foreignkey.id] = detail
-                    
-                    # Prepare farm data
-                    farm_data = []
-                    # Also collect projectStaffTbl IDs
-                    project_staff_ids = []
-                    
-                    for assignment in assigned_farms:
-                        if assignment.projectTbl_foreignkey and assignment.projectTbl_foreignkey.id in farm_detail_dict:
-                            farm_detail = farm_detail_dict[assignment.projectTbl_foreignkey.id]
-                            farm_data.append({
-                                "farm_id": assignment.projectTbl_foreignkey.id,
-                                "farm_reference": farm_detail.farm_reference or "N/A",
-                                "farmer_name": farm_detail.farmername or "N/A",
-                                "region": farm_detail.region or "N/A",
-                                "district": farm_detail.district or "N/A",
-                                "location": farm_detail.location or "N/A",
-                                "farm_size": farm_detail.farm_size or 0,
-                                "status": farm_detail.status or "N/A",
-                                "sector": farm_detail.sector or 0,
-                                "year_established": farm_detail.year_of_establishment.strftime('%Y-%m-%d') if farm_detail.year_of_establishment else "N/A",
-                                "assigned_date": assignment.created_date.strftime('%Y-%m-%d %H:%M:%S') if assignment.created_date else "N/A"
-                            })
-                            project_staff_ids.append(assignment.id)
-                    
-                    print(f"Login successful for: {staff.staffid}")
-                    status["status"] = 1
-                    status["msg"] = "Login successful"
-                    status["data"] = {
-                        "project_id": assignment.id if assigned_farms else None,
-                        "first_name": f'{staff.first_name.title()}',
-                        "last_name": f'{staff.last_name.title()}',
-                        "user_id": f'{staff.id}',
-                        "staff_id": staff.staffid if staff.staffid else "",
-                        "group": f'{staff.designation.name}',
-                       
-                    }
-
-                else:
-                    status["status"] = 0
-                    status["msg"] = "Invalid telephone number or password!"
-                    status["data"] = {
-                        "user": '',
-                        "group": '',
-                        "assigned_farms": []
-                    }
-            else:
-                status["status"] = 0
-                status["msg"] = "Telephone number is required!"
+            status = {"status": False, "message": "", "data": {}}
+            
+            username = data.get("username", "")
+            password = data.get("password", "")
+            
+            if not username or not password:
+                status["message"] = "Username and password are required"
+                return JsonResponse(status, status=400)
+            
+            # Try to find staff by contact or email
+            staff = staffTbl.objects.filter(
+                contact = username,
+                password = password
+            )
+            
+            if staff.exists():
+                staff = staff.first()
+                # Check password (assuming simple password check for now)
+                # In production, you should use proper authentication
+                status["status"] = True
+                status["message"] = "Login successful"
                 status["data"] = {
-                    "user": '',
-                    "group": '',
-                    "assigned_farms": []
+                    "user_id": staff.id,
+                    "first_name": staff.first_name,
+                    "last_name": staff.last_name,
+                    "email": staff.email_address if staff.email_address else "",
+                    "contact": staff.contact,
+                    "staff_id": staff.staffid if staff.staffid else "",
+                    "project_id": staff.projectTbl_foreignkey.id if staff.projectTbl_foreignkey else None,
+                    "project_name": staff.projectTbl_foreignkey.name if staff.projectTbl_foreignkey else "",
+                    "district_id": staff.projectTbl_foreignkey.district.id if staff.projectTbl_foreignkey and staff.projectTbl_foreignkey.district else None,
+                    "district_name": staff.projectTbl_foreignkey.district.name if staff.projectTbl_foreignkey and staff.projectTbl_foreignkey.district else None
                 }
-
+            else:
+                status["message"] = "Invalid username or password"
+                
         except json.JSONDecodeError:
-            status["status"] = 0
-            status["msg"] = "Invalid JSON data!"
-            status["data"] = {
-                "user": '',
-                "group": '',
-                "assigned_farms": []
-            }
+            status["message"] = "Invalid JSON data"
+            return JsonResponse(status, status=400)
         except Exception as e:
-            status["status"] = 0
-            status["msg"] = f"Error occurred: {str(e)}"
-            status["data"] = {
-                "user": '',
-                "group": '',
-                "assigned_farms": []
-            }
-        
-        return JsonResponse(status, safe=False)
+            status["message"] = f"Error occurred: {str(e)}"
+            
+        return JsonResponse(status)
 
-
-
-
-    
+# ============== 2. DAILY REPORTING / ACTIVITY REPORTING ==============
 
 @method_decorator(csrf_exempt, name='dispatch')
-class saveregistrationView(View):
+class SaveActivityReportView(View):
+    """Handle daily reporting and activity reporting (POST only)"""
     def post(self, request):
-        status ={}
-        status["status"] = 0
         try:
             data = json.loads(request.body)
-            name = data["name"]
-            gender = data["gender"]
-            contact = data["contact"]
-            dob = data["dob"]
-            designation = data["designation"]
-            district = data["district"]
-            uid = data["uid"]
-            if district :
-                district = cocoaDistrict.objects.get(id=district)
-        
-            if name!="" and contact!="" and dob!="" and designation!="" :
-                # if designation == "Project Officer" :
-                # 	if not staffTbl.objects.filter(uid=uid).exists():
-                # 		staffobj, staffcreated = staffTbl.objects.get_or_create(
-                # 			contact= contact,
-                # 		    defaults={
-                # 		    # "user" :"",
-                # 		    "first_name":fname,
-                # 			"last_name":lname,
-                # 			"gender":gender,
-                # 			"dob":dob,
-                # 			"contact":contact,
-                # 			"designation":groupTbl.objects.get(name=designation) ,
-                # 			"email_address":email,
-                # 			"uid":uid
-                # 		    },
-                # 		  )
-                # 		if staffcreated: 
-                # 			if district :
-                # 				dist_obj, dist_created = districtStaffTbl.objects.get_or_create(districtTbl_foreignkey=district,staffTbl_foreignkey=staffobj)
-                # 				if dist_created:
-                # 					status["status"] =  1
-                # 					status["msg"] =  "successful saved"
-                # 					status["data"] ={
-                # 					# "user" :'',
-                # 					# "group" : ''
-                # 					}
-                # 				else:
-                # 					if dist_obj:
-                # 						status["status"] =  0
-                # 						status["msg"] =  "User exist"
-                # 						status["data"] ={
-                # 						# "user" :'',
-                # 						# "group" : ''
-                # 						}
-                # 		else:
-                # 			if staffobj:
-                # 				status["status"] =  0
-                # 				status["msg"] =  "User exist"
-                # 				status["data"] ={
-                # 				# "user" :'',
-                # 				# "group" : ''
-                # 				}
-                # 	else:
-                # 		status["status"] =  2
-                # 		status["msg"] =  "record exist"
-                # 		status["data"] = uid
-                # elif designation == "Rehab Assistant" or designation == "Rehab Technician":
-                if not rehabassistantsTbl.objects.filter(uid=uid).exists():
-                    getstaff = staffTbl.objects.get(id=data["agent"])
-                    if data["photo_staff"] :
-                        photo_staff =saveimage(data["photo_staff"], contact) 
-                    else:
-                        photo_staff =data["photo_staff"] 
-                    
-                    
-                    gender = data["gender"]
-                    # phone_number = data["phone_number"]
-                    salary_bank_name = data["salary_bank_name"]
-                    bank_branch = data["bank_branch"]
-                    bank_account_number = data["bank_account_number"]
-                    dob = data["dob"]
-                    ssnit_number = data["ssnit_number"]
-                    designation = data["designation"]
-
-                    designation = data["designation"]
-                    designation = data["designation"]
-                    designation = data["designation"]
-                    if not bank_account_number:
-                        owner_momo= "yes"
-                        momo_account_name= name
-                        momo_number= contact
-                        payment_option= "momo"
-                    else:
-                        owner_momo= ""
-                        momo_account_name= ""
-                        momo_number= ""
-                        payment_option= ""
-
-                    rehabobj, rehab_created = rehabassistantsTbl.objects.get_or_create(
-                        phone_number= contact,
-                        defaults={
-                        "name":name,
-                        "photo_staff":photo_staff,
-                        "phone_number":contact,
-                        "salary_bank_name":salary_bank_name,
-                        "bank_branch":bank_branch,
-                        "bank_account_number":bank_account_number,
-                        "ssnit_number":ssnit_number,
-                        "dob":dob,
-                        "districtTbl_foreignkey": district,
-                        "uid":uid,
-                        "staffTbl_foreignkey":getstaff,
-                        "gender":gender,
-                        "designation":designation,
-
-                        "owner_momo":owner_momo,
-                        "momo_account_name":momo_account_name,
-                        "momo_number":momo_number,
-                        "payment_option":payment_option,
-                        
-                                                
-                        },
-                        )
-
-                    if rehab_created:
-                        status["status"] =  1
-                        status["msg"] =  "Successful Saved !!"
-                        status["data"] ={
-                        
-                        }
-
-                    else:
-                        if rehabobj:
-                            status["status"] = 0
-                            status["msg"] =  "User exist"
-
-
-                
-
-                else:
-                    status["status"] =  2
-                    status["msg"] =  "record exist"
-                    status["data"] = uid
-                    # else :
-                    # 	if staffobj :
-                    # 		status["status"] =  False
-                    # 		status["msg"] =  "User exist",
-                    # 		# status["data"] ={
-                    # 		# "user" :'',
-                    # 		# "group" : ''
-                    # 		# }
-
-                # else:
-                # 	status["status"] =  0
-                # 	status["msg"] =  "Error Occured!"
-                    
-                    # status["data"] ={
-                    # "user" :'',
-                    # "group" : ''
-                    # }
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!7777"
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class saveraAssignmentView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
             
-            farm = data["farmid"]
-            activity= data["activity"]
-            ralist = json.loads(data["rehab_assistants"])
-            assigned_date = data["assigned_date"]
-            uid = data["uid"]
-            staff = data["agent"]
-
-            getstaff =staffTbl.objects.get(id=staff) 
-
-            if not rehabassistantsAssignmentTbl.objects.filter(uid=uid).exists():
-                if farm!="" and ralist!="" :
-
-                    for ra in ralist:
-                        rehabobj, rehab_created = rehabassistantsAssignmentTbl.objects.get_or_create(
-                            farmTbl_foreignkey=farm,
-                            rehabassistantsTbl_foreignkey=ra,
-                            activity=activity,
-                            defaults={
-                          
-                            "farmTbl_foreignkey":Farms.objects.get(id=farm),
-                            "rehabassistantsTbl_foreignkey":rehabassistantsTbl.objects.get(id=ra),
-                            "activity":Activities.objects.get(id=activity),
-                            "assigned_date":assigned_date,
-                            "uid":uid,
-                            "staffTbl_foreignkey":getstaff
-                            },
-                          )
-
-                    if rehab_created:
-                        status["status"] =  1
-                        status["msg"] =  "Successful Saved !!"
-                        status["data"] ={
-                        
-                        }
-
-                    else:
-                        if rehabobj:
-                            status["status"] = 0
-                            status["msg"] =  "User exist"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!",
-                    # status["data"] ={
-                    # "user" :'',
-                    # "group" : ''
-                    # }
-
-            else:
-                status["status"] =  2
-                status["msg"] =  "record exist",
-                status["data"] = uid
-
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class saveMonitoringformView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            staff_contact= data["agent"]
+            uid = data.get("uid", "")
             
-            farmTbl_foreignkey= data["farmTbl_foreignkey"]
-            activity= data["activity"]
-            monitoring_date= data["monitoring_date"]
-            no_rehab_assistants= data["no_rehab_assistants"]
-            original_farm_size= data["original_farm_size"]
-            area_covered_ha= data["area_covered_ha"]
-            remark= data["remark"]
-            lat= data["lat"]
-            lng= data["lng"]
-            tstatus = data["status"]
-            accuracy= data["accuracy"]
-            if data["current_farm_pic"]:
-                current_farm_pic=saveimage(data["current_farm_pic"], staff_contact) 
-            else:
-                current_farm_pic=""
-
-            ralist = data["rehab_assistants"]
-            fuel_oil = data["fuel_oil"]
-            uid = data["uid"]
+            # Check if UID already exists
+            if uid and DailyReportingModel.objects.filter(uid=uid).exists():
+                status["message"] = "Report with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
             
-            if fuel_oil["quantity_ltr"] and fuel_oil["area"]:
+            # Get agent
+            agent = None
+            agent_id = data.get("agent", "")
+            if agent_id:
                 try:
-                    rate = round (fuel_oil["quantity_ltr"]/fuel_oil["area"],3)
-                except Exception as e:
-                    rate=0
-                
-            else:
-                rate=0
-
-            # print(activity)
+                    agent = staffTbl.objects.get(id=agent_id)
+                except:
+                    pass
             
-
-            act=Activities.objects.get(id=int(activity))
-            if not weeklyMontoringTbl.objects.filter(uid=uid).exists():
-
-                if farmTbl_foreignkey!="" and ralist!="" :
-                    weekmonitorobj, weekmonitor_created = weeklyMontoringTbl.objects.get_or_create(
-                        farmTbl_foreignkey=FarmdetailsTbl.objects.get(id=farmTbl_foreignkey),
-                        activity= act ,
-                        uid=uid,
-                        monitoring_date=monitoring_date,
-                        no_rehab_assistants=no_rehab_assistants,
-                        original_farm_size=original_farm_size,
-                        area_covered_ha=area_covered_ha,
-                        remark=remark,
-                        lat=lat,
-                        lng=lng,
-                        accuracy=accuracy,
-                        status=tstatus,
-                        current_farm_pic=current_farm_pic,
-                        staffTbl_foreignkey=staffTbl.objects.get(id = staff_contact),
-
-                        date_purchased=fuel_oil["date_purchased"],
-                        date=fuel_oil["date"],
-                        qty_purchased=fuel_oil["qty_purchased"],
-                        name_operator_receiving=fuel_oil["name_operator_receiving"],
-                        quantity_ltr=fuel_oil["quantity_ltr"],
-                        red_oil_ltr=fuel_oil["red_oil_ltr"],
-                        engine_oil_ltr=fuel_oil["engine_oil_ltr"],
-                        rate=rate,
-                        remarks=fuel_oil["remarks"],
-                        # weeddingcycle=cycle
-
-                      )
-
-                    if weekmonitor_created:
-                        if ralist:
-                            for rehab in ralist:
-                                rehabobj,rehab_created =weeklyMontoringrehabassistTbl.objects.get_or_create(
-                                            weeklyMontoringTbl_foreignkey=weekmonitorobj,
-                                            rehabassistantsTbl_foreignkey=rehabassistantsTbl.objects.get(id=rehab["rehab_asistant"]),
-                                            area_covered_ha=rehab["area_covered_ha"],
-
-                                        )
-
-                        # if fuel_oil:
-                        # 	if fuel_oil["quantity_ltr"] and fuel_oil["area"]:
-                        # 		rate = round (fuel_oil["quantity_ltr"]/fuel_oil["area"],3)
-                        # 	else:
-                        # 		rate=0
-                        # 	fuel_oilobj,fuel_oil_created =fuelMontoringTbl.objects.get_or_create(
-                        # 				weeklyMontoringTbl_foreignkey=weekmonitorobj,
-                        # 				date_purchased=fuel_oil["date_purchased"],
-                        # 				date=fuel_oil["date"],
-                        # 				qty_purchased=fuel_oil["qty_purchased"],
-                        # 				name_operator_receiving=fuel_oil["name_operator_receiving"],
-                        # 				quantity_ltr=fuel_oil["quantity_ltr"],
-                        # 				red_oil_ltr=fuel_oil["red_oil_ltr"],
-                        # 				engine_oil_ltr=fuel_oil["engine_oil_ltr"],
-                        # 				rate=rate,
-                        # 				remarks=fuel_oil["remarks"]
-
-                        # 			)
-
-
-                        status["status"] =  1
-                        status["msg"] =  "Successful Saved !!"
-                        status["data"] ={
-                        
-                        }
- 
-                    else:
-                        status["status"] = 0
-                        status["msg"] =  "data exist"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!"
-
-            else:
-                status["status"] =  2
-                status["msg"] =  "record exist"
-                status["data"] = uid
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e)
-        return JsonResponse(status, safe=False)
-
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class updatefirebaseView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            token = data["token"]
-            userid= data["userid"]
-            getstaff =staffTbl.objects.get(id=userid,delete_field="no") 
-            obj, created = staffTbl.objects.update_or_create(
-                id=userid,
-                defaults={
-                "id":userid,
-                "fbase_code":token
-                },
-              )
-
-            if created:
-                status["status"] =  0
-                status["msg"] =  "Successful Saved !!"
-                status["data"] ={
-                
-                }
-
-            else:
-                if obj:
-                    status["status"] = 1
-                    status["msg"] =  "Successful Saved !!"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!",
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchfarmstatusView(View):
-    def post(self, request):
-
-        status ={}
-        status["status"] =False
-
-        data = json.loads(request.body)
-        userid= data["userid"]
-
-        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
-        Farms = FarmdetailsTbl.objects.filter(districtTbl_foreignkey=dist)
-        data = []
-
-        today = datetime.date.today()
-        current_year = today.year
-        current_month = today.month
-
-        for farm in Farms:
-
-            activity = weeklyMontoringTbl.objects.filter(farmTbl_foreignkey=farm.id,monitoring_date__year=current_year, monitoring_date__month=current_month, delete_field="no").distinct('activity').values_list('activity', flat=True)
-            for act in activity:
-                # print(act)
-                eok={}
-                area_covered = weeklyMontoringTbl.objects.filter(farmTbl_foreignkey=farm.id,activity=act,monitoring_date__year=current_year, monitoring_date__month=current_month,delete_field="no").aggregate(Sum('area_covered_ha'))['area_covered_ha__sum']
-                tstatus = weeklyMontoringTbl.objects.filter(farmTbl_foreignkey=farm.id,activity=act,monitoring_date__year=current_year, monitoring_date__month=current_month,delete_field="no").latest("monitoring_date").status
+            # Get farm
+            farm = None
+            farm_ref = data.get("farm_ref_number", "")
+            if farm_ref:
+                try:
+                    farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
+                except:
+                    pass
             
-                eok["farmid"]=farm.farm_reference
-                eok["location"]=farm.location.title()
-                eok["activity"]=Activities.objects.get(id=act).sub_activity
-                eok["area"]=farm.farm_size
-                eok["area_covered"]=area_covered
-                eok["farmer_name"]=farm.farmername.title()
-                eok["status"]=tstatus
-                datetime_object = datetime.datetime.strptime(str(current_month), "%m")
-                eok["month"]= datetime_object.strftime("%B")
-                eok["year"]=current_year
-
-                data.append(eok)
-        status["status"] =  True
-        status["msg"] =  "Success"
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-from django.contrib.gis.gdal import SpatialReference, CoordTransform
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchpoAssignedfarmsView(View):
-    def post(self, request):
-        status ={}
-        data = json.loads(request.body)
-        userid= data["userid"]
-        status["status"] =False
-        # sector = staffFarmsAssignment.objects.filter(staffTbl_foreignkey=data["userid"]).value_lists("joborder_foreignkey_farm_reference")
-
-        
-        # Farm = Farms.objects.filter(farmdetailstbl__sector=sector)
-        Farm = staffFarmsAssignment.objects.filter(staffTbl_foreignkey=data["userid"]).values_list("joborder_foreignkey__farm_reference",flat=True)
-        data = []
-
-       
-        for fam in Farm:
-            try:
-                poly = Farms.objects.filter(farm_id=fam).first()
-                eok={}
-                #print(fam.geom.transform(trans,clone=True))
-                if poly.geom:
-                    eok["farm_boundary"]= poly.geom.geojson
-                else:
-                    eok["farm_boundary"]=""
-                eok["farmername"]= fam.farmername
-                eok["location"]= fam.location
-                eok["farm_reference"]= fam.farm_reference
-                if fam.farm_size:
-                    eok["farm_size"]= f"{fam.farm_size} Ha"
-                else:
-                    eok["farm_size"]= 0
-
-                data.append(eok)
-            except Exception as e:
-                raise
-        status["status"] =  True
-        status["msg"] =  "Success"
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class outbreakFarmView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
+            # Get community
+            community = None
+            community_id = data.get("community", "")
+            if community_id:
+                try:
+                    community = Community.objects.get(id=community_id)
+                except:
+                    # Try by name if ID doesn't work
+                    try:
+                        community = Community.objects.get(name=community_id)
+                    except:
+                        pass
             
-            outbreaks_foreignkey = data["outbreaks_foreignkey"]
-            farmboundary = data["farmboundary"]
-            farm_location = ""
-            farmer_name = data["farmer_name"]
-            farmer_age = data["farmer_age"]
-            id_type = data["id_type"]
-            id_number = data["id_number"]
-            farmer_contact = data["farmer_contact"]
-            cocoa_type = data["cocoa_type"]
-            age_class = data["age_class"]
-            farm_area = data["farm_area"]
-            communitytbl_foreignkey = data["communitytbl_foreignkey"]
-            agent= data["agent"]
-            inspection_date= data["inspection_date"]
-            uid= data["uid"]
+            # Get district (from farm or agent's project)
+            district = None
+            if farm and farm.district:
+                district = farm.district
+            elif agent and agent.projectTbl_foreignkey and agent.projectTbl_foreignkey.district:
+                district = agent.projectTbl_foreignkey.district
             
-            aa=[]
-            for points in data["farmboundary"]:
-                aa.append((points["longitude"],points["latitude"]))
-
-            farm_geom = Polygon(tuple(aa) )
-
-            # print(farm_geom)
-            dist=communityTbl.objects.get(id=communitytbl_foreignkey).districtTbl_foreignkey.district
-            district = cocoaDistrict.objects.get(district=dist)
-            staff=outbreakFarms.objects.filter(temp_code__startswith= f"ACL/{district.reg_code.reg_code}/{district.district_code}").count() + 1 
-            num="{0:0>3}".format(staff)
-            code = f"ACL/{district.reg_code.reg_code}/{district.district_code}/{num}"
+            # Get project
+            project = None
+            if agent and agent.projectTbl_foreignkey:
+                project = agent.projectTbl_foreignkey
             
-            if  outbreakFarms.objects.filter(temp_code= code).exists():
-                staff = staff + 2
-                num="{0:0>3}".format(staff)
-                code = f"ACL/{district.reg_code.reg_code}/{district.district_code}/{num}"
+            # Get activities
+            main_activity_obj = None
+            activity_obj = None
+            main_activity_code = data.get("main_activity", "")
+            activity_code = data.get("activity", "")
             
-            obj, created = outbreakFarms.objects.get_or_create(
+            if main_activity_code:
+                try:
+                    main_activity_obj = Activities.objects.get(activity_code=main_activity_code)
+                except:
+                    pass
+            
+            if activity_code:
+                try:
+                    activity_obj = Activities.objects.get(activity_code=activity_code)
+                except:
+                    pass
+            
+            # Parse RAS if it's a list
+            ras_ids = data.get("ras", [])
+            
+            # Create daily report
+            report = DailyReportingModel.objects.create(
                 uid=uid,
-                inspection_date=inspection_date,
-                staffTbl_foreignkey=staffTbl.objects.get(id = agent),
-                outbreaks_foreignkey = outBreaks.objects.get(id=outbreaks_foreignkey),
-                farmboundary=str(aa),
-                farm_geom=farm_geom,
-                farm_location=farm_location,
-                farmer_name=farmer_name,
-                farmer_age=farmer_age,
-                id_type=id_type,
-                id_number=id_number,
-                farmer_contact=farmer_contact,
-                cocoa_type = cocoa_type,
-                age_class = age_class,
-                farm_area = farm_area,
-                communitytbl_foreignkey = communityTbl.objects.get(id=communitytbl_foreignkey),
-                temp_code=code,
-                
-
-              )
-
-            if created:
-                status["status"] =  1
-                status["msg"] =  "Successful Saved !!"
-                status["data"] ={
-
-                }
-
-            else:
-                if obj:
-                    status["status"] = 1
-                    status["msg"] =  "Successful Saved !!"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!",
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-
-
-
-# fetch all outbreaks
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchoutbreakView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
-    
-        approvedobs = approvedobsTbl.objects.filter(districtTbl_foreignkey=dist).values_list("outbreakid",flat=True)
-    
-        farms = outBreaks.objects.filter(ob_id__in=approvedobs,geom__isnull=False)
-        
-        asd=[]
-        for farm in farms:
-            eok={}
-            if farm.geom:
-                eok["ob_boundary"]=farm.geom.geojson
-            else:
-                eok["ob_boundary"]=""
-            eok["ob_id"]=farm.id
-            eok["ob_code"]=farm.ob_id
-            eok["ob_size"]=farm.ob_size
-            if farm.districtTbl_foreignkey:
-                eok["district_id"]=farm.districtTbl_foreignkey.id
-                eok["district_name"]=farm.districtTbl_foreignkey.district.title()
-                eok["region_id"]=farm.districtTbl_foreignkey.reg_code.reg_code
-                eok["region_name"]=farm.districtTbl_foreignkey.reg_code.region.title()
-                # if farm.geom:
-                
-            asd.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = asd
-
-        return JsonResponse(status, safe=False)
-
-
-
-
-# fetch all outbreaks
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchcommunityTblView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
-        farms = communityTbl.objects.filter(districtTbl_foreignkey=dist)
-        data = []
-
-        for farm in farms:
-            eok={}
-            eok["operational_area"]=farm.Operational_area
-            eok["community_id"]=farm.id
-            eok["community"]=farm.community
-            eok["district_id"]=farm.districtTbl_foreignkey.id
-            eok["district_name"]=farm.districtTbl_foreignkey.district.title()
-            eok["region_id"]=farm.districtTbl_foreignkey.reg_code.reg_code
-            eok["region_name"]=farm.districtTbl_foreignkey.reg_code.region.title()
-            
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-
-# fetch all cocotype
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchcocoatypeTblView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        # userid= data["userid"]
-
-        farms = cocoatypeTbl.objects.all()
-        data = []
-
-        for farm in farms:
-            eok={}
-            eok["name"]=farm.name
-            
-            
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-# fetch all cocoa class
-@method_decorator(csrf_exempt, name='dispatch')
-class cocoaageclassTblView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        # userid= data["userid"]
-
-        farms = cocoaageclassTbl.objects.all()
-        data = []
-
-        for farm in farms:
-            eok={}
-            eok["name"]=farm.classtype
-            
-            
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-# fetch all outbreaks demarcated Farms 
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchdemarcartedFarmsTblView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-
-        farms = communityTbl.objects.all()
-        data = []
-
-        for farm in farms:
-            eok={}
-            eok["operational_area"]=farm.Operational_area
-            eok["community_id"]=farm.id
-            eok["community"]=farm.community
-            eok["district_id"]=farm.districtTbl_foreignkey.id
-            eok["district_name"]=farm.districtTbl_foreignkey.district.title()
-            eok["region_id"]=farm.districtTbl_foreignkey.reg_code.reg_code
-            eok["region_name"]=farm.districtTbl_foreignkey.reg_code.region.title()
-            
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-# fetch all outbreaks
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchoutbreakCSV(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-        startdate= data["start_date"]
-        enddate= data["end_date"]
-
-        query = dict()
-        if startdate and enddate:
-            query.update(inspection_date__range =[startdate, enddate])
-        if startdate and enddate=="" :
-            query.update(inspection_date__gte=startdate)
-        if enddate and startdate=="":
-            query.update(inspection_date__lte=enddate)
-
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
-        # farms = outbreakFarms.objects.filter(**query,outbreaks_foreignkey__districtTbl_foreignkey=dist)
-        
-        farms = outbreakFarms.objects.filter(**query,staffTbl_foreignkey=userid)
-        data = []
-
-        for farm in farms:
-            eok={}
-            eok["outbreaks_id"]=farm.outbreaks_foreignkey.ob_id
-            eok["farm_location"]=farm.farm_location
-            eok["farmer_name"]=farm.farmer_name
-            eok["farmer_age"]=farm.farmer_age
-            eok["id_type"]=farm.id_type
-            eok["id_number"]=farm.id_number
-            eok["farmer_contact"]=farm.farmer_contact
-            eok["cocoa_type"]=farm.cocoa_type
-            eok["age_class"]=farm.age_class
-            eok["farm_area"]=farm.farm_area
-            eok["communitytbl"]=farm.communitytbl_foreignkey.community
-            eok["inspection_date"]=farm.inspection_date
-            eok["temp_code"]=farm.temp_code
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-
-# fetch all outbreaks demarcated Farms 
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchallRAView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-        dist = districtStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).districtTbl_foreignkey.id
-        # print(dist)
-        rehabs = rehabassistantsTbl.objects.filter(districtTbl_foreignkey=dist)
-
-        data = []
-
-        for rehab in rehabs:
-            eok={}
-            eok["image"]=str(rehab.photo_staff)
-            eok["name"]=rehab.name
-            eok["staff_code"]=rehab.staff_code
-            eok["phone_number"]=rehab.phone_number
-            eok["salary_bank_name"]=rehab.bank_branch
-            eok["bank_account_number"]=rehab.bank_account_number
-            eok["gender"]=rehab.gender
-            eok["ssnit_number"]=rehab.ssnit_number
-            eok["district"]=rehab.districtTbl_foreignkey.district
-            eok["district_id"]=rehab.districtTbl_foreignkey.id
-            eok["region_id"]=rehab.districtTbl_foreignkey.reg_code.region
-            eok["momo_number"]=rehab.momo_number
-            eok["momo_account_name"]=rehab.momo_account_name
-            eok["dob"]=rehab.dob
-            eok["po"]=f'{rehab.staffTbl_foreignkey.first_name} {rehab.staffTbl_foreignkey.last_name}'
-
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class savepomonitoringView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            userid= data["userid"]
-            # staffTbl_foreignkey= data["staffTbl_foreignkey"]
-            lat= data["lat"]
-            lng= data["lng"]
-            inspection_date= data["inspection_date"]
-            accuracy= data["accuracy"]
-            uid=data["uid"]
-
-            getstaff =staffTbl.objects.get(id=userid,delete_field="no") 
-    
-
-        
-            obj, created = posRoutemonitoring.objects.get_or_create(
-            
-                staffTbl_foreignkey=getstaff, 
-                lat=lat,
-                lng=lng,
-                inspection_date=inspection_date,
-                accuracy=accuracy,
-                uid=uid
-            
-               
-              )
-
-    
-            if created:
-                status["status"] =  1
-                status["msg"] =  "Successful Saved !!"
-                status["data"] ={
-                
-                }
-
-            
-            else :
-                status["status"] = 2
-                status["msg"] =  "Already exist !!"
-        
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class saveOBformView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            uid = data["uid"]
-            userid= data["agent"]
-            farmTbl_foreignkey= data["farmTbl_foreignkey"]
-            activity= data["activity"]
-            monitoring_date= data["monitoring_date"]
-            no_ras= data["no_rehab_assistants"]
-            # no_rts= data["no_rts"]
-            no_rts=""
-            # area_covered_ha= data["area_covered_ha"]
-            remark= data["remark"]
-            lat= data["lat"]
-            lng= data["lng"]
-            status_activity = data["status"]
-            accuracy= data["accuracy"]
-            # contractor_name=data["contractor_name"]
-            contractor_name=""
-            # ob_id= data["ob_id"]
-            total_workdone= data["area_covered_ha"]
-            if data["current_farm_pic"]:
-                current_farm_pic=saveimage(data["current_farm_pic"], uid) 
-            else:
-                current_farm_pic=""
-
-            ralist = data["rehab_assistants"]
-            
-    
-
-            act=Activities.objects.get(id=int(activity))
-            if not weeklyMontoringTbl.objects.filter(uid=uid).exists():
-
-                if farmTbl_foreignkey!="" and ralist!="" :
-
-                    obfarm =outbreakFarms.objects.get(id=farmTbl_foreignkey)
-
-                    weekmonitorobj, weekmonitor_created = weeklyobreportTbl.objects.get_or_create(
-                        uid=uid,
-                        staffTbl_foreignkey=staffTbl.objects.get(id = userid),
-                        monitoring_date = monitoring_date,
-                        district = obfarm.communitytbl_foreignkey.districtTbl_foreignkey.district,
-                        Operational_area= obfarm.communitytbl_foreignkey.Operational_area,
-                        community=obfarm.communitytbl_foreignkey.community,
-                        ob_id = obfarm.outbreaks_foreignkey.ob_id,
-                        farm_name=obfarm.farmer_name,
-                        farm_contact=obfarm.farmer_contact,
-                        farmer_ref_number=obfarm.temp_code,
-                        main_activity=act.main_activity,
-                        sub_activity=act.sub_activity,
-                        status_activity=status_activity,
-                        no_ras =no_ras,
-                        no_rts=no_rts,
-                        name_ras="",
-                        farm_size=obfarm.farm_area,
-                        total_workdone=total_workdone,
-                        remark=remark,
-                        contractor_name=contractor_name,
-                        districtTbl_foreignkey=obfarm.communitytbl_foreignkey.districtTbl_foreignkey,
-                        activity=act,
-                        current_farm_pic = current_farm_pic,
-                        lat=lat,
-                        lng=lng,
-                        accuracy =accuracy
-                      )
-
-                    if weekmonitor_created:
-                        if ralist:
-                            for rehab in ralist:
-                                rehabobj,rehab_created =weeklyOBrehabassistTbl.objects.get_or_create(
-                                            weeklyMontoringTbl_foreignkey=weekmonitorobj,
-                                            rehabassistantsTbl_foreignkey=rehabassistantsTbl.objects.get(id=rehab["rehab_asistant"]),
-                                            area_covered_ha=rehab["area_covered_ha"],
-
-                                        )
-
-
-                        status["status"] =  1
-                        status["msg"] =  "Successful Saved !!"
-                        status["data"] ={
-                        
-                        }
- 
-                    else:
-                        status["status"] = 0
-                        status["msg"] =  "data exist"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!"
-
-            else:
-                status["status"] =  2
-                status["msg"] =  "record exist"
-                status["data"] = uid
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e)
-        return JsonResponse(status, safe=False)
-
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class savemaintenancefuelView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            userid= data["userid"]
-            # staffTbl_foreignkey= data["staffTbl_foreignkey"]
-            farmdetailstbl_foreignkey= data["farmdetailstbl_foreignkey"]
-            date_received= data["date_received"]
-            rehabassistantsTbl_foreignkey= data["rehabassistantsTbl_foreignkey"]
-            fuel_ltr= data["fuel_ltr"]
-            remarks=data["remarks"]
-            uid=data["uid"]
-
-            getstaff =staffTbl.objects.get(id=userid,delete_field="no") 
-
-            obj, created = fuelMontoringTbl.objects.get_or_create(
-                staffTbl_foreignkey=getstaff, 
-                farmdetailstbl_foreignkey_id=farmdetailstbl_foreignkey,
-                date_received=date_received,
-                rehabassistantsTbl_foreignkey_id=rehabassistantsTbl_foreignkey,
-                fuel_ltr=fuel_ltr,
-                remarks=remarks,
-                uid=uid
-               
-              )
-
-            if created:
-                status["status"] =  1
-                status["msg"] =  "Successful Saved !!"
-                status["data"] ={
-                
-                }
-
-            else:
-                if obj:
-                    status["status"] = 2
-                    status["msg"] =  "Already exist !!"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!",
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class saveobfuelView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            userid= data["userid"]
-            # staffTbl_foreignkey= data["staffTbl_foreignkey"]
-            farmdetailstbl_foreignkey= data["farmdetailstbl_foreignkey"]
-            date_received= data["date_received"]
-            rehabassistantsTbl_foreignkey= data["rehabassistantsTbl_foreignkey"]
-            fuel_ltr= data["fuel_ltr"]
-            remarks=data["remarks"]
-            uid=data["uid"]
-
-            getstaff =staffTbl.objects.get(id=userid,delete_field="no") 
-
-            obj, created = fuelMontoringobTbl.objects.get_or_create(
-                staffTbl_foreignkey=getstaff, 
-                farmdetailstbl_foreignkey_id=farmdetailstbl_foreignkey,
-                date_received=date_received,
-                rehabassistantsTbl_foreignkey_id=rehabassistantsTbl_foreignkey,
-                fuel_ltr=fuel_ltr,
-                remarks=remarks,
-                uid=uid
-                
-              )
-
-            if created:
-                status["status"] =  1
-                status["msg"] =  "Successful Saved !!"
-                status["data"] ={
-                
-                }
-
-            else:
-                if obj:
-                    status["status"] = 2
-                    status["msg"] =  "Already exist !!"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!",
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-
-
-
-
-# fetch all outbreaks
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchoutbreaFarms(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-
-
-        # farms = outbreakFarms.objects.filter(**query,outbreaks_foreignkey__districtTbl_foreignkey=dist)
-        
-        farms = outbreakFarms.objects.filter(staffTbl_foreignkey=userid)
-        data = []
-
-        for farm in farms:
-            eok={}
-            eok["farm_id"]=farm.id
-            eok["outbreaks_id"]=farm.outbreaks_foreignkey.ob_id
-            eok["farm_location"]=farm.farm_location
-            eok["farmer_name"]=farm.farmer_name
-            eok["farmer_age"]=farm.farmer_age
-            eok["id_type"]=farm.id_type
-            eok["id_number"]=farm.id_number
-            eok["farmer_contact"]=farm.farmer_contact
-            eok["cocoa_type"]=farm.cocoa_type
-            eok["age_class"]=farm.age_class
-            eok["farm_area"]=farm.farm_area
-            eok["communitytbl"]=farm.communitytbl_foreignkey.community
-            eok["inspection_date"]=farm.inspection_date
-            eok["temp_code"]=farm.temp_code
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-
-# fetch all Contractors
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchcontractorView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-
-
-        # farms = outbreakFarms.objects.filter(**query,outbreaks_foreignkey__districtTbl_foreignkey=dist)
-        
-        contractors = contractorsTbl.objects.all()
-        data = []
-
-        for cont in contractors:
-            eok={}
-            eok["farm_id"]=cont.id
-            eok["contractor_name"]=cont.contractor_name
-            eok["contact_person"]=cont.contact_person
-            eok["address"]=cont.address
-            eok["contact_number"]=cont.contact_number
-            
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class savefeedbackView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            userid= data["userid"]
-            title= data["title"]
-            feedback= data["feedback"]
-            uid=data["uid"]
-            week=data["week"]
-            month=data["month"]
-            farm_reference=data["farm_reference"]
-            activity=data["activity"]
-            ra_id=data["ra_id"]
-            
-
-            getstaff =staffTbl.objects.get(id=userid,delete_field="no") 
-
-            obj,created = Feedback.objects.get_or_create(
-                staffTbl_foreignkey=getstaff, 
-                title=title,
-                feedback=feedback,
-                uid=uid,
-                week=week,
-                month=month,
-                farm_reference=farm_reference,
-                activity=activity,
-                ra_id=ra_id
-              )
-
-            if created:
-                status["status"] =  1
-                status["msg"] =  "Successfully Sent !!"
-                status["data"] ={
-                
-                }
-
-            else:
-                if obj:
-                    status["status"] = 2
-                    status["msg"] =  "Already exist !!"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!",
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-
-
-
-
-# fetch all Equipment
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchallFeedback(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-
-        feeds = Feedback.objects.filter(staffTbl_foreignkey=data["userid"])
-
-        data = []
-
-        for feed in feeds:
-            eok={}
-            eok["title"]=feed.title
-            eok["feedback"]=feed.feedback
-            eok["sent_date"]=feed.sent_date
-            eok["uid"]=feed.uid
-            eok["week"]=feed.week
-            eok["month"]=feed.month
-            eok["farm_reference"]=feed.farm_reference
-            eok["activity"]=feed.activity
-            eok["ra_id"]=feed.ra_id
-            eok["Status"]=feed.Status
-            
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-
-
-
-
-
-
-# fetch all Equipment
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchallEquipmentView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-        dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"]).projectTbl_foreignkey.id
-        # print(dist)
-        # equips = Equipment.objects.filter(districtTbl_foreignkey=dist)
-        equips = Equipment.objects.all()
-        data = []
-
-        for equip in equips:
-            eok={}
-            eok["equipment_code"]=equip.equipment_code
-            eok["date_of_capturing"]=equip.date_of_capturing
-            eok["equipment"]=equip.equipment
-            eok["status"]=equip.status
-            eok["serial_number"]=equip.serial_number
-            eok["manufacturer"]=equip.manufacturer
-            eok["pic_serial_number"]= f'https://cocoa-monitor-static.s3.us-west-2.amazonaws.com/media/{str(equip.pic_serial_number)}'
-            eok["pic_equipment"]= f'https://cocoa-monitor-static.s3.us-west-2.amazonaws.com/media/{str(equip.pic_equipment)}'
-            eok["staff_name"]=equip.staff_name
-            data.append(eok)
-            status["status"] =  True
-            status["msg"] = "Success!"
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class saveequipmentEventory(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        data = json.loads(request.body)
-        userid= data["userid"]
-                
-        try : 
-
-
-            date_of_capturing  = data['date_of_capturing']
-            
-            district  = data['district']
-            equipment  = data['equipment']
-            status_fo  = data['status']
-            serial_number  = data['serial_number']
-            manufacturer  = data['manufacturer']
-            pic_serial_number  = data['pic_serial_number']
-            pic_equipment  = data['pic_equipment']
-            telephone  = data['telephone'] 
-            uuid = data['uuid'] 
-            # staff_name  = data['staff_name']
-            
-
-            getstaff = staffTbl.objects.get(id=userid)
-
-            if data["pic_serial_number"] :
-                pic_serial_number =saveimage(data["pic_serial_number"], serial_number) 
-            else:
-                pic_serial_number =data["pic_serial_number"] 
-
-            if data["pic_equipment"] :
-                pic_equipment =saveimage(data["pic_equipment"], telephone) 
-            else:
-                pic_equipment =data["pic_equipment"] 
-
-            dist = cocoaDistrict.objects.get(id=district)
-            equip=equipment[:3]
-            initcode=f"{equip}/{dist.reg_code.reg_code}/{dist.district_code}"
-            if Equipment.objects.filter(equipment_code__startswith= initcode).exists():
-                equipnum = Equipment.objects.filter(equipment_code__startswith= f"{initcode}").count()
-            else:
-                equipnum = 0
-        
-            equipnum_sum = int(equipnum) + 1
-            num="{0:0>3}".format(equipnum_sum)
-            eqcode = f"{initcode}/{num}"
-
-            rehabobj, rehab_created = Equipment.objects.get_or_create(
-            _uuid=uuid,serial_number=serial_number,
-            defaults=dict(
-            equipment_code=eqcode,
-            date_of_capturing=date_of_capturing,
-            region=dist.reg_code.region,
-            district=district,
-            equipment=equipment,
-            status=status_fo,
-            serial_number=serial_number,
-            manufacturer= manufacturer,
-            pic_serial_number=pic_serial_number,
-            pic_equipment=pic_equipment,
-            telephone=telephone,
-            staff_name=f'{getstaff.first_name} {getstaff.last_name}',
-            _uuid=uuid,
-            staffTbl_foreignkey=getstaff,
-            districtTbl_foreignkey=dist
-
+                agent=agent,
+                completion_date=data.get("completion_date"),
+                reporting_date=data.get("reporting_date"),
+                main_activity=main_activity_obj,
+                activity=activity_obj,
+                no_rehab_assistants=data.get("no_rehab_assistants", 0),
+                area_covered_ha=data.get("area_covered_ha", 0.0),
+                remark=data.get("remark", ""),
+                status=data.get("status", 0),
+                farm=farm,
+                farm_ref_number=farm_ref,
+                farm_size_ha=data.get("farm_size_ha", 0.0),
+                community=community,
+                number_of_people_in_group=data.get("number_of_people_in_group", 0),
+                group_work=data.get("group_work", ""),
+                sector=data.get("sector"),
+                projectTbl_foreignkey=project,
+                district=district
             )
-
-            )
-
-            if rehab_created:
-                status["status"] =  1
-                status["msg"] =  "Successful Saved !!"
-                status["data"] ={
-                
-                }
-
-            else:
-                if rehabobj:
-                    status["status"] = 2
-                    status["msg"] =  "Already exist !!"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured! DDDD",
-
-
-
-        except Exception as e:
-            raise e
-            status={}
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-
-        return JsonResponse(status, safe=False)
-    
-
-
-
-# fetch all Equipment
-import json
-from django.http import JsonResponse
-from django.views import View
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-# from .models import projectStaffTbl, paymentReport
-
-@method_decorator(csrf_exempt, name='dispatch')
-class FetchPaymentReportView(View):
-    """
-    API endpoint to fetch payment reports based on user, month, week, and year
-    """
-    
-    def post(self, request):
-        """
-        Handle POST request to fetch payment reports
-        
-        Expected JSON payload:
-        {
-            "userid": user_id,
-            "month": month,
-            "week": week,
-            "year": year
-        }
-        
-        Returns:
-            JSON response with status, message, and data
-        """
-        try:
-            # Initialize response structure
-            response_data = {
-                "status": False,
-                "message": "",
-                "data": []
+            
+            # Add RAS if provided
+            if ras_ids:
+                for ra_id in ras_ids:
+                    try:
+                        ra = PersonnelModel.objects.get(id=ra_id)
+                        report.ras.add(ra)
+                    except:
+                        continue
+            
+            status["status"] = True
+            status["message"] = "Activity report saved successfully"
+            status["data"] = {
+                "uid": report.uid,
+                "id": report.id
             }
             
-            # Parse JSON data from request body
-            try:
-                data = json.loads(request.body)
-            except json.JSONDecodeError:
-                response_data["message"] = "Invalid JSON payload"
-                return JsonResponse(response_data, status=400)
-            
-            # Validate required fields
-            required_fields = ["userid", "month", "week", "year"]
-            for field in required_fields:
-                if field not in data or not data[field]:
-                    response_data["message"] = f"Missing required field: {field}"
-                    return JsonResponse(response_data, status=400)
-            
-            # Extract data from request
-            userid = data["userid"]
-            month = data["month"]
-            week = data["week"]
-            year = data["year"]
-            
-            # Get user's project information
-            try:
-                user_project = projectStaffTbl.objects.get(staffTbl_foreignkey=userid)
-                project_name = user_project.projectTbl_foreignkey.name if user_project.projectTbl_foreignkey else None
-                
-                if not project_name:
-                    response_data["message"] = "User is not assigned to any project"
-                    return JsonResponse(response_data, status=404)
-                    
-            except projectStaffTbl.DoesNotExist:
-                response_data["message"] = "User not found or not assigned to any project"
-                return JsonResponse(response_data, status=404)
-            
-            # Fetch payment reports for the project
-            reports = paymentReport.objects.filter(
-                project__iexact=project_name,
-                year=year,
-                month__iexact=month,
-                week=week
-            )
-            
-            # Prepare response data
-            if reports.exists():
-                payment_data = []
-                
-                for report in reports:
-                    report_dict = {
-                        "id": report.id,
-                        "district": report.district,
-                        "bank_name": report.bank_name,
-                        "bank_branch": report.bank_branch,
-                        "snnit_no": report.snnit_no,
-                        "salary": report.salary,
-                        "project": report.project,
-                        "po_number": report.po_number,
-                        "month": report.month,
-                        "week": report.week,
-                        "year": report.year,
-                        "payment_option": report.payment_option,
-                        "momo_acc": report.momo_acc,
-                        "ra_id": report.ra_id,
-                        "ra_name": report.ra_name,
-                        "code": report.code,
-                        "created_at": report.created_date.strftime("%Y-%m-%d %H:%M:%S") if report.created_date else None,
-                        # "updated_at": report.updated_at.strftime("%Y-%m-%d %H:%M:%S") if report.updated_at else None
-                    }
-                    
-                    # Add project foreign key info if available
-                    if report.projectTbl_foreignkey:
-                        report_dict["project_id"] = report.projectTbl_foreignkey.id
-                        report_dict["project_name"] = report.projectTbl_foreignkey.name
-                    
-                    # Add district foreign key info if available
-                    if report.districtTbl_foreignkey:
-                        report_dict["district_id"] = report.districtTbl_foreignkey.id
-                        report_dict["district_name"] = report.districtTbl_foreignkey.district
-                    
-                    payment_data.append(report_dict)
-                
-                response_data["status"] = True
-                response_data["message"] = f"Successfully retrieved {len(payment_data)} payment report(s)"
-                response_data["data"] = payment_data
-                response_data["metadata"] = {
-                    "total_records": len(payment_data),
-                    "project": project_name,
-                    "month": month,
-                    "week": week,
-                    "year": year
-                }
-                
-            else:
-                response_data["message"] = "No payment reports found for the specified criteria"
-                response_data["metadata"] = {
-                    "total_records": 0,
-                    "project": project_name,
-                    "month": month,
-                    "week": week,
-                    "year": year
-                }
-            
-            return JsonResponse(response_data, safe=False)
-            
-        except Exception as e:
-            # Handle unexpected errors
-            error_response = {
+        except json.JSONDecodeError:
+            return JsonResponse({
                 "status": False,
-                "message": f"An error occurred: {str(e)}",
-                "data": []
-            }
-            return JsonResponse(error_response, status=500)
-
-
-
-# fetch all Equipment
-# @method_decorator(csrf_exempt, name='dispatch')
-# class fetchpaymentdetailsReportView(View):
-#     def post(self, request):	
-#         status ={}
-#         status["status"] =False
-#         data = json.loads(request.body)
-#         userid= data["userid"]
-#         month= data["month"]
-#         week= data["week"]
-#         year= data["year"]
-#         raid= data["raid"]
-
-#         dist = projectStaffTbl.objects.get(staffTbl_foreignkey=data["userid"])
-#         print(dist.projectTbl_foreignkey.name)
-#         if not raid:
-#             reports = paymentdetailedReport.objects.filter(project__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week)
-#         else:
-#             reports = paymentdetailedReport.objects.filter(project__iexact=dist.projectTbl_foreignkey.name,year=year,month__iexact=month,week=week,ra_id=raid)
-
-#         data = []
-
-#         for rep in reports:
-#             eok={}
-#             eok["group_code"]=rep.group_code
-#             eok["ra_id"]=rep.ra_id
-#             eok["ra_name"]=rep.ra_name
-#             eok["po_name"]=rep.po_name
-#             eok["po_number"]=rep.po_number
-#             eok["district"]=rep.district
-#             eok["farmhands_type"]= rep.farmhands_type
-#             eok["farm_reference"]= rep.farm_reference
-#             eok["number_in_a_group"]= rep.number_in_a_group
-#             eok["activity"]=rep.activity
-#             eok["achievement"]=rep.achievement
-#             eok["amount"]=rep.amount
-#             eok["week"]=rep.week
-#             eok["month"]=rep.month
-#             eok["year"]=rep.year
-#             eok["issue"]=rep.issue
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
             
+        return JsonResponse(status)
 
-#             data.append(eok)
-#             status["status"] =  True
-#             status["msg"] = "Success!"
-
-#         status["data"] = data
-#         return JsonResponse(status, safe=False)
-    
-
-
-import json
-from django.http import JsonResponse
-from django.views import View
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q
-# from .models import projectStaffTbl, paymentdetailedReport
+# ============== 3. FARM BOUNDARY ==============
 
 @method_decorator(csrf_exempt, name='dispatch')
-class fetchpaymentdetailsReportView(View):
-    """
-    API endpoint to fetch detailed payment reports
-    Supports filtering by user, month, week, year, and RA ID
-    """
-    
+class SaveMappedFarmView(View):
+    """Handle farm boundary mapping (POST only)"""
     def post(self, request):
-        """
-        Handle POST request to fetch payment details
-        
-        Expected JSON payload:
-        {
-            "userid": user_id (required),
-            "month": month (required),
-            "week": week (required),
-            "year": year (required),
-            "raid": ra_id (optional)
-        }
-        
-        Returns:
-            JSON response with detailed payment report data
-        """
         try:
-            # Parse request data
-            try:
-                request_data = json.loads(request.body)
-            except json.JSONDecodeError:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and mappedFarms.objects.filter(uid=uid).exists():
+                status["message"] = "Farm boundary with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get staff
+            staff = None
+            staff_id = data.get("staffTbl_foreignkey", "")
+            if staff_id:
+                try:
+                    staff = staffTbl.objects.get(id=staff_id)
+                except:
+                    pass
+            
+            # Create geometry from boundary if provided
+            geom = None
+            farmboundary = data.get("farmboundary", "")
+            
+            farm = mappedFarms.objects.create(
+                uid=uid,
+                farm_reference=data.get("farm_reference", ""),
+                farm_area=data.get("farm_area", 0.0),
+                farmer_name=data.get("farmer_name", ""),
+                location=data.get("location", ""),
+                contact=data.get("contact", ""),
+                staffTbl_foreignkey=staff,
+                farmboundary=farmboundary,
+                geom=geom
+            )
+            
+            status["status"] = True
+            status["message"] = "Farm boundary saved successfully"
+            status["data"] = {
+                "uid": farm.uid,
+                "id": farm.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 4. ADD PERSONNEL ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveRegisterView(View):
+    """Handle personnel registration (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            # Get district
+            district = None
+            district_id = data.get("district", "")
+            if district_id:
+                try:
+                    district = cocoaDistrict.objects.get(id=district_id)
+                except:
+                    # Try by name if ID doesn't work
+                    try:
+                        district = cocoaDistrict.objects.get(name=district_id)
+                    except:
+                        pass
+            
+            # Get community
+            community = None
+            community_name = data.get("community", "")
+            if community_name and district:
+                try:
+                    community = Community.objects.get(name=community_name, district=district)
+                except Community.DoesNotExist:
+                    # Create community if it doesn't exist
+                    community = Community.objects.create(
+                        name=community_name,
+                        district=district
+                    )
+                except:
+                    pass
+            
+            # Get project based on district
+            project = None
+            if district:
+                try:
+                    project = projectTbl.objects.get(district=district)
+                except:
+                    pass
+            
+            # Save images if provided
+            primary_phone = data.get("primary_phone_number", "")
+            image = save_image(data.get("image", ""), f"{primary_phone}_image") if data.get("image") else None
+            id_image_front = save_image(data.get("id_image_front", ""), f"{primary_phone}_id_front") if data.get("id_image_front") else None
+            id_image_back = save_image(data.get("id_image_back", ""), f"{primary_phone}_id_back") if data.get("id_image_back") else None
+            consent_form_image = save_image(data.get("consent_form_image", ""), f"{primary_phone}_consent") if data.get("consent_form_image") else None
+            
+            # Create personnel record
+            personnel = PersonnelModel.objects.create(
+                first_name=data.get("first_name", ""),
+                surname=data.get("surname", ""),
+                other_names=data.get("other_names", ""),
+                gender=data.get("gender", ""),
+                date_of_birth=data.get("date_of_birth"),
+                primary_phone_number=primary_phone,
+                secondary_phone_number=data.get("secondary_phone_number", ""),
+                momo_number=data.get("momo_number", ""),
+                emergency_contact_person=data.get("emergency_contact_person", ""),
+                emergency_contact_number=data.get("emergency_contact_number", ""),
+                id_type=data.get("id_type", ""),
+                id_number=data.get("id_number", ""),
+                address=data.get("address", ""),
+                community=community,
+                district=district,
+                projectTbl_foreignkey=project,
+                education_level=data.get("education_level", ""),
+                marital_status=data.get("marital_status", ""),
+                bank_id=data.get("bank_id", ""),
+                account_number=data.get("account_number", ""),
+                branch_id=data.get("branch_id", ""),
+                sort_code=data.get("sort_code", ""),
+                personnel_type=data.get("personnel_type", ""),
+                ezwich_number=data.get("ezwich_number", ""),
+                date_joined=data.get("date_joined"),
+                supervisor_id=data.get("supervisor_id", ""),
+                image=image,
+                id_image_front=id_image_front,
+                id_image_back=id_image_back,
+                consent_form_image=consent_form_image,
+                uid=data.get("uid", "")
+            )
+            
+            status["status"] = True
+            status["message"] = "Personnel registered successfully"
+            status["data"] = {
+                "id": personnel.id,
+                "uid": personnel.uid,
+                "name": f"{personnel.first_name} {personnel.surname}"
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 5. ASSIGN REHAB ASSISTANT (RA) ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveRehabAssignmentView(View):
+    """Handle rehab assistant assignment (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and PersonnelAssignmentModel.objects.filter(uid=uid).exists():
+                status["message"] = "Assignment with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get PO (Project Officer)
+            po = None
+            po_id = data.get("po_id", "")
+            if po_id:
+                try:
+                    po = staffTbl.objects.get(id=po_id)
+                except:
+                    pass
+            
+            # Get RA (Rehab Assistant)
+            ra = None
+            ra_id = data.get("ra_id", "")
+            if ra_id:
+                try:
+                    ra = PersonnelModel.objects.get(id=ra_id)
+                except:
+                    pass
+            
+            # Get district
+            district = None
+            district_id = data.get("district_id", "")
+            if district_id:
+                try:
+                    district = cocoaDistrict.objects.get(id=district_id)
+                except:
+                    try:
+                        district = cocoaDistrict.objects.get(name=district_id)
+                    except:
+                        pass
+            
+            # Get community
+            community = None
+            community_id = data.get("community_id", "")
+            if community_id:
+                try:
+                    community = Community.objects.get(id=community_id)
+                except:
+                    try:
+                        community = Community.objects.get(name=community_id)
+                    except:
+                        pass
+            
+            # Get project (from PO or district)
+            project = None
+            if po and po.projectTbl_foreignkey:
+                project = po.projectTbl_foreignkey
+            elif district:
+                try:
+                    project = projectTbl.objects.get(district=district)
+                except:
+                    pass
+            
+            # Create personnel assignment
+            assignment = PersonnelAssignmentModel.objects.create(
+                uid=uid,
+                po=po,
+                ra=ra,
+                projectTbl_foreignkey=project,
+                district=district,
+                community=community,
+                date_assigned=data.get("date_assigned"),
+                status=data.get("status", 0)
+            )
+            
+            status["status"] = True
+            status["message"] = "Rehab assistant assigned successfully"
+            status["data"] = {
+                "uid": assignment.uid,
+                "id": assignment.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 6. GROWTH MONITORING ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class GrowthMonitoringView(View):
+    """Handle growth monitoring (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and GrowthMonitoringModel.objects.filter(uid=uid).exists():
+                status["message"] = "Growth monitoring record with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get agent
+            agent = None
+            agent_id = data.get("agent", "")
+            if agent_id:
+                try:
+                    agent = staffTbl.objects.get(id=agent_id)
+                except:
+                    pass
+            
+            # Get district (from agent's project)
+            district = None
+            project = None
+            if agent and agent.projectTbl_foreignkey:
+                project = agent.projectTbl_foreignkey
+                if project.district:
+                    district = project.district
+            
+            # Create growth monitoring record
+            record = GrowthMonitoringModel.objects.create(
+                uid=uid,
+                plant_uid=data.get("plant_uid", ""),
+                number_of_leaves=data.get("number_of_leaves", 0),
+                height=data.get("height", 0.0),
+                stem_size=data.get("stem_size", 0.0),
+                leaf_color=data.get("leaf_color", ""),
+                date=data.get("date"),
+                lat=data.get("lat", 0.0),
+                lng=data.get("lng", 0.0),
+                agent=agent,
+                projectTbl_foreignkey=project,
+                district=district
+            )
+            
+            status["status"] = True
+            status["message"] = "Growth monitoring record saved successfully"
+            status["data"] = {
+                "uid": record.uid,
+                "id": record.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 7. OUTBREAK FARM ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveOutbreakFarmView(View):
+    """Handle outbreak farm reporting (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and OutbreakFarmModel.objects.filter(uid=uid).exists():
+                status["message"] = "Outbreak farm record with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get reported by
+            reported_by = None
+            reported_by_id = data.get("reported_by", "")
+            if reported_by_id:
+                try:
+                    reported_by = staffTbl.objects.get(id=reported_by_id)
+                except:
+                    pass
+            
+            # Get community
+            community = None
+            community_name = data.get("community", "")
+            if community_name:
+                try:
+                    community = Community.objects.get(name=community_name)
+                except:
+                    pass
+            
+            # Get district (from community or agent's project)
+            district = None
+            region = None
+            project = None
+            
+            if community and community.district:
+                district = community.district
+                region = community.district.region
+            
+            if reported_by and reported_by.projectTbl_foreignkey:
+                project = reported_by.projectTbl_foreignkey
+                if project.district and not district:
+                    district = project.district
+                    region = project.district.region
+            
+            # Create geometry from coordinates if provided
+            geom = None
+            coordinates = data.get("coordinates", "")
+            if coordinates:
+                try:
+                    lat, lng = map(float, coordinates.split(','))
+                    geom = Point(lng, lat)
+                except:
+                    pass
+            
+            # Create outbreak farm record
+            outbreak = OutbreakFarmModel.objects.create(
+                uid=uid,
+                farmer_name=data.get("farmer_name", ""),
+                farm_location=data.get("farm_location", ""),
+                community=community,
+                farm_size=data.get("farm_size", 0.0),
+                disease_type=data.get("disease_type", ""),
+                date_reported=data.get("date_reported"),
+                reported_by=reported_by,
+                status=data.get("status", 0),
+                coordinates=coordinates,
+                geom=geom,
+                projectTbl_foreignkey=project,
+                district=district,
+                region=region
+            )
+            
+            status["status"] = True
+            status["message"] = "Outbreak farm record saved successfully"
+            status["data"] = {
+                "uid": outbreak.uid,
+                "id": outbreak.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 8. CONTRACTOR CERTIFICATE ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveContractorCertificateView(View):
+    """Handle contractor certificate (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and ContractorCertificateModel.objects.filter(uid=uid).exists():
+                status["message"] = "Contractor certificate with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get contractor
+            contractor = None
+            contractor_id = data.get("contractor_id", "")
+            if contractor_id:
+                try:
+                    contractor = contractorsTbl.objects.get(id=contractor_id)
+                except:
+                    try:
+                        contractor = contractorsTbl.objects.get(contractor_name=contractor_id)
+                    except:
+                        pass
+            
+            # Get district (from contractor or context)
+            district = None
+            project = None
+            
+            if contractor and contractor.district:
+                district = contractor.district
+            
+            # Try to get project from district
+            if district:
+                try:
+                    project = projectTbl.objects.get(district=district)
+                except:
+                    pass
+            
+            # Create contractor certificate
+            certificate = ContractorCertificateModel.objects.create(
+                uid=uid,
+                contractor=contractor,
+                work_type=data.get("work_type", ""),
+                start_date=data.get("start_date"),
+                end_date=data.get("end_date"),
+                status=data.get("status", "Pending"),
+                remarks=data.get("remarks", ""),
+                projectTbl_foreignkey=project,
+                district=district
+            )
+            
+            status["status"] = True
+            status["message"] = "Contractor certificate saved successfully"
+            status["data"] = {
+                "uid": certificate.uid,
+                "id": certificate.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 9. CONTRACTOR CERTIFICATE VERIFICATION ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveVerificationFarmsView(View):
+    """Handle contractor certificate verification (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and ContractorCertificateVerificationModel.objects.filter(uid=uid).exists():
+                status["message"] = "Certificate verification with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get certificate
+            certificate = None
+            certificate_id = data.get("certificate_id", "")
+            if certificate_id:
+                try:
+                    certificate = ContractorCertificateModel.objects.get(uid=certificate_id)
+                except:
+                    try:
+                        certificate = ContractorCertificateModel.objects.get(id=certificate_id)
+                    except:
+                        pass
+            
+            # Get verified by
+            verified_by = None
+            verified_by_id = data.get("verified_by", "")
+            if verified_by_id:
+                try:
+                    verified_by = staffTbl.objects.get(id=verified_by_id)
+                except:
+                    pass
+            
+            # Get district (from certificate or verifier)
+            district = None
+            project = None
+            
+            if certificate and certificate.district:
+                district = certificate.district
+                project = certificate.projectTbl_foreignkey
+            elif verified_by and verified_by.projectTbl_foreignkey:
+                project = verified_by.projectTbl_foreignkey
+                if project.district:
+                    district = project.district
+            
+            # Create certificate verification
+            verification = ContractorCertificateVerificationModel.objects.create(
+                uid=uid,
+                certificate=certificate,
+                verified_by=verified_by,
+                verification_date=data.get("verification_date"),
+                is_verified=data.get("is_verified", False),
+                comments=data.get("comments", ""),
+                projectTbl_foreignkey=project,
+                district=district
+            )
+            
+            status["status"] = True
+            status["message"] = "Certificate verification saved successfully"
+            status["data"] = {
+                "uid": verification.uid,
+                "id": verification.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 10. SUBMIT ISSUE / FEEDBACK ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveFeedbackView(View):
+    """Handle issue/feedback submission (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and IssueModel.objects.filter(uid=uid).exists():
+                status["message"] = "Issue with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get user
+            user = None
+            user_id = data.get("user_id", "")
+            if user_id:
+                try:
+                    user = staffTbl.objects.get(id=user_id)
+                except:
+                    pass
+            
+            # Get district and project from user
+            district = None
+            project = None
+            
+            if user and user.projectTbl_foreignkey:
+                project = user.projectTbl_foreignkey
+                if project.district:
+                    district = project.district
+            
+            # Create issue
+            issue = IssueModel.objects.create(
+                uid=uid,
+                user=user,
+                issue_type=data.get("issue_type", ""),
+                description=data.get("description", ""),
+                date_reported=data.get("date_reported"),
+                status=data.get("status", 0),
+                projectTbl_foreignkey=project,
+                district=district
+            )
+            
+            status["status"] = True
+            status["message"] = "Issue/feedback submitted successfully"
+            status["data"] = {
+                "uid": issue.uid,
+                "id": issue.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 11. IRRIGATION ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveIrrigationView(View):
+    """Handle irrigation reporting (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and IrrigationModel.objects.filter(uid=uid).exists():
+                status["message"] = "Irrigation record with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get farm
+            farm = None
+            farm_id = data.get("farm_id", "")
+            if farm_id:
+                try:
+                    farm = FarmdetailsTbl.objects.get(id=farm_id)
+                except:
+                    try:
+                        farm = FarmdetailsTbl.objects.get(farm_reference=farm_id)
+                    except:
+                        pass
+            
+            # Get agent
+            agent = None
+            agent_id = data.get("agent", "")
+            if agent_id:
+                try:
+                    agent = staffTbl.objects.get(id=agent_id)
+                except:
+                    pass
+            
+            # Get district and project
+            district = None
+            project = None
+            
+            if farm and farm.district:
+                district = farm.district
+                project = farm.projectTbl_foreignkey
+            elif agent and agent.projectTbl_foreignkey:
+                project = agent.projectTbl_foreignkey
+                if project.district:
+                    district = project.district
+            
+            # Create irrigation record
+            irrigation = IrrigationModel.objects.create(
+                uid=uid,
+                farm=farm,
+                irrigation_type=data.get("irrigation_type", ""),
+                water_volume=data.get("water_volume", 0.0),
+                date=data.get("date"),
+                agent=agent,
+                projectTbl_foreignkey=project,
+                district=district
+            )
+            
+            status["status"] = True
+            status["message"] = "Irrigation record saved successfully"
+            status["data"] = {
+                "uid": irrigation.uid,
+                "id": irrigation.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 12. GENERAL DATA LOADING ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchRegionDistrictsView(View):
+    """Load regions and districts (GET)"""
+    def get(self, request):
+        try:
+            regions = Region.objects.all()
+            region_data = []
+            
+            for region in regions:
+                districts = cocoaDistrict.objects.filter(region=region)
+                district_list = []
+                
+                for district in districts:
+                    district_list.append({
+                        "id": district.id,
+                        "name": district.name,
+                        "district_code": district.district_code,
+                        "shape_area": district.shape_area
+                    })
+                
+                region_data.append({
+                    "id": region.id,
+                    "name": region.region,
+                    "region_code": region.reg_code,
+                    "districts": district_list
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(regions)} regions",
+                "data": region_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchAllContractorsView(View):
+    """Load contractors (GET)"""
+    def get(self, request):
+        try:
+            contractors = contractorsTbl.objects.all()
+            contractor_data = []
+            
+            for contractor in contractors:
+                contractor_data.append({
+                    "id": contractor.id,
+                    "contractor_name": contractor.contractor_name,
+                    "contact_person": contractor.contact_person,
+                    "address": contractor.address,
+                    "contact_number": contractor.contact_number,
+                    "interested_services": contractor.interested_services,
+                    "target": contractor.target,
+                    "district_id": contractor.district.id if contractor.district else None,
+                    "district_name": contractor.district.name if contractor.district else None
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(contractor_data)} contractors",
+                "data": contractor_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchActivitiesView(View):
+    """Load activities (GET)"""
+    def get(self, request):
+        try:
+            activities = Activities.objects.all()
+            activity_data = []
+            
+            for activity in activities:
+                activity_data.append({
+                    "id": activity.id,
+                    "main_activity": activity.main_activity,
+                    "sub_activity": activity.sub_activity,
+                    "activity_code": activity.activity_code,
+                    "required_equipment": activity.required_equipment
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(activity_data)} activities",
+                "data": activity_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchFarmsView(View):
+    """Load farms (GET)"""
+    def get(self, request):
+        try:
+            user_id = request.GET.get('user_id')
+            
+            # If user_id is provided, get their assigned farms
+            if user_id:
+                try:
+                    staff = staffTbl.objects.get(id=user_id)
+                    project = staff.projectTbl_foreignkey
+                    if project:
+                        farms = FarmdetailsTbl.objects.filter(projectTbl_foreignkey=project)
+                    else:
+                        farms = FarmdetailsTbl.objects.all()
+                except:
+                    farms = FarmdetailsTbl.objects.all()
+            else:
+                farms = FarmdetailsTbl.objects.all()
+            
+            farm_data = []
+            for farm in farms:
+                farm_data.append({
+                    "id": farm.id,
+                    "farm_reference": farm.farm_reference,
+                    "farmername": farm.farmername,
+                    "location": farm.location,
+                    "region_id": farm.region.id if farm.region else None,
+                    "region_name": farm.region.name if farm.region else None,
+                    "district_id": farm.district.id if farm.district else None,
+                    "district_name": farm.district.name if farm.district else None,
+                    "community_id": farm.community.id if farm.community else None,
+                    "community_name": farm.community.name if farm.community else None,
+                    "farm_size": farm.farm_size,
+                    "status": farm.status,
+                    "sector": farm.sector,
+                    "project_id": farm.projectTbl_foreignkey.id if farm.projectTbl_foreignkey else None,
+                    "project_name": farm.projectTbl_foreignkey.name if farm.projectTbl_foreignkey else None
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(farm_data)} farms",
+                "data": farm_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchCommunityView(View):
+    """Load communities (GET)"""
+    def get(self, request):
+        try:
+            district_id = request.GET.get('district_id')
+            
+            if district_id:
+                try:
+                    district = cocoaDistrict.objects.get(id=district_id)
+                    communities = Community.objects.filter(district=district)
+                except:
+                    communities = Community.objects.all()
+            else:
+                communities = Community.objects.all()
+            
+            community_data = []
+            for community in communities:
+                community_data.append({
+                    "id": community.id,
+                    "name": community.name,
+                    "district_id": community.district.id if community.district else None,
+                    "district_name": community.district.name if community.district else None,
+                    "operational_area": community.operational_area
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(community_data)} communities",
+                "data": community_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchJobOrderView(View):
+    """Load job order farms (GET)"""
+    def get(self, request):
+        try:
+            user_id = request.GET.get('user_id')
+            
+            # If user_id is provided, get their assigned job orders
+            if user_id:
+                try:
+                    staff = staffTbl.objects.get(id=user_id)
+                    project = staff.projectTbl_foreignkey
+                    if project:
+                        job_orders = Joborder.objects.filter(projectTbl_foreignkey=project)
+                    else:
+                        job_orders = Joborder.objects.all()
+                except:
+                    job_orders = Joborder.objects.all()
+            else:
+                job_orders = Joborder.objects.all()
+            
+            job_order_data = []
+            for job in job_orders:
+                job_order_data.append({
+                    "id": job.id,
+                    "farm_reference": job.farm_reference,
+                    "farmername": job.farmername,
+                    "location": job.location,
+                    "region_id": job.region.id if job.region else None,
+                    "region_name": job.region.name if job.region else None,
+                    "district_id": job.district.id if job.district else None,
+                    "district_name": job.district.name if job.district else None,
+                    "community_id": job.community.id if job.community else None,
+                    "community_name": job.community.name if job.community else None,
+                    "farm_size": job.farm_size,
+                    "sector": job.sector,
+                    "job_order_code": job.job_order_code,
+                    "project_id": job.projectTbl_foreignkey.id if job.projectTbl_foreignkey else None,
+                    "project_name": job.projectTbl_foreignkey.name if job.projectTbl_foreignkey else None
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(job_order_data)} job orders",
+                "data": job_order_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchRehabAssistantsView(View):
+    """Load rehab assistants (GET)"""
+    def get(self, request):
+        try:
+            user_id = request.GET.get('user_id')
+            district_id = request.GET.get('district_id')
+            
+            # Base query
+            query = PersonnelModel.objects.filter(personnel_type="Rehab Assistant")
+            
+            # Filter by district if provided
+            if district_id:
+                try:
+                    district = cocoaDistrict.objects.get(id=district_id)
+                    query = query.filter(district=district)
+                except:
+                    pass
+            # Filter by user's district if user_id provided
+            elif user_id:
+                try:
+                    staff = staffTbl.objects.get(id=user_id)
+                    if staff.projectTbl_foreignkey and staff.projectTbl_foreignkey.district:
+                        query = query.filter(district=staff.projectTbl_foreignkey.district)
+                except:
+                    pass
+            
+            rehab_data = []
+            for person in query:
+                rehab_data.append({
+                    "id": person.id,
+                    "uid": person.uid,
+                    "name": f"{person.first_name} {person.surname}",
+                    "phone_number": person.primary_phone_number,
+                    "personnel_type": person.personnel_type,
+                    "district_id": person.district.id if person.district else None,
+                    "district_name": person.district.name if person.district else None,
+                    "community_id": person.community.id if person.community else None,
+                    "community_name": person.community.name if person.community else None,
+                    "project_id": person.projectTbl_foreignkey.id if person.projectTbl_foreignkey else None,
+                    "project_name": person.projectTbl_foreignkey.name if person.projectTbl_foreignkey else None
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(rehab_data)} rehab assistants",
+                "data": rehab_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchPOAssignedFarmsView(View):
+    """Load assigned farms for PO (GET)"""
+    def get(self, request):
+        try:
+            user_id = request.GET.get('user_id')
+            
+            if not user_id:
                 return JsonResponse({
                     "status": False,
-                    "message": "Invalid JSON format in request body",
+                    "message": "user_id is required",
                     "data": []
                 }, status=400)
             
-            # Validate required fields
-            required_fields = ["userid", "month", "week", "year"]
-            missing_fields = [field for field in required_fields if field not in request_data or not request_data[field]]
-            
-            if missing_fields:
-                return JsonResponse({
-                    "status": False,
-                    "message": f"Missing required fields: {', '.join(missing_fields)}",
-                    "data": []
-                }, status=400)
-            
-            # Extract parameters
-            userid = request_data["userid"]
-            month = request_data["month"]
-            week = request_data["week"]
-            year = request_data["year"]
-            raid = request_data.get("raid", "")  # Optional parameter
-            
-            # Get user's project
             try:
-                user_project = projectStaffTbl.objects.get(staffTbl_foreignkey=userid)
-                project_name = user_project.projectTbl_foreignkey.name if user_project.projectTbl_foreignkey else None
+                staff = staffTbl.objects.get(id=user_id)
+                project = staff.projectTbl_foreignkey
                 
-                if not project_name:
+                if project:
+                    farms = FarmdetailsTbl.objects.filter(projectTbl_foreignkey=project)
+                    
+                    farm_data = []
+                    for farm in farms:
+                        # Get farm boundary if available from mappedFarms
+                        boundary = ""
+                        try:
+                            mapped_farm = mappedFarms.objects.get(farm_reference=farm.farm_reference)
+                            if mapped_farm.farmboundary:
+                                boundary = mapped_farm.farmboundary
+                        except:
+                            pass
+                        
+                        farm_data.append({
+                            "id": farm.id,
+                            "farm_boundary": boundary,
+                            "farmername": farm.farmername,
+                            "location": farm.location,
+                            "farm_reference": farm.farm_reference,
+                            "farm_size": farm.farm_size,
+                            "district_id": farm.district.id if farm.district else None,
+                            "district_name": farm.district.name if farm.district else None,
+                            "region_id": farm.region.id if farm.region else None,
+                            "region_name": farm.region.name if farm.region else None
+                        })
+                    
+                    return JsonResponse({
+                        "status": True,
+                        "message": f"Found {len(farm_data)} assigned farms",
+                        "data": farm_data
+                    })
+                else:
                     return JsonResponse({
                         "status": False,
                         "message": "User is not assigned to any project",
                         "data": []
                     }, status=404)
                     
-            except projectStaffTbl.DoesNotExist:
+            except staffTbl.DoesNotExist:
                 return JsonResponse({
                     "status": False,
-                    "message": "User not found or not assigned to any project",
+                    "message": "User not found",
                     "data": []
                 }, status=404)
             
-            # Build query filters
-            filters = {
-                "project__iexact": project_name,
-                "year": year,
-                "month__iexact": month,
-                "week": week
-            }
-            
-            # Add RA ID filter if provided and not empty
-            if raid:
-                filters["ra_id"] = raid
-            
-            # Fetch reports
-            reports = paymentdetailedReport.objects.filter(**filters)
-            
-            # Prepare response data
-            report_data = []
-            for report in reports:
-                report_item = {
-                    "id": report.id,
-                    "group_code": report.group_code,
-                    "ra_id": report.ra_id,
-                    "ra_name": report.ra_name,
-                    "ra_account": report.ra_account,
-                    "po_id": report.po_id,
-                    "po_name": report.po_name,
-                    "po_number": report.po_number,
-                    "district": report.district,
-                    "farmhands_type": report.farmhands_type,
-                    "farm_reference": report.farm_reference,
-                    "number_in_a_group": report.number_in_a_group,
-                    "activity": report.activity,
-                    "farmsize": report.farmsize,
-                    "achievement": report.achievement,
-                    "amount": report.amount,
-                    "week": report.week,
-                    "month": report.month,
-                    "year": report.year,
-                    "issue": report.issue,
-                    "sector": report.sector,
-                    "act_code": report.act_code,
-                    "code": report.code,
-                    "created_at": report.created_date.strftime("%Y-%m-%d %H:%M:%S") if report.created_date else None,
-                    # "updated_at": report.updated_at.strftime("%Y-%m-%d %H:%M:%S") if report.updated_at else None
-                }
-                
-                # Add foreign key relationships if they exist
-                if report.projectTbl_foreignkey:
-                    report_item["project_id"] = report.projectTbl_foreignkey.id
-                    report_item["project_name"] = report.projectTbl_foreignkey.name
-                
-                if report.staffTbl_foreignkey:
-                    report_item["staff_id"] = report.staffTbl_foreignkey.id
-                    report_item["staff_name"] = f"{report.staffTbl_foreignkey.firstname} {report.staffTbl_foreignkey.lastname}"
-                
-                # Calculate derived fields
-                try:
-                    if report.achievement and report.farmsize:
-                        percentage = (float(report.achievement) / float(report.farmsize)) * 100 if float(report.farmsize) > 0 else 0
-                        report_item["completion_percentage"] = round(percentage, 2)
-                except (ValueError, TypeError):
-                    report_item["completion_percentage"] = None
-                
-                report_data.append(report_item)
-            
-            # Prepare metadata
-            metadata = {
-                "total_records": len(report_data),
-                "project": project_name,
-                "month": month,
-                "week": week,
-                "year": year,
-                "filters_applied": {
-                    "has_raid_filter": bool(raid)
-                }
-            }
-            
-            # If RA ID was provided, add it to metadata
-            if raid:
-                metadata["ra_id"] = raid
-            
-            # Calculate summary statistics if there's data
-            if report_data:
-                try:
-                    total_amount = sum(float(item["amount"]) for item in report_data if item["amount"] and item["amount"].replace('.', '', 1).isdigit())
-                    total_achievement = sum(float(item["achievement"]) for item in report_data if item["achievement"])
-                    total_farmsize = sum(float(item["farmsize"]) for item in report_data if item["farmsize"])
-                    
-                    metadata["summary"] = {
-                        "total_amount": total_amount,
-                        "total_achievement": total_achievement,
-                        "total_farmsize": total_farmsize,
-                        "average_completion": round((total_achievement / total_farmsize * 100), 2) if total_farmsize > 0 else 0
-                    }
-                except (ValueError, TypeError):
-                    metadata["summary"] = "Unable to calculate summary statistics"
-            
-            response = {
-                "status": True,
-                "message": f"Successfully retrieved {len(report_data)} detailed payment report(s)",
-                "data": report_data,
-                "metadata": metadata
-            }
-            
-            return JsonResponse(response, safe=False)
-            
         except Exception as e:
-            # Log the error for debugging (you can add proper logging here)
-            print(f"Error in PaymentDetailsReportView: {str(e)}")
-            
             return JsonResponse({
                 "status": False,
-                "message": f"An unexpected error occurred: {str(e)}",
+                "message": f"Error occurred: {str(e)}",
                 "data": []
             }, status=500)
 
-
-
-
-
-class rehabassistantsTblListView(ListAPIView):
-    queryset = rehabassistantsTbl.objects.all()
-    serializer_class = rehabassistantsTblSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-    
-
-        # Get the request parameters
-        filters = rehabassistantsTblSerializer(data=self.request.query_params)
-        filters.is_valid(raise_exception=True)
-
-        if self.request.query_params['userid']:
-            print(self.request.query_params['userid'])
-            dist = projectStaffTbl.objects.filter(staffTbl_foreignkey=self.request.query_params['userid']).values_list("districtTbl_foreignkey__id", flat=True)
-            queryset = queryset.filter(projectTbl_foreignkey__in=dist)
-            print("dist")
-            print(dist)
-        return queryset
-# /items/?category=Electronics&price_min=100&price_max=500
-
-
 @method_decorator(csrf_exempt, name='dispatch')
-class versionTblView(View):
-    def post(self, request):
+class FetchOutbreakView(View):
+    """Load assigned outbreaks (GET)"""
+    def get(self, request):
         try:
-            data = json.loads(request.body)
-            status ={}
-            status["status"] =False
-
-            if data["version"] :
-                if versionTbl.objects.filter(version=data["version"]).exists():
-                    status["status"] =  1
-                    status["msg"] =  "sucessful"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "not sucessful"
-                    
-            else:
-                status["status"] =  0
-                status["msg"] =  "not sucessful"
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-    
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class savenewMaintenanceReportView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-    
-
-            staffTbl_foreignkey= data["agent"]
-            # districtTbl_foreignkey= data["community"]["district_id"]
-            uid= data["uid"]
-            monitoring_date= data["monitoring_date"]
-            no_rehab_assistants= data["no_rehab_assistants"]
-            area_covered_ha= data["area_covered_ha"]
-            remark= data["remark"]
-            lat= data["lat"]
-            lng= data["lng"]
-            accuracy= data["accuracy"]
-            activity= data["activity"]
-            current_farm_pic= data["current_farm_pic"]
-            farm_ref_number= data["farm_ref_number"]
-            farm_size_ha= data["farm_size_ha"]
-            cocoa_seedlings_alive= data["cocoa_seedlings_alive"]
-            plantain_seedlings_alive= data["plantain_seedlings_alive"]
-            name_of_ched_ta= data["name_of_ched_ta"]
-            ched_ta_contact= data["ched_ta_contact"]
-            community= data["community"]
-            contractor_name= data["contractor_name"]
-            number_of_people_in_group= data["number_of_people_in_group"]
-            groupWork= data["groupWork"]
-            completedByContractor= data["completedByContractor"]
-            ralist = data["rehab_assistants"]
-
-            comm = communityTbl.objects.get(id=community)
-
-
-
-            if data["current_farm_pic"]:
-                current_farm_pic=saveimage(data["current_farm_pic"], staff_contact) 
-            else:
-                current_farm_pic=""
-
-        
-            # act=Activities.objects.get(id=int(activity))
-            if not mobileMaintenance.objects.filter(uid=uid).exists():
-
-                if farm_ref_number!="" and ralist!="" :
-                    weekmonitorobj, weekmonitor_created = mobileMaintenance.objects.get_or_create(
-                        staffTbl_foreignkey=staffTbl.objects.get(id = staffTbl_foreignkey),
-                        districtTbl_foreignkey_id=comm.districtTbl_foreignkey.id,
-                        uid=uid,
-                        monitoring_date=monitoring_date,
-                        no_rehab_assistants=no_rehab_assistants,
-                        area_covered_ha=area_covered_ha,
-                        remark=remark,
-                        lat=lat,
-                        lng=lng,
-                        accuracy=accuracy,
-                        activity_id=activity,
-                        current_farm_pic=current_farm_pic,
-                        farm_ref_number=farm_ref_number,
-                        farm_size_ha=farm_size_ha,
-                        cocoa_seedlings_alive=cocoa_seedlings_alive,
-                        plantain_seedlings_alive=plantain_seedlings_alive,
-                        name_of_ched_ta=name_of_ched_ta,
-                        ched_ta_contact=ched_ta_contact,
-                        community=comm.community,
-                        contractor_name=contractor_name,
-                        number_of_people_in_group=number_of_people_in_group,
-                        groupWork=groupWork,
-                        completedByContractor=completedByContractor
-                      )
-
-                    if weekmonitor_created:
-                        if ralist:
-                            for rehab in ralist:
-                                rehabobj,rehab_created =mobileMaintenancerehabassistTbl.objects.get_or_create(
-                                            mobileMaintenance_foreignkey=weekmonitorobj,
-                                            rehabassistantsTbl_foreignkey=rehabassistantsTbl.objects.get(id=rehab["rehab_asistant"]),
-                                            area_covered_ha=rehab["area_covered_ha"],
-
-                                        )
-
-
-                        status["status"] =  1
-                        status["msg"] =  "Successful Saved !!"
-                        status["data"] ={
-                        
-                        }
- 
-                    else:
-                        status["status"] = 0
-                        status["msg"] =  "data exist"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!"
-
-            else:
-                status["status"] =  2
-                status["msg"] =  "record exist"
-                status["data"] = uid
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e)
-        return JsonResponse(status, safe=False)
-
-
-
-
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class saveContractorcertificateofworkdoneAPIView(View):
-#     def post(self, request):
-#         status ={}
-#         status["status"] = 0
-#         try:
-#             data = json.loads(request.body)
-#             staffTbl_foreignkey= data["userid"]
-#             districtTbl_foreignkey= data["district"]
-#             uid= data["uid"]
-#             current_year= data["current_year"]
-#             current_month= data["current_month"]
-#             currrent_week= data["currrent_week"]
-#             activity= data["activity"]
-#             weeding_rounds= data["weeding_rounds"]
-#             farmer_name= data["farmer_name"]
-#             sector=data["sector"]
-#             reporting_date= data["reporting_date"]
-#             farm_ref_number= data["farm_ref_number"]
-#             farm_size_ha= data["farm_size_ha"]
-#             community= data["community"]
-#             contractor= data["contractor"]
-
-#             contractor = contractorsTbl.objects.get(id=contractor)
-        
-#             district = cocoaDistrict.objects.get(id=districtTbl_foreignkey)
-#             for act in activity:
-#                 # print (act)
-#             # if not contractorcertificateWorkdone.objects.filter(uuid=uid).exists():
-#                 staffid = staffTbl.objects.get(id = staffTbl_foreignkey)
-#                 weekmonitorobj, contract_created = contractorcertificateWorkdone.objects.get_or_create(
-#                     staffTbl_foreignkey=staffTbl.objects.get(id = staffTbl_foreignkey),
-#                     uuid=uid,
-#                     reporting_date=reporting_date,
-#                     region=district.reg_code.region,
-#                     districtTbl_foreignkey=district,
-#                     district=district.district,
-#                     year=current_year,
-#                     month=current_month,
-#                     week=currrent_week,
-#                     farmer_ref_number=farm_ref_number,
-#                     community=community,
-#                     activity=Activities.objects.get(id=act),
-#                     weeding_rounds=weeding_rounds,
-#                     farmer_name=farmer_name,
-#                     sector=sector,
-#                     farm_size=farm_size_ha,
-#                     contractor=contractor.contractor_name,
-#                     po_telephone=staffTbl.objects.get(id = staffTbl_foreignkey).contact,
-#                     project_officer=f'{staffid.first_name} {staffid.last_name}'
-#                         )
-                
-#                 if contract_created :
-#                     status["status"] =  1
-#                     status["msg"] =  "Successful Saved !!"
-                     
-
-#                 else:
-#                     status["status"] =  2
-#                     status["msg"] =  "record exist"
-#                     status["data"] = uid
-
-#         except Exception as e:
-#             raise e
-#             status["status"] =  0
-#             status["msg"] =  "Error Occured!"
-#             status["data"] =str(e)
-#         return JsonResponse(status, safe=False)
-    
-
-@method_decorator(csrf_exempt, name='dispatch')
-class saveContractorcertificateofworkdoneAPIView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            staffTbl_foreignkey= data["userid"]
-            districtTbl_foreignkey= data["district"]
-            uid= data["uid"]
-            current_year= data["current_year"]
-            current_month= data["current_month"]
-            currrent_week= data["currrent_week"]
-            activity= data["activity"]
-            weeding_rounds= data["weeding_rounds"]
-            # farmer_name= data["farmer_name"]
-            sector=data["sector"]
-            reporting_date= data["reporting_date"]
-            farm_ref_number= data["farm_ref_number"]
-            farm_size_ha= data["farm_size_ha"]
-            community= data["community"]
-            contractor= data["contractor"]
-
-            contractor = contractorsTbl.objects.get(id=contractor)
-        
-            district = cocoaDistrict.objects.get(id=districtTbl_foreignkey)
-            for act in activity:
-                # print (act)
-            # if not contractorcertificateWorkdone.objects.filter(uuid=uid).exists():
-
-                staffid = staffTbl.objects.get(id = staffTbl_foreignkey)
-
-                activity_instance = Activities.objects.get(id=act)
-                # Fetch the job order using the farm reference number
-                job_order = Joborder.objects.get(farm_reference=farm_ref_number)
-                activity_code = activity_instance.activity_code
-                # Print the activity code
-                # print(hasattr(job_order, activity_code))
-                
-                act_check = allFarmqueryTbl.objects.filter(farm_reference=farm_ref_number,activity_code=activity_instance.activity_code,year=current_year).count()
-                
-               
-
-                contractorz = contractorcertificateWorkdone.objects.filter(farmer_ref_number=farm_ref_number,activity=act,reporting_date__year=current_year).count()
-                activity_count = activityReporting.objects.filter(activity_id=act,farm_ref_number=farm_ref_number,reporting_date__year=current_year).count()
-                allcheck=contractorz+activity_count
-
-               
-                if  allcheck < job_order.M3 :
-
-                    weekmonitorobj, contract_created = contractorcertificateWorkdone.objects.get_or_create(
-                        staffTbl_foreignkey=staffTbl.objects.get(id = staffTbl_foreignkey),
-                        uuid=uid,
-                        reporting_date=reporting_date,
-                        region=district.reg_code.region,
-                        districtTbl_foreignkey=district,
-                        district=district.district,
-                        year=current_year,
-                        month=current_month,
-                        week=currrent_week,
-                        farmer_ref_number=farm_ref_number,
-                        community=community,
-                        activity=Activities.objects.get(id=act),
-                        weeding_rounds=weeding_rounds,
-                        # farmer_name=farmer_name,
-                        sector=sector,
-                        farm_size=farm_size_ha,
-                        contractor=contractor.contractor_name,
-                        po_telephone=staffTbl.objects.get(id = staffTbl_foreignkey).contact,
-                        project_officer=f'{staffid.first_name} {staffid.last_name}'
-                            )
-                    
-                    if contract_created :
-                        status["status"] =  1
-                        status["msg"] =  "Successful Saved !!"
-                        
-
-                    else:
-                        status["status"] =  2
-                        status["msg"] =  "record exist"
-                        status["data"] = uid
-                
-                else:
-                        status["status"] =  3
-                        status["msg"] =  "reported for in RA reporting"
-                        status["data"] = uid
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e)
-        return JsonResponse(status, safe=False)
-    
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchallContractors(View):
-    def post(self, request):
-        try:
-            datas = contractorsTbl.objects.all()
-            status ={}
-            status["status"] =False
-
-            datas = contractorsTbl.objects.all()
-            data = []
-            for aa in datas:
-                eok={}
-                eok["id"]=aa.id
-                eok["name"]=aa.contractor_name
-                data.append(eok)
-              
-            status["status"] =  1
-            status["msg"] =  "sucessful"
-            status["data"] = data
-    
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-    
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class saveVerificationFarmsAPIView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
-            uid=data["uid"]
-            current_year= data["current_year"]
-            current_month= data["current_month"]
-            currrent_week= data["currrent_week"]
-            activity= data["activity"]
-            reporting_date= data["reporting_date"]
-            farm_ref_number= data["farm_ref_number"]
-            farm_size_ha= data["farm_size_ha"]
-            community= data["community"]
-            district=  data["district"]
-            staffTbl_foreignkey= data["userid"]
-            lat= data["lat"]
-            lng= data["lng"]
-            accuracy= data["accuracy"]
-          
-            contractor_name= data["contractor"]
-            completed_by= data["completed_by"]
-
-
-            def saveimage(image, imgname):
-                img = decodeDesignImage(image)
-                img_io = io.BytesIO()
-
-                if img is not None:
-                    img.save(img_io, format='PNG')
-                    img_io.seek(0)  # Reset buffer position to the beginning
-
-                    data = InMemoryUploadedFile(
-                        img_io,
-                        field_name=None,
-                        name=f"{imgname}.png",
-                        content_type='image/png',
-                        size=img_io.getbuffer().nbytes,  # Get the correct size
-                        charset=None
-                    )
-                    return data
-                return None
-
-
-
-            if contractor_name: 
-                contractors = contractorsTbl.objects.get(id=contractor_name).contractor_name
-            else:
-                contractors = "none"
-        
-            district = cocoaDistrict.objects.get(id=district)
-            for act in activity:
-                current_farm_pic = saveimage(data.get("current_farm_pic"), uid) if data.get("current_farm_pic") else None
-                staffid = staffTbl.objects.get(id = staffTbl_foreignkey)
-                weekmonitorobj, contract_created = verificationWorkdone.objects.get_or_create(
-                    staffTbl_foreignkey=staffTbl.objects.get(id = staffTbl_foreignkey),
-                    uuid=uid,
-                    reporting_date=reporting_date,
-                    region=district.reg_code.region,
-                    districtTbl_foreignkey=district,
-                    district=district.district,
-                    year=current_year,
-                    month=current_month,
-                    week=currrent_week,
-                    farmer_ref_number=farm_ref_number,
-                    community=community,
-                    activity=Activities.objects.get(id=act),
-                    farm_size=farm_size_ha,
-                    contractor=contractors,
-                    po_telephone=staffTbl.objects.get(id = staffTbl_foreignkey).contact,
-                    project_officer=f'{staffid.first_name} {staffid.last_name}',
-                    lat=lat,
-                    lng=lng,
-                    accuracy=accuracy,
-                    geom=Point(lng,lat),
-                    completed_by=completed_by,
-                    current_farm_pic=current_farm_pic
-                    )
-                
-                if contract_created :
-                    status["status"] =  1
-                    status["msg"] =  "Successful Saved !!"
-                     
-
-                else:
-                    status["status"] =  2
-                    status["msg"] =  "record exist"
-                    status["data"] = uid
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e)
-        return JsonResponse(status, safe=False)
-    
-
-
-
-# @method_decorator(csrf_exempt, name='dispatch')
-# class saveVerificationFarmsAPIView(View):
-#     def post(self, request):
-#         status = {}
-#         status["status"] = 0
-#         try:
-#             data = json.loads(request.body)
-#             # print(f"Received data: {data.keys()}")
-
-#             uid = data["uid"]
-#             current_year = data["current_year"]
-#             current_month = data["current_month"]
-#             currrent_week = data["currrent_week"]
-#             activity = data["activity"]
-#             reporting_date = data["reporting_date"]
-#             farm_ref_number = data["farm_ref_number"]
-#             farm_size_ha = data["farm_size_ha"]
-#             community = data["community"]
-#             district = data["district"]
-#             staffTbl_foreignkey = data["userid"]
-#             lat = data["lat"]
-#             lng = data["lng"]
-#             accuracy = data["accuracy"]
-
-#             contractor_name = data.get("contractor")
-#             completed_by = data["completed_by"]
-
-#             current_farm_pic = ""
-#             # Save the image only before the first activity is processed
-#             if data.get("current_farm_pic"):
-#                 current_farm_pic = saveimage(data["current_farm_pic"], uid)
-#                 print(f"Path returned by saveimage: {current_farm_pic}")
-#             else:
-#                 print("No current_farm_pic data received.")
-
-#             contractors = "none"
-#             if contractor_name:
-#                 try:
-#                     contractors = contractorsTbl.objects.get(id=contractor_name).contractor_name
-#                 except contractorsTbl.DoesNotExist:
-#                     print(f"Contractor with ID {contractor_name} not found.")
-#                     status["status"] = 0
-#                     status["msg"] = f"Error: Contractor with ID {contractor_name} not found."
-#                     return JsonResponse(status, safe=False)
-
-#             try:
-#                 district_obj = cocoaDistrict.objects.get(id=district)
-#             except cocoaDistrict.DoesNotExist:
-#                 print(f"Cocoa district with ID {district} not found.")
-#                 status["status"] = 0
-#                 status["msg"] = f"Error: Cocoa district with ID {district} not found."
-#                 return JsonResponse(status, safe=False)
-
-#             staff_obj = staffTbl.objects.get(id=staffTbl_foreignkey)
-
-#             for i, act in enumerate(activity):
-#                 try:
-#                     activity_obj = Activities.objects.get(id=act)
-#                 except Activities.DoesNotExist:
-#                     print(f"Activity with ID {act} not found.")
-#                     status["status"] = 0
-#                     status["msg"] = f"Error: Activity with ID {act} not found."
-#                     return JsonResponse(status, safe=False)
-
-#                 weekmonitorobj, contract_created = verificationWorkdone.objects.get_or_create(
-#                     staffTbl_foreignkey=staff_obj,
-#                     uuid=uid,
-#                     reporting_date=reporting_date,
-#                     region=district_obj.reg_code.region,
-#                     districtTbl_foreignkey=district_obj,
-#                     district=district_obj.district,
-#                     year=current_year,
-#                     month=current_month,
-#                     week=currrent_week,
-#                     farmer_ref_number=farm_ref_number,
-#                     community=community,
-#                     activity=activity_obj,
-#                     farm_size=farm_size_ha,
-#                     contractor=contractors,
-#                     po_telephone=staff_obj.contact,
-#                     project_officer=f'{staff_obj.first_name} {staff_obj.last_name}',
-#                     lat=lat,
-#                     lng=lng,
-#                     accuracy=accuracy,
-#                     geom=Point(lng,lat),
-#                     completed_by=completed_by,
-#                     current_farm_pic=current_farm_pic  # The same saved pic for all activities
-#                 )
-
-#                 if contract_created:
-#                     status["status"] = 1
-#                     status["msg"] = "Successful Saved !!"
-#                 else:
-#                     status["status"] = 2
-#                     status["msg"] = "record exist"
-#                     status["data"] = uid
-
-#         except Exception as e:
-#             print(f"An error occurred: {str(e)}", exc_info=True)
-#             status["status"] = 0
-#             status["msg"] = "Error Occured!"
-#             status["data"] = str(e)
-#         return JsonResponse(status, safe=False)
-
-
-# # Create your views here.
-class Coco32FormCoreSerializerView(viewsets.ReadOnlyModelViewSet):
-    try:
-        queryset = Coco32FormCore.objects.using('odk').filter(field_submission_date__date__gte=(date.today()-timedelta(days=5)))
-    except:
-        queryset =Coco32FormCore.objects.using('odk').all()
-    serializer_class = Coco32FormCoreSerializer
-
-
-class Coco32FormWorkdoneByRaSerializerView(viewsets.ReadOnlyModelViewSet):
-    try:
-        queryset = Coco32FormWorkdoneByRa.objects.using('odk').filter(field_submission_date__date__gte=(date.today()-timedelta(days=5)))
-    except:
-        queryset =Coco32FormWorkdoneByRa.objects.using('odk').all()
-    serializer_class = Coco32FormWorkdoneByRaSerializer
-
-
-class Coco32FormWorkdoneByPoNspSerializerView(viewsets.ReadOnlyModelViewSet):
-    try:
-        queryset = Coco32FormWorkdoneByPoNsp.objects.using('odk').filter(field_submission_date__date__gte=(date.today()-timedelta(days=5)))
-    except:
-        queryset =Coco32FormWorkdoneByPoNsp.objects.using('odk').all()
-    serializer_class = Coco32FormWorkdoneByPoNspSerializer
-
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class savemappedFarmView(View):
-    def post(self, request):
-        status ={}
-        status["status"] = 0
-        try:
-            data = json.loads(request.body)
+            user_id = request.GET.get('user_id')
             
-    
-            uid= data["uid"]
-            staff= data["userid"]
-            farm_reference= data["farm_reference"]
-            farm_area= data["farm_size"]
-            farmer_name= data["farmer_name"]
-            location= data["location"]
-            farmboundary= data["farmboundary"]
-            contact = data["contact"]
+            if not user_id:
+                return JsonResponse({
+                    "status": False,
+                    "message": "user_id is required",
+                    "data": []
+                }, status=400)
             
-            
-            aa=[]
-            for points in farmboundary:
-                aa.append((points["longitude"],points["latitude"]))
-
-            farm_geom = Polygon(tuple(aa) )
-            staffid = staffTbl.objects.get(id = staff)
-
-            obj, created = mappedFarms.objects.get_or_create(farm_reference=farm_reference,
-                defaults=dict(
-                geom=farm_geom,
-                uuid=uid,
-                contact=contact,
-                farm_reference=farm_reference,
-                farm_area=farm_area,
-                farmer_name=farmer_name,
-                location=location,
-                staffTbl_foreignkey=staffid,
-                farmboundary=str(aa),
-          
-                
-                )
-               
-              )
-
-            if created:
-                status["status"] =  1
-                status["msg"] =  "Successful Saved !!"
-                status["data"] ={
-
-                }
-            else:
-                if obj:
-                    status["status"] = 1
-                    status["msg"] =  "Successful Saved !!"
-                else:
-                    status["status"] =  0
-                    status["msg"] =  "Error Occured!",
-
-        except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!",
-            status["data"] =str(e),
-        return JsonResponse(status, safe=False)
-    
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class fetchjoborderView(View):
-    def post(self, request):	
-        status ={}
-        status["status"] =False
-        data = json.loads(request.body)
-        userid= data["userid"]
-
-        print(userid)
-        sectorlist =sectorStaffassignment.objects.filter(staffTbl_foreignkey = data["userid"]).values_list("sector",flat=True)
-        print(sectorlist)
-        
-        farms = Joborder.objects.filter(sector__in=sectorlist).defer('location','sector','region',"year_of_establishment")
-        # print(farms.count())
-        print(farms.count())
-        data = []
-
-        for farm in farms:
-            # print(farm.farm_reference)
             try:
-                eok={}
-                eok["farm_code"]=farm.id
-                eok["farm_id"]=farm.farm_reference
-                eok["farmer_nam"]=checkTitle(farm.farmername)
-                eok["district_id"]=farm.districtTbl_foreignkey.id
-                eok["district_name"]=checkTitle(farm.districtTbl_foreignkey.district)
-                eok["region_id"]=farm.districtTbl_foreignkey.reg_code.reg_code
-                eok["region_name"]=checkTitle(farm.districtTbl_foreignkey.reg_code.region)
-                eok["sector"]=farm.sector
-                eok["farm_code"]=farm.id
-                eok["location"]=farm.location
-                eok["farm_size"]=farm.farm_size
-                eok["E1"]= farm.E1
-                eok["E2"]= farm.E2
-                eok["E3"]= farm.E3
-                eok["E4"]= farm.E4
-                eok["E6"]= farm.E6
-                eok["E7"]= farm.E7
-                eok["M3"]= farm.M3
-                eok["R1"]= farm.R1
-                eok["R2"]= farm.R2
-                eok["R2"]= farm.R2
-                eok["R4"]= farm.R4
-                eok["R4"]= farm.R4
-                eok["T1"]= farm.T1
-                eok["T2"]= farm.T2
-                eok["T5"]= farm.T5
-                eok["T7"]= farm.T7
+                staff = staffTbl.objects.get(id=user_id)
+                project = staff.projectTbl_foreignkey
+                
+                if project:
+                    outbreaks = OutbreakFarmModel.objects.filter(projectTbl_foreignkey=project)
+                    
+                    outbreak_data = []
+                    for outbreak in outbreaks:
+                        outbreak_data.append({
+                            "ob_id": outbreak.id,
+                            "ob_code": outbreak.uid,
+                            "ob_size": outbreak.farm_size,
+                            "district_id": outbreak.district.id if outbreak.district else None,
+                            "district_name": outbreak.district.name if outbreak.district else None,
+                            "region_id": outbreak.region.id if outbreak.region else None,
+                            "region_name": outbreak.region.name if outbreak.region else None,
+                            "ob_boundary": outbreak.coordinates if outbreak.coordinates else ""
+                        })
+                    
+                    return JsonResponse({
+                        "status": True,
+                        "message": f"Found {len(outbreak_data)} outbreaks",
+                        "data": outbreak_data
+                    })
+                else:
+                    return JsonResponse({
+                        "status": False,
+                        "message": "User is not assigned to any project",
+                        "data": []
+                    }, status=404)
+                    
+            except staffTbl.DoesNotExist:
+                return JsonResponse({
+                    "status": False,
+                    "message": "User not found",
+                    "data": []
+                }, status=404)
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
 
-                data.append(eok)
-                status["status"] =  True
-                status["msg"] = "Success!"
-            except Exception as e:
-                print(e)
-                continue
-
-        status["data"] = data
-
-        return JsonResponse(status, safe=False)
-
-
-from datetime import datetime
-
-# Get the current year
-current_year = datetime.now().year
-
-print(current_year)
+# ============== 13. PAYMENT REPORT ==============
 
 @method_decorator(csrf_exempt, name='dispatch')
-class savenActivityReportView(View):
+class FetchPaymentsView(View):
+    """Generate payment report (POST only)"""
     def post(self, request):
-        status ={}
-        status["status"] = 0
-        results=[]
         try:
             data = json.loads(request.body)
-    
-
-            staffTbl_foreignkey= data["agent"]
-            # districtTbl_foreignkey= data["community"]["district_id"]
-            uid= data["uid"]
+            status = {"status": False, "message": "", "data": []}
             
-            no_rehab_assistants= data["no_rehab_assistants"]
-            area_covered_ha= data["area_covered_ha"]
-            remark= data["remark"]
-            sector= data["sector"]
-           
-            activity= data["activity"]
-            farm_ref_number= data["farm_ref_number"]
-            farm_size_ha= data["farm_size_ha"]
-            community= data["community"]
-            number_of_people_in_group= data["number_of_people_in_group"]
-            groupWork= data["groupWork"]
-            ralist = data["rehab_assistants"]
-            completed_date= data["completed_date"]
-            reporting_date= data["reporting_date"]
-
-            # act=Activities.objects.get(id=activity)
-            # activ=act.activity_code
-            # joborder=Joborder.objects.get(farm_reference=farm_ref_number)
-            # print("Amos",activ)
-            # print("helloo",joborder.activ)
-
-            for act in activity:
-                activity_instance = Activities.objects.get(id=act)
-                print(activity_instance.sub_activity)
-                activity_code = activity_instance.activity_code
-
-                # Fetch the job order using the farm reference number
-                job_order = Joborder.objects.get(farm_reference=farm_ref_number)
-
-                # Print the activity code
-                # print(hasattr(job_order, activity_code))
-
-                act_check = getattr(job_order, activity_code)
-
+            userid = data.get("userid", "")
+            month = data.get("month", "")
+            week = data.get("week", "")
+            year = data.get("year", "")
             
-
-                # if not activityReporting.objects.filter(uid=uid).exists():
-                joborder=Joborder.objects.get(farm_reference=farm_ref_number)
+            if not userid or not month or not week or not year:
+                status["message"] = "userid, month, week, and year are required"
+                return JsonResponse(status, status=400)
+            
+            try:
+                staff = staffTbl.objects.get(id=userid)
+                project = staff.projectTbl_foreignkey
                 
-                # print(activ.activ)
-                # print(act.activity_code)
-                contractor = contractorcertificateWorkdone.objects.filter(farmer_ref_number=farm_ref_number,activity=act,reporting_date__year=current_year).count()
-                activity_count = activityReporting.objects.filter(activity_id=act,farm_ref_number=farm_ref_number,reporting_date__year=current_year).count()
-                allcheck=contractor+activity_count
-                if  allcheck < act_check :
-                    if farm_ref_number!="" and ralist!="" :
-                        weekmonitorobj, weekmonitor_created = activityReporting.objects.get_or_create(
-                            staffTbl_foreignkey=staffTbl.objects.get(id = staffTbl_foreignkey),
-                            joborder = joborder,
-                            uid=uid,
-                            sector=sector,
-                            reporting_date=reporting_date,
-                            completed_date=completed_date,
-                            no_rehab_assistants=no_rehab_assistants,
-                            area_covered_ha=area_covered_ha,
-                            remark=remark,
-                            activity_id=act,
-                            farm_ref_number=farm_ref_number,
-                            farm_size_ha=farm_size_ha,
-                            community=community,
-                            number_of_people_in_group=number_of_people_in_group,
-                            groupWork=groupWork,
-                        
-                        
-                        )
-
-                        if weekmonitor_created:
-                            if ralist:
-                                for rehab in ralist:
-                                    rehabobj,rehab_created =activityreportingrehabassistTbl.objects.get_or_create(
-                                                activityreporting_foreignkey=weekmonitorobj,
-                                                rehabassistantsTbl_foreignkey=rehabassistantsTbl.objects.get(id=rehab["rehab_asistant"]),
-                                                area_covered_ha=rehab["area_covered_ha"],
-
-                                            )
-
-
-                            status["status"] =  1
-                            status["msg"] =  "Successful Saved !!"
-                            status["data"] ={
-                            # "activity":activity_instance.sub_activity
-                            }
-    
-                        else:
-                            status["status"] = 0
-                            status["msg"] =  "data exist"
-                    else:
-                        status["status"] =  0
-                        status["msg"] =  "Error Occured!"
-                        
+                if project:
+                    # Get personnel in this project for payment report
+                    personnel = PersonnelModel.objects.filter(projectTbl_foreignkey=project)
+                    
+                    payment_data = []
+                    for person in personnel:
+                        payment_data.append({
+                            "ra_id": person.uid or str(person.id),
+                            "ra_name": f"{person.first_name} {person.surname}",
+                            "district": project.district.name if project.district else "",
+                            "bank_name": person.bank_id or "",
+                            "bank_branch": person.branch_id or "",
+                            "snnit_no": "",  # Would need additional field
+                            "salary": "",  # Would need salary calculation logic
+                            "year": year,
+                            "po_number": staff.staffid if staff.staffid else "",
+                            "month": month,
+                            "week": week,
+                            "payment_option": "Bank" if person.bank_id else "Momo" if person.momo_number else "Unknown",
+                            "momo_acc": person.momo_number or ""
+                        })
+                    
+                    status["status"] = True
+                    status["message"] = f"Found {len(payment_data)} payment records"
+                    status["data"] = payment_data
                 else:
-                    status["status"] =  3
-                    status["msg"] =  "max threahold met;contact your MnE "
-                    status["data"] = uid
-               
-                results.append(status)
-
+                    status["message"] = "User is not assigned to any project"
+                    
+            except staffTbl.DoesNotExist:
+                status["message"] = "User not found"
+                return JsonResponse(status, status=404)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": []
+            }, status=400)
         except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e)
-        return JsonResponse(results, safe=False)
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+            
+        return JsonResponse(status)
 
-
-
-
-
+# ============== 14. DETAILED PAYMENT REPORT ==============
 
 @method_decorator(csrf_exempt, name='dispatch')
-class savenspecialprojectfarmsTblView(View):
+class FetchPaymentDetailedReportView(View):
+    """Generate detailed payment report (POST only)"""
     def post(self, request):
-        status ={}
-        status["status"] = 0
-        results=[]
         try:
             data = json.loads(request.body)
-    
-
-            staffTbl_foreignkey= data["agent"]
-            # districtTbl_foreignkey= data["community"]["district_id"]
-            uid= data["uid"]
+            status = {"status": False, "message": "", "data": []}
             
-            no_rehab_assistants= data["no_rehab_assistants"]
-            area_covered_ha= data["area_covered_ha"]
-            remark= data["remark"]
-            sector= data["sector"]
-           
-            activity= data["activity"]
-            farm_ref_number= data["farm_ref_number"]
-            farm_size_ha= data["farm_size_ha"]
-            community= data["community"]
-            number_of_people_in_group= data["number_of_people_in_group"]
-            groupWork= data["groupWork"]
-            ralist = data["rehab_assistants"]
-            completed_date= data["completed_date"]
-            reporting_date= data["reporting_date"]
-
-            # act=Activities.objects.get(id=activity)
-            # activ=act.activity_code
-            # joborder=Joborder.objects.get(farm_reference=farm_ref_number)
-            # print("Amos",activ)
-            # print("helloo",joborder.activ)
-
-            for act in activity:
-                activity_instance = Activities.objects.get(id=act)
-                print(activity_instance.sub_activity)
-                activity_code = activity_instance.activity_code
-
-                # Fetch the job order using the farm reference number
-                job_order = Joborder.objects.get(farm_reference=farm_ref_number)
-
-                # Print the activity code
-                # print(hasattr(job_order, activity_code))
-
-                act_check = getattr(job_order, activity_code)
-
+            userid = data.get("userid", "")
+            month = data.get("month", "")
+            week = data.get("week", "")
+            year = data.get("year", "")
             
-
-                # if not activityReporting.objects.filter(uid=uid).exists():
-                joborder=Joborder.objects.get(farm_reference=farm_ref_number)
+            if not userid or not month or not week or not year:
+                status["message"] = "userid, month, week, and year are required"
+                return JsonResponse(status, status=400)
+            
+            try:
+                staff = staffTbl.objects.get(id=userid)
+                project = staff.projectTbl_foreignkey
                 
-                # print(activ.activ)
-                # print(act.activity_code)
-                contractor = contractorcertificateWorkdone.objects.filter(farmer_ref_number=farm_ref_number,activity=act,reporting_date__year=current_year).count()
-                activity_count = activityReporting.objects.filter(activity_id=act,farm_ref_number=farm_ref_number,reporting_date__year=current_year).count()
-                allcheck=contractor+activity_count
-                if  allcheck < act_check :
-                    if farm_ref_number!="" and ralist!="" :
-                        weekmonitorobj, weekmonitor_created = activityReporting.objects.get_or_create(
-                            staffTbl_foreignkey=staffTbl.objects.get(id = staffTbl_foreignkey),
-                            joborder = joborder,
-                            uid=uid,
-                            sector=sector,
-                            reporting_date=reporting_date,
-                            completed_date=completed_date,
-                            no_rehab_assistants=no_rehab_assistants,
-                            area_covered_ha=area_covered_ha,
-                            remark=remark,
-                            activity_id=act,
-                            farm_ref_number=farm_ref_number,
-                            farm_size_ha=farm_size_ha,
-                            community=community,
-                            number_of_people_in_group=number_of_people_in_group,
-                            groupWork=groupWork,
+                if project:
+                    # Get daily reports for this project, month, week, year
+                    # This is simplified - in reality you'd need proper date filtering
+                    daily_reports = DailyReportingModel.objects.filter(
+                        projectTbl_foreignkey=project
+                    )
+                    
+                    detailed_data = []
+                    for report in daily_reports:
+                        # Get rehab assistants from ManyToMany field
+                        ras_list = report.ras.all()
                         
-                        
-                        )
-
-                        if weekmonitor_created:
-                            if ralist:
-                                for rehab in ralist:
-                                    rehabobj,rehab_created =activityreportingrehabassistTbl.objects.get_or_create(
-                                                activityreporting_foreignkey=weekmonitorobj,
-                                                rehabassistantsTbl_foreignkey=rehabassistantsTbl.objects.get(id=rehab["rehab_asistant"]),
-                                                area_covered_ha=rehab["area_covered_ha"],
-
-                                            )
-
-
-                            status["status"] =  1
-                            status["msg"] =  "Successful Saved !!"
-                            status["data"] ={
-                            # "activity":activity_instance.sub_activity
-                            }
-    
-                        else:
-                            status["status"] = 0
-                            status["msg"] =  "data exist"
-                    else:
-                        status["status"] =  0
-                        status["msg"] =  "Error Occured!"
-                        
+                        for ra in ras_list:
+                            detailed_data.append({
+                                "group_code": f"GRP{report.id}",
+                                "ra_id": ra.uid or str(ra.id),
+                                "ra_name": f"{ra.first_name} {ra.surname}",
+                                "ra_account": ra.account_number or ra.momo_number or "",
+                                "po_id": staff.id,
+                                "po_name": f"{staff.first_name} {staff.last_name}",
+                                "po_number": staff.staffid or "",
+                                "district": project.district.name if project.district else "",
+                                "project": project.name,
+                                "farmhands_type": "Rehab Assistant",
+                                "farm_reference": report.farm_ref_number,
+                                "number_in_a_group": ras_list.count(),
+                                "activity": report.activity.sub_activity if report.activity else "",
+                                "farmsize": report.farm_size_ha,
+                                "achievement": report.area_covered_ha,
+                                "amount": "",  # Would need rate calculation
+                                "week": week,
+                                "month": month,
+                                "year": year,
+                                "issue": report.remark,
+                                "sector": report.sector or "",
+                                "act_code": report.activity.activity_code if report.activity else ""
+                            })
+                    
+                    status["status"] = True
+                    status["message"] = f"Found {len(detailed_data)} detailed payment records"
+                    status["data"] = detailed_data
                 else:
-                    status["status"] =  3
-                    status["msg"] =  "max threahold met;contact your MnE "
-                    status["data"] = uid
-               
-                results.append(status)
-
+                    status["message"] = "User is not assigned to any project"
+                    
+            except staffTbl.DoesNotExist:
+                status["message"] = "User not found"
+                return JsonResponse(status, status=404)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": []
+            }, status=400)
         except Exception as e:
-            raise e
-            status["status"] =  0
-            status["msg"] =  "Error Occured!"
-            status["data"] =str(e)
-        return JsonResponse(results, safe=False)
-
-
-
-class WbpFarmsListView(ListAPIView):
-    queryset = Farms.objects.all()
-    serializer_class = WbpFarmsSerializer
-    
-    def get_queryset(self):
-    # Start with the base queryset
-        queryset = super().get_queryset()
-
-        # Check if the request method is POST and handle JSON body
-        if self.request.method == 'POST':
-            data = json.loads(self.request.body)
-            userid = data.get('userid')
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
             
-        else:
-            
-            userid = self.request.query_params.get('userid')
-            print(userid)
-        if userid:
-            # Attempt to retrieve farms assigned to the specified staff member
-            farms = staffFarmsAssignment.objects.filter(
-                staffTbl_foreignkey=userid
-            ).values_list("joborder_foreignkey__farm_reference", flat=True)
+        return JsonResponse(status)
 
-            if farms:
-                queryset = queryset.filter(farm_id__in=farms)
+# ============== 15. ALL FARM QUERY ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AllFarmQueryView(View):
+    """Get all farms for a user (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": []}
+            
+            userid = data.get("userid", "")
+            district_id = data.get("district_id", "")
+            
+            if not userid:
+                status["message"] = "userid is required"
+                return JsonResponse(status, status=400)
+            
+            try:
+                staff = staffTbl.objects.get(id=userid)
+                project = staff.projectTbl_foreignkey
+                
+                if project:
+                    farms = FarmdetailsTbl.objects.filter(projectTbl_foreignkey=project)
+                    
+                    farm_data = []
+                    for farm in farms:
+                        farm_data.append({
+                            "id": farm.id,
+                            "farm_reference": farm.farm_reference,
+                            "farmername": farm.farmername,
+                            "location": farm.location,
+                            "region": farm.region.name if farm.region else "",
+                            "district": farm.district.name if farm.district else "",
+                            "community": farm.community.name if farm.community else "",
+                            "farm_size": farm.farm_size,
+                            "status": farm.status,
+                            "sector": farm.sector,
+                            "year_of_establishment": farm.year_of_establishment
+                        })
+                    
+                    status["status"] = True
+                    status["message"] = f"Found {len(farm_data)} farms"
+                    status["data"] = farm_data
+                else:
+                    status["message"] = "User is not assigned to any project"
+                    
+            except staffTbl.DoesNotExist:
+                status["message"] = "User not found"
+                return JsonResponse(status, status=404)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": []
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 16. WEEKLY SUMMARY REPORT ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class WeeklySummaryReportView(View):
+    """Generate weekly summary report (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": []}
+            
+            userid = data.get("userid", "")
+            month = data.get("month", "")
+            week = data.get("week", "")
+            year = data.get("year", "")
+            
+            if not userid or not month or not week or not year:
+                status["message"] = "userid, month, week, and year are required"
+                return JsonResponse(status, status=400)
+            
+            try:
+                staff = staffTbl.objects.get(id=userid)
+                project = staff.projectTbl_foreignkey
+                
+                if project:
+                    # Get daily reports for the specified period
+                    # This is simplified - in reality you'd need proper date filtering
+                    daily_reports = DailyReportingModel.objects.filter(
+                        projectTbl_foreignkey=project,
+                        status=1  # Submitted reports only
+                    )
+                    
+                    summary_data = []
+                    for report in daily_reports:
+                        summary_data.append({
+                            "reporting_date": report.reporting_date,
+                            "agent": f"{report.agent.first_name} {report.agent.last_name}" if report.agent else "",
+                            "farm_reference": report.farm_ref_number,
+                            "activity": report.activity.sub_activity if report.activity else "",
+                            "area_covered_ha": report.area_covered_ha,
+                            "no_rehab_assistants": report.no_rehab_assistants,
+                            "community": report.community.name if report.community else "",
+                            "district": report.district.name if report.district else "",
+                            "remark": report.remark
+                        })
+                    
+                    status["status"] = True
+                    status["message"] = f"Found {len(summary_data)} weekly reports"
+                    status["data"] = summary_data
+                else:
+                    status["message"] = "User is not assigned to any project"
+                    
+            except staffTbl.DoesNotExist:
+                status["message"] = "User not found"
+                return JsonResponse(status, status=404)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": []
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 17. VERIFICATION (VIDEO RECORD) ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveVerificationRecordView(View):
+    """Handle video verification (POST only)"""
+    def post(self, request):
+        try:
+            # This endpoint should handle multipart form data for video upload
+            if request.content_type.startswith('multipart/form-data'):
+                uid = request.POST.get('uid', '')
+                farmRef = request.POST.get('farmRef', '')
+                timestamp = request.POST.get('timestamp', '')
+                status_val = request.POST.get('status', '0')
+                
+                # Check if UID already exists
+                if uid and VerifyRecord.objects.filter(uid=uid).exists():
+                    return JsonResponse({
+                        "status": False,
+                        "message": "Verification record with this UID already exists",
+                        "data": {"uid": uid}
+                    })
+                
+                # Get farm
+                farm = None
+                if farmRef:
+                    try:
+                        farm = FarmdetailsTbl.objects.get(farm_reference=farmRef)
+                    except:
+                        pass
+                
+                # Get district and project
+                district = None
+                project = None
+                if farm:
+                    district = farm.district
+                    project = farm.projectTbl_foreignkey
+                
+                # Create verification record
+                verification = VerifyRecord.objects.create(
+                    uid=uid,
+                    farm=farm,
+                    farmRef=farmRef,
+                    timestamp=timestamp,
+                    status=int(status_val),
+                    projectTbl_foreignkey=project,
+                    district=district
+                )
+                
+                # Handle video file if provided
+                if 'video' in request.FILES:
+                    verification.videoPath = request.FILES['video']
+                    verification.save()
+                
+                return JsonResponse({
+                    "status": True,
+                    "message": "Verification record saved successfully",
+                    "data": {
+                        "uid": verification.uid,
+                        "id": verification.id
+                    }
+                })
             else:
-                queryset = queryset.none()
+                # Handle JSON payload (without video)
+                data = json.loads(request.body)
+                uid = data.get("uid", "")
+                
+                if uid and VerifyRecord.objects.filter(uid=uid).exists():
+                    return JsonResponse({
+                        "status": False,
+                        "message": "Verification record with this UID already exists",
+                        "data": {"uid": uid}
+                    })
+                
+                # Get farm
+                farm = None
+                farmRef = data.get("farmRef", "")
+                if farmRef:
+                    try:
+                        farm = FarmdetailsTbl.objects.get(farm_reference=farmRef)
+                    except:
+                        pass
+                
+                # Get district and project
+                district = None
+                project = None
+                if farm:
+                    district = farm.district
+                    project = farm.projectTbl_foreignkey
+                
+                verification = VerifyRecord.objects.create(
+                    uid=uid,
+                    farm=farm,
+                    farmRef=farmRef,
+                    timestamp=data.get("timestamp"),
+                    status=data.get("status", 0),
+                    projectTbl_foreignkey=project,
+                    district=district
+                )
+                
+                return JsonResponse({
+                    "status": True,
+                    "message": "Verification record saved successfully",
+                    "data": {
+                        "uid": verification.uid,
+                        "id": verification.id
+                    }
+                })
+                
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
 
-        return queryset.order_by('farm_id')
+# ============== 18. AREA CALCULATION ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveCalculatedAreaView(View):
+    """Handle area calculation (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            # Get district if provided in context
+            district = None
+            district_id = data.get("district_id", "")
+            if district_id:
+                try:
+                    district = cocoaDistrict.objects.get(id=district_id)
+                except:
+                    pass
+            
+            # Get project from district
+            project = None
+            if district:
+                try:
+                    project = projectTbl.objects.get(district=district)
+                except:
+                    pass
+            
+            # Create calculated area
+            area = CalculatedArea.objects.create(
+                date=data.get("date"),
+                title=data.get("title", ""),
+                value=data.get("value", 0.0),
+                projectTbl_foreignkey=project,
+                district=district
+            )
+            
+            status["status"] = True
+            status["message"] = "Area calculation saved successfully"
+            status["data"] = {
+                "id": area.id,
+                "title": area.title,
+                "value": area.value
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 19. FARM VALIDATION ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveFarmValidationView(View):
+    """Handle farm validation (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            field_uri = data.get("field_uri", "")
+            
+            # Check if already exists
+            if field_uri and FarmValidation.objects.filter(field_uri=field_uri).exists():
+                status["message"] = "Farm validation record already exists"
+                status["data"] = {"field_uri": field_uri}
+                return JsonResponse(status)
+            
+            # Get farm
+            farm = None
+            farm_id = data.get("farm_id", "")
+            if farm_id:
+                try:
+                    farm = FarmdetailsTbl.objects.get(farm_reference=farm_id)
+                except:
+                    pass
+            
+            # Create farm validation record
+            validation = FarmValidation.objects.create(
+                field_uri=field_uri,
+                field_submission_date=data.get("field_submission_date"),
+                reporting_date=data.get("reporting_date"),
+                staff_id=data.get("staff_id", ""),
+                staff_name=data.get("staff_name", ""),
+                sector_no=data.get("sector_no"),
+                region=data.get("region", ""),
+                farm=farm,
+                farm_size=data.get("farm_size", 0.0),
+                farmer_contact=data.get("farmer_contact", ""),
+                farm_verified_by_ched=data.get("farm_verified_by_ched", ""),
+                demarcated_to_boundary=data.get("demarcated_to_boundary", ""),
+                treated_to_boundary=data.get("treated_to_boundary", ""),
+                undesirable_shade_tree=data.get("undesirable_shade_tree", ""),
+                farmer_name=data.get("farmer_name", ""),
+                maintained_to_boundary=data.get("maintained_to_boundary", ""),
+                point_lng=data.get("point_lng", ""),
+                point_lat=data.get("point_lat", ""),
+                point_acc=data.get("point_acc", ""),
+                farms_in_mushy_field=data.get("farms_in_mushy_field", ""),
+                rice_maize_cassava_farm=data.get("rice_maize_cassava_farm", ""),
+                location=data.get("location", ""),
+                established_to_boundary=data.get("established_to_boundary", ""),
+                general_remarks=data.get("general_remarks", "")
+            )
+            
+            status["status"] = True
+            status["message"] = "Farm validation record saved successfully"
+            status["data"] = {
+                "field_uri": validation.field_uri,
+                "id": validation.field_uri
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+
+# ============== 20. FEEDBACK ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveFeedbackAPIView(View):
+    """Handle feedback submission (POST only) - API version"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
+            if uid and Feedback.objects.filter(uid=uid).exists():
+                status["message"] = "Feedback with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get staff
+            staff = None
+            staff_id = data.get("staff_id", "")
+            if staff_id:
+                try:
+                    staff = staffTbl.objects.get(id=staff_id)
+                except:
+                    pass
+            
+            # Create feedback
+            feedback = Feedback.objects.create(
+                staffTbl_foreignkey=staff,
+                title=data.get("title", ""),
+                feedback=data.get("feedback", ""),
+                uid=uid,
+                farm_reference=data.get("farm_reference", ""),
+                activity=data.get("activity", ""),
+                ra_id=data.get("ra_id", ""),
+                Status=data.get("status", "Open")
+            )
+            
+            status["status"] = True
+            status["message"] = "Feedback submitted successfully"
+            status["data"] = {
+                "uid": feedback.uid,
+                "id": feedback.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)

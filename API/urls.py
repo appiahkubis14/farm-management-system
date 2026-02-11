@@ -1,65 +1,71 @@
+# urls.py
 from django.urls import path
 from . import views
-from django.contrib import admin 
-from django.contrib.auth.views import LogoutView
-from django.views.decorators.csrf import csrf_exempt
-import json
+from django.contrib import admin
+
 app_name = 'API'
 
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
-    path('v1/auth/login/', views.loginmobileV2View.as_view()),
-    # path('v2/auth/login/', views.loginmobileV2View.as_view()),
-
-    # path('v1/saveoutbreakfarm/', views.outbreakFarmView.as_view()),
-    # path('v1/fetchoutbreak/', views.fetchoutbreakView.as_view()),
-    # path('v1/fetchcommunity/', views.fetchcommunityTblView.as_view()),
-    # path('v1/fetchcocoatype/', views.fetchcocoatypeTblView.as_view()),
-    # path('v1/cocoaageclass/', views.cocoaageclassTblView.as_view()),
-    # path('v1/fetchoutbreakcsv/', views.fetchoutbreakCSV.as_view()),
-    # path('v1/fetchallra/', views.fetchallRAView.as_view()),
-    # path('v1/savepomonitoring/', views.savepomonitoringView.as_view()),
-
     
-    path('v1/saveregister/', views.saveregistrationView.as_view()),
-    path('v1/regiondistricts/', views.fetchregionDistrictsView.as_view()),
-    path('v1/fetchallcontractors/', views.fetchallContractors.as_view()), 
-    path('v1/activity/', views.fetchactivitiesView),
-    path('v1/farms/', views.fetchfarmsView.as_view()),
-    path('v1/fetchjoborder/', views.fetchjoborderView.as_view()),
-    path('v1/fetchrehabassistants/', views.fetchRehabassistantsView.as_view()),
-    path('v1/savemonitoringform/', views.saveMonitoringformView.as_view()),
-    path('v1/saveactivityreport/', views.savenActivityReportView.as_view()), 
-    path('v1/saverehabasssignment/', views.saveraAssignmentView.as_view()),
-    path('v1/savefeedback/', views.savefeedbackView.as_view()),
     path('v1/version/', views.versionTblView.as_view()),
-    path('v1/fetchpayments/', views.FetchPaymentReportView.as_view()),
-    path('v1/fetchpaymentdetailedreport/', views.fetchpaymentdetailsReportView.as_view()),
-    path('v1/updatefirebase/', views.updatefirebaseView.as_view()),
+    # 1. Authentication & User (POST only)
+    path('v1/auth/login/', views.LoginView.as_view(), name='login'),
     
-   
+    # 2. Daily Reporting / Activity Reporting (POST only)
+    path('v1/saveactivityreport/', views.SaveActivityReportView.as_view(), name='save_activity_report'),
     
-    # path('v1/fetchfarmstatus/', views.fetchfarmstatusView.as_view()),
-    # path('v1/fetchpoassignedfarms/', views.fetchpoAssignedfarmsView.as_view()),
-    # # path('v1/fetchpoassignedfarms/', views.fetchpoAssignedfarmsView),
-    # path('v1/savemaintenancefuel/', views.savemaintenancefuelView.as_view()),
-    # path('v1/saveobfuel/', views.saveobfuelView.as_view()),
-    # path('v1/saveobfuel/', views.saveobfuelView.as_view()),
-    # path('v1/saveobmonitoringform/', views.saveOBformView.as_view()),
-    # path('v1/fetchoutbreafarmslist/', views.fetchoutbreaFarms.as_view()),
-    # path('v1/fetchcontractor/', views.fetchcontractorView.as_view()),
-    path('v1/fetchallequipment/', views.fetchallEquipmentView.as_view()),
-    # path('v1/saveequipmenteventory/', views.saveequipmentEventory.as_view()),
-    # path('v1/fetchallfeedback/', views.fetchallFeedback.as_view()),
-    # path('rehabassistantslist_drf/', views.rehabassistantsTblListView.as_view(), name='rehabassistantslist_drf'),
-    # path('v1/savenewmaintenanceform/', views.savenewMaintenanceReportView.as_view()),
-    # path('v1/saveContractorcertificateofworkdone/', views.saveContractorcertificateofworkdoneAPIView.as_view()),
-    # path('v1/saveverificationfarms/', views.saveVerificationFarmsAPIView.as_view()), 
-    # path('Coco32FormCoreSerializer/', views.Coco32FormCoreSerializerView.as_view({'get': 'list'}), name='Coco32FormCoreSerializer'),
-    # path('Coco32FormWorkdoneByRaSerializer/', views.Coco32FormWorkdoneByRaSerializerView.as_view({'get': 'list'}), name='Coco32FormWorkdoneByRaSerializer'),
-    # path('Coco32FormWorkdoneByPoNspSerializer/', views.Coco32FormWorkdoneByPoNspSerializerView.as_view({'get': 'list'}), name='Coco32FormWorkdoneByPoNspSerializer'),
-    # path('v1/savemappedfarm/', views.savemappedFarmView.as_view()), 
-    #  path('wbpfarmslist_drf/', views.WbpFarmsListView.as_view(), name='Wbpfarmslist_drf'),
+    # 4. Add Personnel (POST only)
+    path('v1/saveregister/', views.SaveRegisterView.as_view(), name='save_register'),
     
- ]
+    # 5. Assign Rehab Assistant (RA) (POST only)
+    path('v1/saverehabasssignment/', views.SaveRehabAssignmentView.as_view(), name='save_rehab_assignment'),
+    
+    # 6. Growth Monitoring (POST only)
+    path('v1/growth-monitoring/', views.GrowthMonitoringView.as_view(), name='growth_monitoring'),
+    
+    # 7. Outbreak Farm (POST only)
+    path('v1/saveoutbreakfarm/', views.SaveOutbreakFarmView.as_view(), name='save_outbreak_farm'),
+    
+    # 8. Contractor Certificate (POST only)
+    path('v1/saveContractorcertificateofworkdone/', views.SaveContractorCertificateView.as_view(), name='save_contractor_certificate'),
+    
+    # 8. Contractor Certificate Verification (POST only)
+    path('v1/saveverificationfarms/', views.SaveVerificationFarmsView.as_view(), name='save_verification_farms'),
+    
+    # 9. Submit Issue / Feedback (POST only)
+    path('v1/savefeedback/', views.SaveFeedbackView.as_view(), name='save_feedback'),
+    
+    # 10. Irrigation (POST only - new endpoint)
+    path('v1/saveirrigation/', views.SaveIrrigationView.as_view(), name='save_irrigation'),
+    
+    # 11. General Data Loading (GET endpoints)
+    path('v1/regiondistricts/', views.FetchRegionDistrictsView.as_view(), name='region_districts'),
+    path('v1/fetchallcontractors/', views.FetchAllContractorsView.as_view(), name='fetch_all_contractors'),
+    path('v1/activity/', views.FetchActivitiesView.as_view(), name='activity'),
+    path('v1/farms/', views.FetchFarmsView.as_view(), name='farms'),
+    path('v1/fetchcommunity/', views.FetchCommunityView.as_view(), name='fetch_community'),
+    path('v1/fetchjoborder/', views.FetchJobOrderView.as_view(), name='fetch_joborder'),
+    path('v1/fetchrehabassistants/', views.FetchRehabAssistantsView.as_view(), name='fetch_rehabassistants'),
+    path('v1/fetchpoassignedfarms/', views.FetchPOAssignedFarmsView.as_view(), name='fetch_po_assigned_farms'),
+    path('v1/fetchoutbreak/', views.FetchOutbreakView.as_view(), name='fetch_outbreak'),
+    
+    # 12. Payment Report (POST only)
+    path('v1/fetchpayments/', views.FetchPaymentsView.as_view(), name='fetch_payments'),
+    
+    # 13. Detailed Payment Report (POST only)
+    path('v1/fetchpaymentdetailedreport/', views.FetchPaymentDetailedReportView.as_view(), name='fetch_payment_detailed_report'),
+    
+    # 15. Verification (Video Record) (POST only)
+    path('v1/saveverificationrecord/', views.SaveVerificationRecordView.as_view(), name='save_verification_record'),
+    
+    # 16. Area Calculation (POST only)
+    path('v1/savecalculatedarea/', views.SaveCalculatedAreaView.as_view(), name='save_calculated_area'),
 
+    # 17. Area Calculation (POST only)
+    path('v1/savecalculatedarea/', views.SaveCalculatedAreaView.as_view(), name='save_calculated_area'),
+
+    # 18. save map farms
+    path('v1/savemapfarms/', views.SaveMappedFarmView.as_view(), name='save_map_farms'),
+]
