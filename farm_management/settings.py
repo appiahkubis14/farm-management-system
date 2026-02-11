@@ -70,10 +70,19 @@ INSTALLED_APPS = [
 
 # Optional: Configure Leaflet
 LEAFLET_CONFIG = {
-    'DEFAULT_CENTER': (7.9465, -1.0232),  # Ghana coordinates
+    'DEFAULT_CENTER': (5.678, -1.234),  # Ghana coordinates
     'DEFAULT_ZOOM': 6,
-    'MIN_ZOOM': 3,
-    'MAX_ZOOM': 18,
+    'MIN_ZOOM': 5,
+    'MAX_ZOOM': 28,
+    'MIN_CENTER': (5.678, -1.234),
+    'MAX_CENTER': (5.678, -1.234),
+    'DEFAULT_PRECISION': 6,
+    'CRS': 'EPSG:4326',
+    'SPATIAL_EXTENT': (-180, -90, 180, 90),
+    'SPATIAL_EXTENT_CRS': 'EPSG:4326',
+    'DEFAULT_TILE_LAYER': 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    'DEFAULT_TILE_LAYER_ATTRIBUTION': '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    
     'RESET_VIEW': False,
     'SCALE': 'both',
     'ATTRIBUTION_PREFIX': 'Powered by django-leaflet',

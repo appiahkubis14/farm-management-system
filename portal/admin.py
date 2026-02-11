@@ -959,11 +959,18 @@ class posRoutemonitoringAdmin(admin.ModelAdmin):
     search_fields = ('staffTbl_foreignkey__first_name', 'staffTbl_foreignkey__last_name')
     list_per_page = 50
 
+from django.contrib.gis import admin as gis_admin
+
 @admin.register(mappedFarms)
-class mappedFarmsAdmin(admin.ModelAdmin):
+class mappedFarmsAdmin(ImportExportModelAdmin, LeafletGeoAdmin):
     list_display = ('farm_reference', 'farmer_name', 'location', 'farm_area', 'contact')
     search_fields = ('farm_reference', 'farmer_name', 'location')
     list_per_page = 50
+    
+    # Optional: Customize the map
+    default_lon = -1.234
+    default_lat = 5.678
+    default_zoom = 12
 
 @admin.register(FarmValidation)
 class FarmValidationAdmin(admin.ModelAdmin):
@@ -1125,183 +1132,17 @@ class DetailedPaymentReportAdmin(ImportExportModelAdmin):
 # MENU MANAGEMENT ADMIN
 # ============================================
 
-from django import forms
-from django.utils.html import format_html
-from django.urls import reverse
 
-class MenuItemForm(forms.ModelForm):
-    class Meta:
-        model = MenuItem
-        fields = '__all__'
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        instance = kwargs.get('instance')
-        
-        # Filter parent choices to exclude self and descendants
-        if instance and instance.pk:
-            descendants = instance.get_descendants()
-            exclude_ids = [instance.pk] + [d.pk for d in descendants]
-            self.fields['parent'].queryset = MenuItem.objects.exclude(id__in=exclude_ids)
-        else:
-            self.fields['parent'].queryset = MenuItem.objects.all()
-        
-        self.fields['parent'].queryset = self.fields['parent'].queryset.order_by('display_name')
-
-@admin.register(MenuItem)
-class MenuItemAdmin(admin.ModelAdmin):
-    form = MenuItemForm
-    list_display = ('display_name_with_indent', 'icon_preview', 'parent_name', 'order', 
-                   'is_active_display', 'child_count_display', 'group_count', 'url_preview')
-    list_display_links = ('display_name_with_indent',)
-    list_editable = ('order',)
-    list_filter = ('is_active', 'parent', 'allowed_groups')
-    search_fields = ('display_name', 'name', 'url')
-    filter_horizontal = ('allowed_groups',)
-    readonly_fields = ('created_at', 'updated_at', 'full_path_display', 
-                      'level_display', 'child_count_display')
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'display_name', 'icon', 'url', 'order', 'is_active')
-        }),
-        ('Hierarchy', {
-            'fields': ('parent',),
-            'description': 'Set the parent menu item to create a hierarchical structure'
-        }),
-        ('Permissions', {
-            'fields': ('allowed_groups',),
-            'description': 'User groups that can access this menu item'
-        }),
-        ('Hierarchy Information', {
-            'fields': ('full_path_display', 'level_display', 'child_count_display'),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    actions = ['activate_items', 'deactivate_items', 'make_top_level']
-    
-    def display_name_with_indent(self, obj):
-        """Display name with indentation based on level"""
-        if obj.level > 0:
-            indent_px = obj.level * 20
-            return format_html(
-                '<div style="margin-left: {}px; display: flex; align-items: center;">'
-                '<span style="margin-right: 5px;">↳</span>'
-                '<strong>{}</strong>'
-                '</div>',
-                indent_px,
-                obj.display_name
-            )
-        else:
-            return format_html('<strong>{}</strong>', obj.display_name)
-    display_name_with_indent.short_description = 'Menu Item'
-    display_name_with_indent.admin_order_field = 'display_name'
-    
-    def icon_preview(self, obj):
-        if obj.icon:
-            return format_html('<i class="{}" title="{}"></i>', obj.icon, obj.icon)
-        return "—"
-    icon_preview.short_description = 'Icon'
-    
-    def parent_name(self, obj):
-        if obj.parent:
-            return obj.parent.display_name
-        return "(Top Level)"
-    parent_name.short_description = 'Parent'
-    parent_name.admin_order_field = 'parent__display_name'
-    
-    def is_active_display(self, obj):
-        if obj.is_active:
-            return format_html('<span style="color: #28a745; font-weight: bold;">{}</span>', '● Active')
-        else:
-            return format_html('<span style="color: #dc3545; font-weight: bold;">{}</span>', '○ Inactive')
-    is_active_display.short_description = 'Status'
-    
-    def child_count_display(self, obj):
-        count = obj.children.count()
-        if count > 0:
-            url = reverse('admin:portal_menuitem_changelist') + f'?parent__id__exact={obj.id}'
-            return format_html('<a href="{}">{}</a>', url, count)
-        return count
-    child_count_display.short_description = 'Children'
-    
-    def group_count(self, obj):
-        return obj.allowed_groups.count()
-    group_count.short_description = 'Groups'
-    
-    def url_preview(self, obj):
-        if obj.url:
-            return format_html('<code style="font-size: 0.8em;">{}</code>', obj.url)
-        return "—"
-    url_preview.short_description = 'URL'
-    
-    def full_path_display(self, obj):
-        return obj.full_path
-    full_path_display.short_description = 'Full Path'
-    
-    def level_display(self, obj):
-        return obj.level
-    level_display.short_description = 'Level'
-    
-    def activate_items(self, request, queryset):
-        updated = queryset.update(is_active=True)
-        self.message_user(request, f'{updated} menu items activated.')
-    activate_items.short_description = "Activate selected items"
-    
-    def deactivate_items(self, request, queryset):
-        updated = queryset.update(is_active=False)
-        self.message_user(request, f'{updated} menu items deactivated.')
-    deactivate_items.short_description = "Deactivate selected items"
-    
-    def make_top_level(self, request, queryset):
-        updated = queryset.update(parent=None)
-        self.message_user(request, f'{updated} items set as top-level.')
-    make_top_level.short_description = "Make selected items top-level"
-
-@admin.register(SidebarConfiguration)
-class SidebarConfigurationAdmin(admin.ModelAdmin):
-    list_display = ('name', 'is_active', 'get_theme_display', 'show_icons', 'expand_all')
-    list_editable = ('is_active', 'show_icons', 'expand_all')
-    fieldsets = (
-        ('General Settings', {
-            'fields': ('name', 'is_active', 'theme')
-        }),
-        ('Display Options', {
-            'fields': ('show_icons', 'expand_all', 'show_user_info', 'show_search'),
-        }),
-    )
-    
-    def get_theme_display(self, obj):
-        return obj.get_theme_display()
-    get_theme_display.short_description = 'Theme'
 
 # ============================================
 # SIMPLE ADMIN CLASSES
 # ============================================
 
-class SimpleAdmin(admin.ModelAdmin):
-    list_per_page = 50
-
-# Register remaining simple models
-@admin.register(Sidebar)
-class SidebarAdmin(SimpleAdmin):
-    list_display = ('name',)
-    search_fields = ('name',)
-
-@admin.register(GroupSidebar)
-class GroupSidebarAdmin(SimpleAdmin):
-    list_display = ('assigned_group',)
-    filter_horizontal = ('hidden_sidebars',)
 
 # ============================================
-# ADMIN SITE CUSTOMIZATION
-# ============================================
 
-admin.site.site_header = "Cocoa Rehabilitation System Administration"
-admin.site.site_title = "Cocoa Rehab System"
+admin.site.site_header = "Farm Management System"
+admin.site.site_title = "Farm Management System"
 admin.site.index_title = "System Administration"
 
 # Register GIS models

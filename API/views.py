@@ -277,6 +277,8 @@ class SaveActivityReportView(View):
         return JsonResponse(status)
 
 # ============== 3. FARM BOUNDARY ==============
+from django.contrib.gis.geos import Polygon, MultiPolygon
+import json
 
 @method_decorator(csrf_exempt, name='dispatch')
 class SaveMappedFarmView(View):
@@ -303,10 +305,44 @@ class SaveMappedFarmView(View):
                 except:
                     pass
             
-            # Create geometry from boundary if provided
-            geom = None
+            # Get farmboundary string
             farmboundary = data.get("farmboundary", "")
             
+            # Convert string coordinates to GEOS geometry
+            geom = None
+            if farmboundary:
+                try:
+                    # Parse the JSON string
+                    coords = json.loads(farmboundary)
+                    
+                    # You need at least 3 points to form a polygon
+                    if len(coords) >= 3:
+                        # Convert to tuple format (lng, lat) - note the order: lng first, then lat
+                        polygon_coords = []
+                        for coord in coords:
+                            if len(coord) == 2:
+                                lng = float(coord[0])
+                                lat = float(coord[1])
+                                polygon_coords.append((lng, lat))
+                        
+                        # IMPORTANT: Close the polygon (add first point at the end)
+                        if polygon_coords and polygon_coords[0] != polygon_coords[-1]:
+                            polygon_coords.append(polygon_coords[0])
+                        
+                        # Create Polygon - note the extra parentheses
+                        # Polygon requires a sequence of coordinates: ((x1 y1, x2 y2, x3 y3, x1 y1),)
+                        polygon = Polygon(polygon_coords)
+                        
+                        # Ensure polygon is valid
+                        if polygon.valid:
+                            # Wrap in MultiPolygon
+                            geom = MultiPolygon(polygon)
+                            geom.srid = 4326  # Set coordinate system
+                            
+                except Exception as e:
+                    print(f"Error creating geometry: {e}")
+            
+            # Create the farm record
             farm = mappedFarms.objects.create(
                 uid=uid,
                 farm_reference=data.get("farm_reference", ""),
@@ -340,7 +376,6 @@ class SaveMappedFarmView(View):
             }, status=500)
             
         return JsonResponse(status)
-
 # ============== 4. ADD PERSONNEL ==============
 
 @method_decorator(csrf_exempt, name='dispatch')
