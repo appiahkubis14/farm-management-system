@@ -153,6 +153,142 @@ class SaveActivityReportView(View):
             uid = data.get("uid", "")
             
             # Check if UID already exists
+            if uid and  ActivityReportingModel.objects.filter(uid=uid).exists():
+                status["message"] = "Report with this UID already exists"
+                status["data"] = {"uid": uid}
+                return JsonResponse(status)
+            
+            # Get agent
+            agent = None
+            agent_id = data.get("agent", "")
+            if agent_id:
+                try:
+                    agent = staffTbl.objects.get(id=agent_id)
+                except:
+                    pass
+            
+            # Get farm
+            farm = None
+            farm_ref = data.get("farm_ref_number", "")
+            if farm_ref:
+                try:
+                    farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
+                except:
+                    pass
+            
+            # Get community
+            community = None
+            community_id = data.get("community", "")
+            if community_id:
+                try:
+                    community = Community.objects.get(id=community_id)
+                except:
+                    # Try by name if ID doesn't work
+                    try:
+                        community = Community.objects.get(name=community_id)
+                    except:
+                        pass
+            
+            # Get district (from farm or agent's project)
+            district = None
+            if farm and farm.district:
+                district = farm.district
+            elif agent and agent.projectTbl_foreignkey and agent.projectTbl_foreignkey.district:
+                district = agent.projectTbl_foreignkey.district
+            
+            # Get project
+            project = None
+            if agent and agent.projectTbl_foreignkey:
+                project = agent.projectTbl_foreignkey
+            
+            # Get activities
+            main_activity_obj = None
+            activity_obj = None
+            main_activity_code = data.get("main_activity", "")
+            activity_code = data.get("activity", "")
+            
+            if main_activity_code:
+                try:
+                    main_activity_obj = Activities.objects.get(activity_code=main_activity_code)
+                except:
+                    pass
+            
+            if activity_code:
+                try:
+                    activity_obj = Activities.objects.get(activity_code=activity_code)
+                except:
+                    pass
+            
+            # Parse RAS if it's a list
+            ras_ids = data.get("ras", [])
+            
+            # Create daily report
+            report = ActivityReportingModel.objects.create(
+                uid=uid,
+                agent=agent,
+                completion_date=data.get("completion_date"),
+                reporting_date=data.get("reporting_date"),
+                main_activity=main_activity_obj,
+                activity=activity_obj,
+                no_rehab_assistants=data.get("no_rehab_assistants", 0),
+                area_covered_ha=data.get("area_covered_ha", 0.0),
+                remark=data.get("remark", ""),
+                status=data.get("status", 0),
+                farm=farm,
+                farm_ref_number=farm_ref,
+                farm_size_ha=data.get("farm_size_ha", 0.0),
+                community=community,
+                number_of_people_in_group=data.get("number_of_people_in_group", 0),
+                group_work=data.get("group_work", ""),
+                sector=data.get("sector"),
+                projectTbl_foreignkey=project,
+                district=district
+            )
+            
+            # Add RAS if provided
+            if ras_ids:
+                for ra_id in ras_ids:
+                    try:
+                        ra = PersonnelModel.objects.get(id=ra_id)
+                        report.ras.add(ra)
+                    except:
+                        continue
+            
+            status["status"] = True
+            status["message"] = "Activity report saved successfully"
+            status["data"] = {
+                "uid": report.uid,
+                "id": report.id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+            
+        return JsonResponse(status)
+    
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveDailyReportView(View):
+    """Handle daily reporting and activity reporting (POST only)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            status = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID already exists
             if uid and DailyReportingModel.objects.filter(uid=uid).exists():
                 status["message"] = "Report with this UID already exists"
                 status["data"] = {"uid": uid}
@@ -275,6 +411,7 @@ class SaveActivityReportView(View):
             }, status=500)
             
         return JsonResponse(status)
+
 
 # ============== 3. FARM BOUNDARY ==============
 from django.contrib.gis.geos import Polygon, MultiPolygon

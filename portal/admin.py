@@ -541,6 +541,51 @@ class DailyReportingModelResource(resources.ModelResource):
                  'number_of_people_in_group', 'group_work', 'sector',
                  'projectTbl_foreignkey', 'district')
 
+class ActivityReportingModelResource(resources.ModelResource):
+    agent = fields.Field(
+        column_name='agent',
+        attribute='agent',
+        widget=ForeignKeyWidget(staffTbl, 'contact')
+    )
+    main_activity = fields.Field(
+        column_name='main_activity',
+        attribute='main_activity',
+        widget=ForeignKeyWidget(Activities, 'main_activity')
+    )
+    activity = fields.Field(
+        column_name='activity',
+        attribute='activity',
+        widget=ForeignKeyWidget(Activities, 'sub_activity')
+    )
+    farm = fields.Field(
+        column_name='farm',
+        attribute='farm',
+        widget=ForeignKeyWidget(FarmdetailsTbl, 'farm_reference')
+    )
+    community = fields.Field(
+        column_name='community',
+        attribute='community',
+        widget=ForeignKeyWidget(Community, 'name')
+    )
+    projectTbl_foreignkey = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    
+    class Meta:
+        model = ActivityReportingModel
+        fields = ('uid', 'agent', 'completion_date', 'reporting_date', 'main_activity',
+                 'activity', 'no_rehab_assistants', 'area_covered_ha', 'remark',
+                 'status', 'farm', 'farm_ref_number', 'farm_size_ha', 'community',
+                 'number_of_people_in_group', 'group_work', 'sector',
+                 'projectTbl_foreignkey', 'district')
+
 class GrowthMonitoringModelResource(resources.ModelResource):
     agent = fields.Field(
         column_name='agent',
@@ -1033,6 +1078,15 @@ class PersonnelAssignmentModelAdmin(ImportExportModelAdmin):
 @admin.register(DailyReportingModel)
 class DailyReportingModelAdmin(ImportExportModelAdmin):
     resource_class = DailyReportingModelResource
+    list_display = ('reporting_date', 'agent', 'district', 'farm_ref_number', 'activity', 'area_covered_ha', 'status')
+    list_filter = ('status', 'reporting_date', 'main_activity', 'district', 'projectTbl_foreignkey')
+    search_fields = ('agent__first_name', 'agent__last_name', 'farm_ref_number', 'community__name', 'remark')
+    readonly_fields = ('uid',)
+    list_per_page = 50
+
+@admin.register(ActivityReportingModel)
+class ActivityReportingModelAdmin(ImportExportModelAdmin):
+    resource_class = ActivityReportingModelResource
     list_display = ('reporting_date', 'agent', 'district', 'farm_ref_number', 'activity', 'area_covered_ha', 'status')
     list_filter = ('status', 'reporting_date', 'main_activity', 'district', 'projectTbl_foreignkey')
     search_fields = ('agent__first_name', 'agent__last_name', 'farm_ref_number', 'community__name', 'remark')

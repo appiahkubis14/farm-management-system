@@ -15,7 +15,8 @@ urlpatterns = [
     
     # 2. Daily Reporting / Activity Reporting (POST only)
     path('v1/saveactivityreport/', views.SaveActivityReportView.as_view(), name='save_activity_report'),
-    
+    path('v1/savedailyreport/', views.SaveDailyReportView.as_view(), name='save_daily_report'),
+
     # 4. Add Personnel (POST only)
     path('v1/saveregister/', views.SaveRegisterView.as_view(), name='save_register'),
     

@@ -400,6 +400,33 @@ class DailyReportingModel(timeStamp):
     
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
+    
+
+class ActivityReportingModel(timeStamp):
+    """Model for Daily Reporting and Activity Reporting modules"""
+    uid = models.CharField(max_length=2500, blank=True, null=True)
+    agent = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True)
+    completion_date = models.DateField(blank=True, null=True)
+    reporting_date = models.DateField(blank=True, null=True)
+    main_activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="main_activities_reporting")
+    activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="sub_activities_reporting")
+    no_rehab_assistants = models.IntegerField(default=0, blank=True, null=True)
+    area_covered_ha = models.FloatField(default=0.0, blank=True, null=True)
+    remark = models.TextField(blank=True, null=True)
+    status = models.IntegerField(default=0)  # 0=Pending, 1=Submitted
+    farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    farm_ref_number = models.CharField(max_length=250, blank=True, null=True)
+    farm_size_ha = models.FloatField(default=0.0, blank=True, null=True)
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, blank=True, null=True)
+    number_of_people_in_group = models.IntegerField(default=0, blank=True, null=True)
+    group_work = models.CharField(max_length=50, blank=True, null=True)  # Yes/No
+    sector = models.IntegerField(blank=True, null=True)
+    ras = models.ManyToManyField(PersonnelModel, blank=True)
+    projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
+    district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.agent} - {self.reporting_date}"
 
 class GrowthMonitoringModel(timeStamp):
     """Model for Growth Monitoring module"""
