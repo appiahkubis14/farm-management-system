@@ -2207,47 +2207,137 @@ class SaveVerificationRecordView(View):
 
 # ============== 18. AREA CALCULATION ==============
 
+# @method_decorator(csrf_exempt, name='dispatch')
+# class SaveCalculatedAreaView(View):
+#     """Handle area calculation (POST only)"""
+#     def post(self, request):
+#         try:
+#             data = json.loads(request.body)
+#             status = {"status": False, "message": "", "data": {}}
+            
+#             # Get district if provided in context
+#             district = None
+#             district_id = data.get("district_id", "")
+#             if district_id:
+#                 try:
+#                     district = cocoaDistrict.objects.get(id=district_id)
+#                 except:
+#                     pass
+            
+#             # Get project from district
+#             project = None
+#             if district:
+#                 try:
+#                     project = projectTbl.objects.get(district=district)
+#                 except:
+#                     pass
+            
+#             # Create calculated area
+#             area = CalculatedArea.objects.create(
+#                 date=data.get("date"),
+#                 title=data.get("title", ""),
+#                 value=data.get("value", 0.0),
+#                 projectTbl_foreignkey=project,
+#                 district=district
+#             )
+            
+#             status["status"] = True
+#             status["message"] = "Area calculation saved successfully"
+#             status["data"] = {
+#                 "id": area.id,
+#                 "title": area.title,
+#                 "value": area.value
+#             }
+            
+#         except json.JSONDecodeError:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": "Invalid JSON data",
+#                 "data": {}
+#             }, status=400)
+#         except Exception as e:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": f"Error occurred: {str(e)}",
+#                 "data": {}
+#             }, status=500)
+            
+#         return JsonResponse(status)
+
+
+
+
+
+# views_api.py
+import json
+import uuid
+from django.views import View
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.core.paginator import Paginator
+from django.utils import timezone
+from django.db.models import Q
+from portal.models import (
+    CalculatedArea, EquipmentModel, OutbreakFarmModel, 
+    projectTbl, cocoaDistrict, staffTbl, FarmdetailsTbl,
+    Community, Region
+)
+
+# ============== 1. CALCULATED AREA APIs ==============
+
 @method_decorator(csrf_exempt, name='dispatch')
 class SaveCalculatedAreaView(View):
-    """Handle area calculation (POST only)"""
+    """Save calculated area (POST)"""
     def post(self, request):
         try:
             data = json.loads(request.body)
-            status = {"status": False, "message": "", "data": {}}
             
-            # Get district if provided in context
+            # Get district if provided
             district = None
-            district_id = data.get("district_id", "")
+            district_id = data.get("district_id")
             if district_id:
                 try:
                     district = cocoaDistrict.objects.get(id=district_id)
-                except:
+                except cocoaDistrict.DoesNotExist:
                     pass
             
-            # Get project from district
+            # Get project from district or direct project_id
             project = None
-            if district:
+            project_id = data.get("project_id")
+            if project_id:
                 try:
-                    project = projectTbl.objects.get(district=district)
+                    project = projectTbl.objects.get(id=project_id)
+                except projectTbl.DoesNotExist:
+                    pass
+            elif district:
+                try:
+                    project = projectTbl.objects.filter(district=district).first()
                 except:
                     pass
             
             # Create calculated area
             area = CalculatedArea.objects.create(
-                date=data.get("date"),
+                date=data.get("date", timezone.now()),
                 title=data.get("title", ""),
                 value=data.get("value", 0.0),
+                geom=data.get("geom") if data.get("geom") else None,
                 projectTbl_foreignkey=project,
                 district=district
             )
             
-            status["status"] = True
-            status["message"] = "Area calculation saved successfully"
-            status["data"] = {
-                "id": area.id,
-                "title": area.title,
-                "value": area.value
-            }
+            return JsonResponse({
+                "status": True,
+                "message": "Area calculation saved successfully",
+                "data": {
+                    "id": area.id,
+                    "date": area.date.strftime("%Y-%m-%d %H:%M:%S"),
+                    "title": area.title,
+                    "value": f"{area.value} ha",
+                    "district": area.district.name if area.district else None,
+                    "project": area.projectTbl_foreignkey.name if area.projectTbl_foreignkey else None
+                }
+            })
             
         except json.JSONDecodeError:
             return JsonResponse({
@@ -2261,8 +2351,527 @@ class SaveCalculatedAreaView(View):
                 "message": f"Error occurred: {str(e)}",
                 "data": {}
             }, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchCalculatedAreasView(View):
+    """Fetch calculated areas (GET)"""
+    def get(self, request):
+        try:
+            project_id = request.GET.get('project_id')
+            district_id = request.GET.get('district_id')
+            page = request.GET.get('page', 1)
+            page_size = request.GET.get('page_size', 20)
             
-        return JsonResponse(status)
+            # Base query
+            query = CalculatedArea.objects.select_related(
+                'district', 'projectTbl_foreignkey'
+            ).all().order_by('-date')
+            
+            # Apply filters
+            if project_id:
+                query = query.filter(projectTbl_foreignkey_id=project_id)
+            if district_id:
+                query = query.filter(district_id=district_id)
+            
+            # Pagination
+            paginator = Paginator(query, page_size)
+            page_obj = paginator.get_page(page)
+            
+            data = []
+            for area in page_obj:
+                data.append({
+                    "id": area.id,
+                    "date": area.date.strftime("%Y-%m-%d %H:%M:%S"),
+                    "title": area.title,
+                    "value": f"{area.value} ha",
+                    "district_id": area.district.id if area.district else None,
+                    "district_name": area.district.name if area.district else None,
+                    "project_id": area.projectTbl_foreignkey.id if area.projectTbl_foreignkey else None,
+                    "project_name": area.projectTbl_foreignkey.name if area.projectTbl_foreignkey else None
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": "Calculated areas fetched successfully",
+                "data": data,
+                "pagination": {
+                    "current_page": page_obj.number,
+                    "total_pages": paginator.num_pages,
+                    "total_records": paginator.count,
+                    "has_next": page_obj.has_next(),
+                    "has_previous": page_obj.has_previous()
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+
+# ============== 2. EQUIPMENT APIs ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveEquipmentView(View):
+    """Save equipment (POST)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            
+            # Get related objects
+            district = None
+            if data.get("district_id"):
+                try:
+                    district = cocoaDistrict.objects.get(id=data["district_id"])
+                except cocoaDistrict.DoesNotExist:
+                    pass
+            
+            project = None
+            if data.get("project_id"):
+                try:
+                    project = projectTbl.objects.get(id=data["project_id"])
+                except projectTbl.DoesNotExist:
+                    pass
+            
+            staff = None
+            if data.get("staff_id"):
+                try:
+                    staff = staffTbl.objects.get(id=data["staff_id"])
+                except staffTbl.DoesNotExist:
+                    pass
+            
+            # Create equipment
+            equipment = EquipmentModel.objects.create(
+                equipment=data.get("equipment"),
+                status=data.get("status", "Good"),
+                serial_number=data.get("serial_number"),
+                manufacturer=data.get("manufacturer"),
+                staff_name=staff,
+                projectTbl_foreignkey=project,
+                district=district,
+                uid=str(uuid.uuid4())
+            )
+            
+            return JsonResponse({
+                "status": True,
+                "message": "Equipment saved successfully",
+                "data": {
+                    "equipment_code": equipment.equipment_code,
+                    "date_of_capturing": equipment.date_of_capturing.strftime("%Y-%m-%d %H:%M:%S"),
+                    "equipment": equipment.equipment,
+                    "status": equipment.status,
+                    "serial_number": equipment.serial_number,
+                    "manufacturer": equipment.manufacturer,
+                    "staff_name": f"{staff.first_name} {staff.last_name}" if staff else None
+                }
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchAllEquipmentView(View):
+    """Fetch all equipment (GET)"""
+    def get(self, request):
+        try:
+            project_id = request.GET.get('project_id')
+            district_id = request.GET.get('district_id')
+            status = request.GET.get('status')
+            page = request.GET.get('page', 1)
+            page_size = request.GET.get('page_size', 20)
+            
+            # Base query
+            query = EquipmentModel.objects.select_related(
+                'staff_name', 'projectTbl_foreignkey', 'district'
+            ).all().order_by('-date_of_capturing')
+            
+            # Apply filters
+            if project_id:
+                query = query.filter(projectTbl_foreignkey_id=project_id)
+            if district_id:
+                query = query.filter(district_id=district_id)
+            if status:
+                query = query.filter(status=status)
+            
+            # Pagination
+            paginator = Paginator(query, page_size)
+            page_obj = paginator.get_page(page)
+            
+            data = []
+            for equip in page_obj:
+                data.append({
+                    "equipment_code": equip.equipment_code,
+                    "date_of_capturing": equip.date_of_capturing.strftime("%Y-%m-%d %H:%M:%S"),
+                    "equipment": equip.equipment,
+                    "status": equip.status,
+                    "serial_number": equip.serial_number,
+                    "manufacturer": equip.manufacturer,
+                    "pic_serial_number": request.build_absolute_uri(equip.pic_serial_number.url) if equip.pic_serial_number else None,
+                    "pic_equipment": request.build_absolute_uri(equip.pic_equipment.url) if equip.pic_equipment else None,
+                    "staff_name": f"{equip.staff_name.first_name} {equip.staff_name.last_name}" if equip.staff_name else None,
+                    "staff_id": equip.staff_name.id if equip.staff_name else None,
+                    "district_id": equip.district.id if equip.district else None,
+                    "district_name": equip.district.name if equip.district else None,
+                    "project_id": equip.projectTbl_foreignkey.id if equip.projectTbl_foreignkey else None,
+                    "project_name": equip.projectTbl_foreignkey.name if equip.projectTbl_foreignkey else None
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": "Equipment fetched successfully",
+                "data": data,
+                "pagination": {
+                    "current_page": page_obj.number,
+                    "total_pages": paginator.num_pages,
+                    "total_records": paginator.count,
+                    "has_next": page_obj.has_next(),
+                    "has_previous": page_obj.has_previous()
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+
+# ============== 3. OUTBREAK FARM APIs ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SaveOutbreakFarmView(View):
+    """Save outbreak farm (POST)"""
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            
+            # Get related objects
+            district = None
+            if data.get("district_id"):
+                try:
+                    district = cocoaDistrict.objects.get(id=data["district_id"])
+                except cocoaDistrict.DoesNotExist:
+                    pass
+            
+            region = None
+            if data.get("region_id"):
+                try:
+                    region = Region.objects.get(id=data["region_id"])
+                except Region.DoesNotExist:
+                    pass
+            elif district:
+                region = district.region
+            
+            project = None
+            if data.get("project_id"):
+                try:
+                    project = projectTbl.objects.get(id=data["project_id"])
+                except projectTbl.DoesNotExist:
+                    pass
+            
+            reported_by = None
+            if data.get("reported_by_id"):
+                try:
+                    reported_by = staffTbl.objects.get(id=data["reported_by_id"])
+                except staffTbl.DoesNotExist:
+                    pass
+            
+            community = None
+            if data.get("community_id"):
+                try:
+                    community = Community.objects.get(id=data["community_id"])
+                except Community.DoesNotExist:
+                    pass
+            
+            farm = None
+            if data.get("farm_id"):
+                try:
+                    farm = FarmdetailsTbl.objects.get(id=data["farm_id"])
+                except FarmdetailsTbl.DoesNotExist:
+                    pass
+            
+            # Create outbreak farm
+            outbreak = OutbreakFarm.objects.create(
+                farm=farm,
+                farm_location=data.get("farm_location"),
+                farmer_name=data.get("farmer_name"),
+                farmer_age=data.get("farmer_age"),
+                id_type=data.get("id_type"),
+                id_number=data.get("id_number"),
+                farmer_contact=data.get("farmer_contact"),
+                cocoa_type=data.get("cocoa_type"),
+                age_class=data.get("age_class"),
+                farm_area=data.get("farm_area", 0.0),
+                communitytbl=data.get("communitytbl"),
+                community=community,
+                inspection_date=data.get("inspection_date"),
+                temp_code=data.get("temp_code"),
+                disease_type=data.get("disease_type"),
+                date_reported=data.get("date_reported", timezone.now().date()),
+                reported_by=reported_by,
+                status=data.get("status", 0),
+                coordinates=data.get("coordinates"),
+                severity=data.get("severity", "Medium"),
+                treatment_applied=data.get("treatment_applied"),
+                treatment_date=data.get("treatment_date"),
+                projectTbl_foreignkey=project,
+                district=district,
+                region=region,
+                uid=str(uuid.uuid4())
+            )
+            
+            return JsonResponse({
+                "status": True,
+                "message": "Outbreak farm saved successfully",
+                "data": {
+                    "farm_id": outbreak.farm.id if outbreak.farm else None,
+                    "outbreaks_id": outbreak.outbreak_id,
+                    "farm_location": outbreak.farm_location,
+                    "farmer_name": outbreak.farmer_name,
+                    "farmer_age": outbreak.farmer_age,
+                    "id_type": outbreak.id_type,
+                    "id_number": outbreak.id_number,
+                    "farmer_contact": outbreak.farmer_contact,
+                    "cocoa_type": outbreak.cocoa_type,
+                    "age_class": outbreak.age_class,
+                    "farm_area": outbreak.farm_area,
+                    "communitytbl": outbreak.communitytbl,
+                    "inspection_date": outbreak.inspection_date.strftime("%Y-%m-%d") if outbreak.inspection_date else None,
+                    "temp_code": outbreak.temp_code,
+                    "disease_type": outbreak.disease_type,
+                    "severity": outbreak.severity,
+                    "status": outbreak.status
+                }
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "status": False,
+                "message": "Invalid JSON data",
+                "data": {}
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchOutbreakFarmsListView(View):
+    """Fetch outbreak farms list (GET)"""
+    def get(self, request):
+        try:
+            project_id = request.GET.get('project_id')
+            district_id = request.GET.get('district_id')
+            status = request.GET.get('status')
+            severity = request.GET.get('severity')
+            page = request.GET.get('page', 1)
+            page_size = request.GET.get('page_size', 20)
+            
+            # Base query
+            query = OutbreakFarm.objects.select_related(
+                'farm', 'reported_by', 'projectTbl_foreignkey', 'district', 'region', 'community'
+            ).all().order_by('-date_reported')
+            
+            # Apply filters
+            if project_id:
+                query = query.filter(projectTbl_foreignkey_id=project_id)
+            if district_id:
+                query = query.filter(district_id=district_id)
+            if status is not None:
+                query = query.filter(status=status)
+            if severity:
+                query = query.filter(severity=severity)
+            
+            # Pagination
+            paginator = Paginator(query, page_size)
+            page_obj = paginator.get_page(page)
+            
+            data = []
+            for outbreak in page_obj:
+                data.append({
+                    "farm_id": outbreak.farm.id if outbreak.farm else None,
+                    "farm_reference": outbreak.farm.farm_reference if outbreak.farm else None,
+                    "outbreaks_id": outbreak.outbreak_id,
+                    "farm_location": outbreak.farm_location,
+                    "farmer_name": outbreak.farmer_name,
+                    "farmer_age": outbreak.farmer_age,
+                    "id_type": outbreak.id_type,
+                    "id_number": outbreak.id_number,
+                    "farmer_contact": outbreak.farmer_contact,
+                    "cocoa_type": outbreak.cocoa_type,
+                    "age_class": outbreak.age_class,
+                    "farm_area": outbreak.farm_area,
+                    "communitytbl": outbreak.communitytbl,
+                    "community_id": outbreak.community.id if outbreak.community else None,
+                    "community_name": outbreak.community.name if outbreak.community else None,
+                    "inspection_date": outbreak.inspection_date.strftime("%Y-%m-%d") if outbreak.inspection_date else None,
+                    "temp_code": outbreak.temp_code,
+                    "disease_type": outbreak.disease_type,
+                    "severity": outbreak.severity,
+                    "date_reported": outbreak.date_reported.strftime("%Y-%m-%d") if outbreak.date_reported else None,
+                    "reported_by": f"{outbreak.reported_by.first_name} {outbreak.reported_by.last_name}" if outbreak.reported_by else None,
+                    "status": outbreak.status,
+                    "status_display": dict(OutbreakFarm._meta.get_field('status').choices).get(outbreak.status, 'Unknown'),
+                    "coordinates": outbreak.coordinates,
+                    "treatment_applied": outbreak.treatment_applied,
+                    "treatment_date": outbreak.treatment_date.strftime("%Y-%m-%d") if outbreak.treatment_date else None,
+                    "district_id": outbreak.district.id if outbreak.district else None,
+                    "district_name": outbreak.district.name if outbreak.district else None,
+                    "region_id": outbreak.region.id if outbreak.region else None,
+                    "region_name": outbreak.region.region if outbreak.region else None,
+                    "project_id": outbreak.projectTbl_foreignkey.id if outbreak.projectTbl_foreignkey else None,
+                    "project_name": outbreak.projectTbl_foreignkey.name if outbreak.projectTbl_foreignkey else None
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": "Outbreak farms fetched successfully",
+                "data": data,
+                "pagination": {
+                    "current_page": page_obj.number,
+                    "total_pages": paginator.num_pages,
+                    "total_records": paginator.count,
+                    "has_next": page_obj.has_next(),
+                    "has_previous": page_obj.has_previous()
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+
+# ============== 4. SINGLE RECORD FETCH APIs ==============
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchOutbreakFarmDetailView(View):
+    """Fetch single outbreak farm details (GET)"""
+    def get(self, request, outbreak_id):
+        try:
+            outbreak = OutbreakFarm.objects.select_related(
+                'farm', 'reported_by', 'projectTbl_foreignkey', 'district', 'region', 'community'
+            ).get(outbreak_id=outbreak_id)
+            
+            return JsonResponse({
+                "status": True,
+                "message": "Outbreak farm details fetched successfully",
+                "data": {
+                    "farm_id": outbreak.farm.id if outbreak.farm else None,
+                    "farm_reference": outbreak.farm.farm_reference if outbreak.farm else None,
+                    "outbreaks_id": outbreak.outbreak_id,
+                    "farm_location": outbreak.farm_location,
+                    "farmer_name": outbreak.farmer_name,
+                    "farmer_age": outbreak.farmer_age,
+                    "id_type": outbreak.id_type,
+                    "id_number": outbreak.id_number,
+                    "farmer_contact": outbreak.farmer_contact,
+                    "cocoa_type": outbreak.cocoa_type,
+                    "age_class": outbreak.age_class,
+                    "farm_area": outbreak.farm_area,
+                    "communitytbl": outbreak.communitytbl,
+                    "community_id": outbreak.community.id if outbreak.community else None,
+                    "community_name": outbreak.community.name if outbreak.community else None,
+                    "inspection_date": outbreak.inspection_date.strftime("%Y-%m-%d") if outbreak.inspection_date else None,
+                    "temp_code": outbreak.temp_code,
+                    "disease_type": outbreak.disease_type,
+                    "severity": outbreak.severity,
+                    "date_reported": outbreak.date_reported.strftime("%Y-%m-%d") if outbreak.date_reported else None,
+                    "reported_by_id": outbreak.reported_by.id if outbreak.reported_by else None,
+                    "reported_by": f"{outbreak.reported_by.first_name} {outbreak.reported_by.last_name}" if outbreak.reported_by else None,
+                    "status": outbreak.status,
+                    "coordinates": outbreak.coordinates,
+                    "treatment_applied": outbreak.treatment_applied,
+                    "treatment_date": outbreak.treatment_date.strftime("%Y-%m-%d") if outbreak.treatment_date else None,
+                    "district_id": outbreak.district.id if outbreak.district else None,
+                    "district_name": outbreak.district.name if outbreak.district else None,
+                    "region_id": outbreak.region.id if outbreak.region else None,
+                    "region_name": outbreak.region.region if outbreak.region else None,
+                    "project_id": outbreak.projectTbl_foreignkey.id if outbreak.projectTbl_foreignkey else None,
+                    "project_name": outbreak.projectTbl_foreignkey.name if outbreak.projectTbl_foreignkey else None
+                }
+            })
+            
+        except OutbreakFarm.DoesNotExist:
+            return JsonResponse({
+                "status": False,
+                "message": "Outbreak farm not found",
+                "data": {}
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchEquipmentDetailView(View):
+    """Fetch single equipment details (GET)"""
+    def get(self, request, equipment_code):
+        try:
+            equip = EquipmentModel.objects.select_related(
+                'staff_name', 'projectTbl_foreignkey', 'district'
+            ).get(equipment_code=equipment_code)
+            
+            return JsonResponse({
+                "status": True,
+                "message": "Equipment details fetched successfully",
+                "data": {
+                    "equipment_code": equip.equipment_code,
+                    "date_of_capturing": equip.date_of_capturing.strftime("%Y-%m-%d %H:%M:%S"),
+                    "equipment": equip.equipment,
+                    "status": equip.status,
+                    "serial_number": equip.serial_number,
+                    "manufacturer": equip.manufacturer,
+                    "pic_serial_number": request.build_absolute_uri(equip.pic_serial_number.url) if equip.pic_serial_number else None,
+                    "pic_equipment": request.build_absolute_uri(equip.pic_equipment.url) if equip.pic_equipment else None,
+                    "staff_id": equip.staff_name.id if equip.staff_name else None,
+                    "staff_name": f"{equip.staff_name.first_name} {equip.staff_name.last_name}" if equip.staff_name else None,
+                    "district_id": equip.district.id if equip.district else None,
+                    "district_name": equip.district.name if equip.district else None,
+                    "project_id": equip.projectTbl_foreignkey.id if equip.projectTbl_foreignkey else None,
+                    "project_name": equip.projectTbl_foreignkey.name if equip.projectTbl_foreignkey else None
+                }
+            })
+            
+        except EquipmentModel.DoesNotExist:
+            return JsonResponse({
+                "status": False,
+                "message": "Equipment not found",
+                "data": {}
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": {}
+            }, status=500)
+
+
+
+
 
 # ============== 19. FARM VALIDATION ==============
 

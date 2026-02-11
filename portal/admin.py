@@ -1093,14 +1093,14 @@ class ActivityReportingModelAdmin(ImportExportModelAdmin):
     readonly_fields = ('uid',)
     list_per_page = 50
 
-@admin.register(GrowthMonitoringModel)
-class GrowthMonitoringModelAdmin(ImportExportModelAdmin):
-    resource_class = GrowthMonitoringModelResource
-    list_display = ('plant_uid', 'date', 'district', 'height', 'number_of_leaves', 'agent', 'projectTbl_foreignkey')
-    list_filter = ('date', 'leaf_color', 'district', 'projectTbl_foreignkey')
-    search_fields = ('plant_uid', 'agent__first_name', 'agent__last_name')
-    readonly_fields = ('uid',)
-    list_per_page = 50
+# @admin.register(GrowthMonitoringModel)
+# class GrowthMonitoringModelAdmin(ImportExportModelAdmin):
+#     resource_class = GrowthMonitoringModelResource
+#     list_display = ('plant_uid', 'date', 'district', 'height', 'number_of_leaves', 'agent', 'projectTbl_foreignkey')
+#     list_filter = ('date', 'leaf_color', 'district', 'projectTbl_foreignkey')
+#     search_fields = ('plant_uid', 'agent__first_name', 'agent__last_name')
+#     readonly_fields = ('uid',)
+#     list_per_page = 50
 
 @admin.register(OutbreakFarmModel)
 class OutbreakFarmModelAdmin(ImportExportModelAdmin):
@@ -1156,13 +1156,13 @@ class VerifyRecordAdmin(ImportExportModelAdmin):
     readonly_fields = ('uid',)
     list_per_page = 50
 
-@admin.register(CalculatedArea)
-class CalculatedAreaAdmin(ImportExportModelAdmin):
-    resource_class = CalculatedAreaResource
-    list_display = ('title', 'district', 'value', 'date', 'projectTbl_foreignkey')
-    list_filter = ('date', 'district', 'projectTbl_foreignkey')
-    search_fields = ('title',)
-    list_per_page = 50
+# @admin.register(CalculatedArea)
+# class CalculatedAreaAdmin(ImportExportModelAdmin):
+#     resource_class = CalculatedAreaResource
+#     list_display = ('title', 'district', 'value', 'date', 'projectTbl_foreignkey')
+#     list_filter = ('date', 'district', 'projectTbl_foreignkey')
+#     search_fields = ('title',)
+#     list_per_page = 50
 
 @admin.register(PaymentReport)
 class PaymentReportAdmin(ImportExportModelAdmin):
@@ -1219,3 +1219,870 @@ admin.site.register(Farms, FarmsAdmin)
 # If you want to customize the default User/Group admin:
 # admin.site.unregister(User)
 # admin.site.unregister(Group)
+
+
+
+
+
+# admin.py
+from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from django.contrib.admin import DateFieldListFilter
+from import_export import resources, fields
+from import_export.admin import ImportExportModelAdmin
+from import_export.widgets import ForeignKeyWidget, DateWidget, DateTimeWidget
+from .models import (
+    CalculatedArea, EquipmentModel, EquipmentAssignmentModel,
+    OutbreakFarmModel, QR_CodeModel, GrowthMonitoringModel,
+    projectTbl, cocoaDistrict, staffTbl, Community, Region,
+    FarmdetailsTbl
+)
+
+# ============== RESOURCES FOR IMPORT/EXPORT ==============
+
+class CalculatedAreaResource(resources.ModelResource):
+    """Resource for CalculatedArea import/export"""
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    project = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    
+    class Meta:
+        model = CalculatedArea
+        import_id_fields = ['id']
+        fields = [
+            'id', 'date', 'title', 'value', 'district', 'project',
+            'created_date', 'delete_field'
+        ]
+        export_order = fields
+        skip_unchanged = True
+        report_skipped = True
+
+
+class EquipmentResource(resources.ModelResource):
+    """Resource for EquipmentModel import/export"""
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    project = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    staff = fields.Field(
+        column_name='staff_name',
+        attribute='staff_name',
+        widget=ForeignKeyWidget(staffTbl, 'first_name')
+    )
+    
+    class Meta:
+        model = EquipmentModel
+        import_id_fields = ['equipment_code', 'serial_number']
+        fields = [
+            'id', 'equipment_code', 'equipment', 'status', 'serial_number',
+            'manufacturer', 'staff', 'district', 'project',
+            'date_of_capturing', 'created_date', 'delete_field', 'uid'
+        ]
+        export_order = fields
+        skip_unchanged = True
+        report_skipped = True
+
+
+class OutbreakFarmResource(resources.ModelResource):
+    """Resource for OutbreakFarmModel import/export"""
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    region = fields.Field(
+        column_name='region',
+        attribute='region',
+        widget=ForeignKeyWidget(Region, 'region')
+    )
+    project = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    community = fields.Field(
+        column_name='community',
+        attribute='community',
+        widget=ForeignKeyWidget(Community, 'name')
+    )
+    reported_by = fields.Field(
+        column_name='reported_by',
+        attribute='reported_by',
+        widget=ForeignKeyWidget(staffTbl, 'first_name')
+    )
+    farm = fields.Field(
+        column_name='farm_reference',
+        attribute='farm',
+        widget=ForeignKeyWidget(FarmdetailsTbl, 'farm_reference')
+    )
+    
+    class Meta:
+        model = OutbreakFarmModel
+        import_id_fields = ['outbreak_id']
+        fields = [
+            'id', 'outbreak_id', 'farm', 'farm_location', 'farmer_name',
+            'farmer_age', 'id_type', 'id_number', 'farmer_contact',
+            'cocoa_type', 'age_class', 'farm_area', 'community',
+            'communitytbl', 'inspection_date', 'temp_code', 'disease_type',
+            'severity', 'date_reported', 'reported_by', 'status',
+            'coordinates', 'treatment_applied', 'treatment_date',
+            'district', 'region', 'project', 'created_date', 'delete_field', 'uid'
+        ]
+        export_order = fields
+        skip_unchanged = True
+        report_skipped = True
+
+
+class EquipmentAssignmentResource(resources.ModelResource):
+    """Resource for EquipmentAssignmentModel import/export"""
+    equipment = fields.Field(
+        column_name='equipment',
+        attribute='equipment',
+        widget=ForeignKeyWidget(EquipmentModel, 'equipment_code')
+    )
+    assigned_to = fields.Field(
+        column_name='assigned_to',
+        attribute='assigned_to',
+        widget=ForeignKeyWidget(staffTbl, 'first_name')
+    )
+    assigned_by = fields.Field(
+        column_name='assigned_by',
+        attribute='assigned_by',
+        widget=ForeignKeyWidget(staffTbl, 'first_name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    project = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    
+    class Meta:
+        model = EquipmentAssignmentModel
+        import_id_fields = ['id']
+        fields = [
+            'id', 'equipment', 'assigned_to', 'assigned_by',
+            'assignment_date', 'return_date', 'condition_at_assignment',
+            'notes', 'status', 'district', 'project', 'created_date',
+            'delete_field', 'uid'
+        ]
+        export_order = fields
+        skip_unchanged = True
+        report_skipped = True
+
+
+class GrowthMonitoringResource(resources.ModelResource):
+    """Resource for GrowthMonitoringModel import/export"""
+    agent = fields.Field(
+        column_name='agent',
+        attribute='agent',
+        widget=ForeignKeyWidget(staffTbl, 'first_name')
+    )
+    district = fields.Field(
+        column_name='district',
+        attribute='district',
+        widget=ForeignKeyWidget(cocoaDistrict, 'name')
+    )
+    project = fields.Field(
+        column_name='project',
+        attribute='projectTbl_foreignkey',
+        widget=ForeignKeyWidget(projectTbl, 'name')
+    )
+    qr_code = fields.Field(
+        column_name='qr_code',
+        attribute='qr_code',
+        widget=ForeignKeyWidget(QR_CodeModel, 'uid')
+    )
+    
+    class Meta:
+        model = GrowthMonitoringModel
+        import_id_fields = ['plant_uid']
+        fields = [
+            'id', 'plant_uid', 'qr_code', 'number_of_leaves', 'height',
+            'stem_size', 'leaf_color', 'date', 'lat', 'lng', 'agent',
+            'district', 'project', 'created_date', 'delete_field', 'uid'
+        ]
+        export_order = fields
+        skip_unchanged = True
+        report_skipped = True
+
+
+# ============== ADMIN REGISTRATIONS ==============
+
+@admin.register(CalculatedArea)
+class CalculatedAreaAdmin(ImportExportModelAdmin):
+    """Admin for Calculated Area"""
+    resource_class = CalculatedAreaResource
+    list_display = ['id', 'title', 'value_display', 'district_name', 'project_name', 'created_date_display', 'delete_field']
+    list_display_links = ['id', 'title']
+    list_filter = [
+        'delete_field',
+        ('created_date', DateFieldListFilter),
+        ('date', DateFieldListFilter),
+        'district',
+        'projectTbl_foreignkey'
+    ]
+    search_fields = ['title', 'district__name', 'projectTbl_foreignkey__name']
+    readonly_fields = ['created_date', 'id']
+    
+    fieldsets = (
+        ('Area Information', {
+            'fields': (
+                'title',
+                'value',
+                'date',
+                'geom',
+            )
+        }),
+        ('Relationships', {
+            'fields': (
+                'district',
+                'projectTbl_foreignkey',
+            )
+        }),
+        ('Timestamps & Status', {
+            'fields': (
+                'created_date',
+                'delete_field',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def value_display(self, obj):
+        return f"{obj.value} ha"
+    value_display.short_description = "Area (ha)"
+    value_display.admin_order_field = 'value'
+    
+    def district_name(self, obj):
+        return obj.district.name if obj.district else "-"
+    district_name.short_description = "District"
+    district_name.admin_order_field = 'district'
+    
+    def project_name(self, obj):
+        return obj.projectTbl_foreignkey.name if obj.projectTbl_foreignkey else "-"
+    project_name.short_description = "Project"
+    project_name.admin_order_field = 'projectTbl_foreignkey'
+    
+    def created_date_display(self, obj):
+        return obj.created_date.strftime("%Y-%m-%d %H:%M") if obj.created_date else "-"
+    created_date_display.short_description = "Created"
+    created_date_display.admin_order_field = 'created_date'
+    
+    actions = ['export_as_csv', 'soft_delete_selected', 'restore_selected']
+    
+    def soft_delete_selected(self, request, queryset):
+        count = queryset.update(delete_field="yes")
+        self.message_user(request, f"Successfully soft-deleted {count} calculated areas.")
+    soft_delete_selected.short_description = "Soft delete selected areas"
+    
+    def restore_selected(self, request, queryset):
+        count = queryset.update(delete_field="no")
+        self.message_user(request, f"Successfully restored {count} calculated areas.")
+    restore_selected.short_description = "Restore selected areas"
+    
+    def get_queryset(self, request):
+        return CalculatedArea.default_objects.all()
+
+
+@admin.register(EquipmentModel)
+class EquipmentModelAdmin(ImportExportModelAdmin):
+    """Admin for Equipment Management"""
+    resource_class = EquipmentResource
+    list_display = [
+        'equipment_code', 'equipment', 'status_badge', 'serial_number',
+        'manufacturer', 'staff_name', 'district_name', 'project_name',
+        'date_of_capturing_display', 'delete_field'
+    ]
+    list_display_links = ['equipment_code', 'equipment']
+    list_filter = [
+        'delete_field',
+        'status',
+        'manufacturer',
+        ('date_of_capturing', DateFieldListFilter),
+        ('created_date', DateFieldListFilter),
+        'district',
+        'projectTbl_foreignkey',
+        'staff_name'
+    ]
+    search_fields = [
+        'equipment_code', 'serial_number', 'equipment',
+        'manufacturer', 'staff_name__first_name', 'staff_name__last_name'
+    ]
+    readonly_fields = ['equipment_code', 'created_date', 'id', 'uid', 'equipment_preview']
+    
+    fieldsets = (
+        ('Equipment Information', {
+            'fields': (
+                'equipment_code',
+                'equipment',
+                'serial_number',
+                'manufacturer',
+                'status',
+            )
+        }),
+        ('Images', {
+            'fields': (
+                'pic_serial_number',
+                'pic_equipment',
+                'equipment_preview',
+            )
+        }),
+        ('Assignment', {
+            'fields': (
+                'staff_name',
+                'district',
+                'projectTbl_foreignkey',
+            )
+        }),
+        ('System Fields', {
+            'fields': (
+                'uid',
+                'date_of_capturing',
+                'created_date',
+                'delete_field',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def status_badge(self, obj):
+        colors = {
+            'Good': 'green',
+            'Fair': 'orange',
+            'Bad': 'red',
+            'Under Repair': 'blue'
+        }
+        color = colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, obj.status
+        )
+    status_badge.short_description = "Status"
+    status_badge.admin_order_field = 'status'
+    
+    def staff_name(self, obj):
+        if obj.staff_name:
+            return f"{obj.staff_name.first_name} {obj.staff_name.last_name}"
+        return "-"
+    staff_name.short_description = "Assigned To"
+    staff_name.admin_order_field = 'staff_name'
+    
+    def district_name(self, obj):
+        return obj.district.name if obj.district else "-"
+    district_name.short_description = "District"
+    district_name.admin_order_field = 'district'
+    
+    def project_name(self, obj):
+        return obj.projectTbl_foreignkey.name if obj.projectTbl_foreignkey else "-"
+    project_name.short_description = "Project"
+    project_name.admin_order_field = 'projectTbl_foreignkey'
+    
+    def date_of_capturing_display(self, obj):
+        return obj.date_of_capturing.strftime("%Y-%m-%d %H:%M") if obj.date_of_capturing else "-"
+    date_of_capturing_display.short_description = "Captured"
+    date_of_capturing_display.admin_order_field = 'date_of_capturing'
+    
+    def equipment_preview(self, obj):
+        html = ''
+        if obj.pic_equipment:
+            html += format_html(
+                '<img src="{}" style="max-height: 100px; max-width: 100px; margin: 5px;" />',
+                obj.pic_equipment.url
+            )
+        if obj.pic_serial_number:
+            html += format_html(
+                '<img src="{}" style="max-height: 100px; max-width: 100px; margin: 5px;" />',
+                obj.pic_serial_number.url
+            )
+        return html if html else "No images"
+    equipment_preview.short_description = "Preview"
+    
+    actions = ['soft_delete_selected', 'restore_selected', 'mark_as_good', 'mark_as_repair']
+    
+    def soft_delete_selected(self, request, queryset):
+        count = queryset.update(delete_field="yes")
+        self.message_user(request, f"Successfully soft-deleted {count} equipment.")
+    soft_delete_selected.short_description = "Soft delete selected equipment"
+    
+    def restore_selected(self, request, queryset):
+        count = queryset.update(delete_field="no")
+        self.message_user(request, f"Successfully restored {count} equipment.")
+    restore_selected.short_description = "Restore selected equipment"
+    
+    def mark_as_good(self, request, queryset):
+        count = queryset.update(status="Good")
+        self.message_user(request, f"Marked {count} equipment as Good.")
+    mark_as_good.short_description = "Mark selected as Good"
+    
+    def mark_as_repair(self, request, queryset):
+        count = queryset.update(status="Under Repair")
+        self.message_user(request, f"Marked {count} equipment as Under Repair.")
+    mark_as_repair.short_description = "Mark selected as Under Repair"
+    
+    def get_queryset(self, request):
+        return EquipmentModel.default_objects.all()
+
+
+@admin.register(EquipmentAssignmentModel)
+class EquipmentAssignmentAdmin(ImportExportModelAdmin):
+    """Admin for Equipment Assignments"""
+    resource_class = EquipmentAssignmentResource
+    list_display = [
+        'id', 'equipment_info', 'assigned_to_name', 'assigned_by_name',
+        'assignment_date_display', 'status_badge', 'district_name', 'delete_field'
+    ]
+    list_display_links = ['id', 'equipment_info']
+    list_filter = [
+        'delete_field',
+        'status',
+        ('assignment_date', DateFieldListFilter),
+        ('return_date', DateFieldListFilter),
+        'district',
+        'projectTbl_foreignkey'
+    ]
+    search_fields = [
+        'equipment__equipment_code', 'equipment__serial_number',
+        'assigned_to__first_name', 'assigned_to__last_name',
+        'assigned_by__first_name', 'assigned_by__last_name'
+    ]
+    readonly_fields = ['uid', 'created_date', 'assignment_date']
+    
+    fieldsets = (
+        ('Assignment Details', {
+            'fields': (
+                'equipment',
+                'assigned_to',
+                'assigned_by',
+                'assignment_date',
+                'condition_at_assignment',
+            )
+        }),
+        ('Return Information', {
+            'fields': (
+                'return_date',
+                'status',
+                'notes',
+            )
+        }),
+        ('Relationships', {
+            'fields': (
+                'district',
+                'projectTbl_foreignkey',
+            )
+        }),
+        ('System Fields', {
+            'fields': (
+                'uid',
+                'created_date',
+                'delete_field',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def equipment_info(self, obj):
+        return f"{obj.equipment.equipment_code} - {obj.equipment.equipment}"
+    equipment_info.short_description = "Equipment"
+    equipment_info.admin_order_field = 'equipment'
+    
+    def assigned_to_name(self, obj):
+        if obj.assigned_to:
+            return f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}"
+        return "-"
+    assigned_to_name.short_description = "Assigned To"
+    assigned_to_name.admin_order_field = 'assigned_to'
+    
+    def assigned_by_name(self, obj):
+        if obj.assigned_by:
+            return f"{obj.assigned_by.first_name} {obj.assigned_by.last_name}"
+        return "-"
+    assigned_by_name.short_description = "Assigned By"
+    assigned_by_name.admin_order_field = 'assigned_by'
+    
+    def assignment_date_display(self, obj):
+        return obj.assignment_date.strftime("%Y-%m-%d %H:%M") if obj.assignment_date else "-"
+    assignment_date_display.short_description = "Assigned Date"
+    assignment_date_display.admin_order_field = 'assignment_date'
+    
+    def status_badge(self, obj):
+        colors = {
+            'Assigned': 'green',
+            'Returned': 'blue',
+            'Lost': 'red',
+            'Damaged': 'orange'
+        }
+        color = colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, obj.status
+        )
+    status_badge.short_description = "Status"
+    status_badge.admin_order_field = 'status'
+    
+    def district_name(self, obj):
+        return obj.district.name if obj.district else "-"
+    district_name.short_description = "District"
+    district_name.admin_order_field = 'district'
+    
+    actions = ['mark_as_returned', 'soft_delete_selected', 'restore_selected']
+    
+    def mark_as_returned(self, request, queryset):
+        count = queryset.update(status="Returned", return_date=timezone.now())
+        self.message_user(request, f"Marked {count} assignments as Returned.")
+    mark_as_returned.short_description = "Mark selected as Returned"
+    
+    def soft_delete_selected(self, request, queryset):
+        count = queryset.update(delete_field="yes")
+        self.message_user(request, f"Successfully soft-deleted {count} assignments.")
+    soft_delete_selected.short_description = "Soft delete selected assignments"
+    
+    def restore_selected(self, request, queryset):
+        count = queryset.update(delete_field="no")
+        self.message_user(request, f"Successfully restored {count} assignments.")
+    restore_selected.short_description = "Restore selected assignments"
+    
+    def get_queryset(self, request):
+        return EquipmentAssignmentModel.default_objects.select_related(
+            'equipment', 'assigned_to', 'assigned_by', 'district', 'projectTbl_foreignkey'
+        ).all()
+
+
+@admin.register(OutbreakFarm)
+class OutbreakFarmAdmin(ImportExportModelAdmin):
+    """Admin for Outbreak Farm Management"""
+    resource_class = OutbreakFarmResource
+    list_display = [
+        'outbreak_id', 'farmer_name', 'disease_type', 'severity_badge',
+        'status_badge', 'farm_location', 'date_reported_display',
+        'reported_by_name', 'district_name', 'delete_field'
+    ]
+    list_display_links = ['outbreak_id', 'farmer_name']
+    list_filter = [
+        'delete_field',
+        'disease_type',
+        'severity',
+        'status',
+        ('date_reported', DateFieldListFilter),
+        ('inspection_date', DateFieldListFilter),
+        'district',
+        'region',
+        'projectTbl_foreignkey'
+    ]
+    search_fields = [
+        'outbreak_id', 'farmer_name', 'disease_type',
+        'farm_location', 'farmer_contact', 'id_number'
+    ]
+    readonly_fields = ['outbreak_id', 'created_date', 'uid', 'geom_display']
+    
+    fieldsets = (
+        ('Outbreak Information', {
+            'fields': (
+                'outbreak_id',
+                'disease_type',
+                'severity',
+                'status',
+                'date_reported',
+                'reported_by',
+            )
+        }),
+        ('Farm Details', {
+            'fields': (
+                'farm',
+                'farm_location',
+                'farmer_name',
+                'farmer_age',
+                'farmer_contact',
+                'farm_area',
+            )
+        }),
+        ('Location', {
+            'fields': (
+                'district',
+                'region',
+                'community',
+                'communitytbl',
+                'coordinates',
+                'geom',
+            )
+        }),
+        ('Identification', {
+            'fields': (
+                'id_type',
+                'id_number',
+                'cocoa_type',
+                'age_class',
+            )
+        }),
+        ('Inspection & Treatment', {
+            'fields': (
+                'inspection_date',
+                'temp_code',
+                'treatment_applied',
+                'treatment_date',
+            )
+        }),
+        ('System Fields', {
+            'fields': (
+                'uid',
+                'created_date',
+                'delete_field',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def severity_badge(self, obj):
+        colors = {
+            'Low': 'green',
+            'Medium': 'orange',
+            'High': 'red',
+            'Critical': 'darkred'
+        }
+        color = colors.get(obj.severity, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, obj.severity
+        )
+    severity_badge.short_description = "Severity"
+    severity_badge.admin_order_field = 'severity'
+    
+    def status_badge(self, obj):
+        status_colors = {
+            0: 'orange',
+            1: 'blue',
+            2: 'green',
+            3: 'gray'
+        }
+        status_text = {
+            0: 'Pending',
+            1: 'Submitted',
+            2: 'Treated',
+            3: 'Resolved'
+        }
+        color = status_colors.get(obj.status, 'gray')
+        text = status_text.get(obj.status, 'Unknown')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, text
+        )
+    status_badge.short_description = "Status"
+    status_badge.admin_order_field = 'status'
+    
+    def date_reported_display(self, obj):
+        return obj.date_reported.strftime("%Y-%m-%d") if obj.date_reported else "-"
+    date_reported_display.short_description = "Reported Date"
+    date_reported_display.admin_order_field = 'date_reported'
+    
+    def reported_by_name(self, obj):
+        if obj.reported_by:
+            return f"{obj.reported_by.first_name} {obj.reported_by.last_name}"
+        return "-"
+    reported_by_name.short_description = "Reported By"
+    reported_by_name.admin_order_field = 'reported_by'
+    
+    def district_name(self, obj):
+        return obj.district.name if obj.district else "-"
+    district_name.short_description = "District"
+    district_name.admin_order_field = 'district'
+    
+    def geom_display(self, obj):
+        if obj.geom:
+            return format_html(
+                '<span>Lat: {}, Lng: {}</span>',
+                obj.geom.y, obj.geom.x
+            )
+        return "-"
+    geom_display.short_description = "Coordinates"
+    
+    actions = [
+        'mark_as_treated', 'mark_as_resolved', 'increase_severity',
+        'decrease_severity', 'soft_delete_selected', 'restore_selected'
+    ]
+    
+    def mark_as_treated(self, request, queryset):
+        count = queryset.update(status=2, treatment_date=timezone.now().date())
+        self.message_user(request, f"Marked {count} outbreaks as Treated.")
+    mark_as_treated.short_description = "Mark selected as Treated"
+    
+    def mark_as_resolved(self, request, queryset):
+        count = queryset.update(status=3)
+        self.message_user(request, f"Marked {count} outbreaks as Resolved.")
+    mark_as_resolved.short_description = "Mark selected as Resolved"
+    
+    def increase_severity(self, request, queryset):
+        severity_order = {'Low': 'Medium', 'Medium': 'High', 'High': 'Critical', 'Critical': 'Critical'}
+        for outbreak in queryset:
+            outbreak.severity = severity_order.get(outbreak.severity, outbreak.severity)
+            outbreak.save()
+        self.message_user(request, f"Increased severity for {queryset.count()} outbreaks.")
+    increase_severity.short_description = "Increase Severity"
+    
+    def decrease_severity(self, request, queryset):
+        severity_order = {'Critical': 'High', 'High': 'Medium', 'Medium': 'Low', 'Low': 'Low'}
+        for outbreak in queryset:
+            outbreak.severity = severity_order.get(outbreak.severity, outbreak.severity)
+            outbreak.save()
+        self.message_user(request, f"Decreased severity for {queryset.count()} outbreaks.")
+    decrease_severity.short_description = "Decrease Severity"
+    
+    def soft_delete_selected(self, request, queryset):
+        count = queryset.update(delete_field="yes")
+        self.message_user(request, f"Successfully soft-deleted {count} outbreaks.")
+    soft_delete_selected.short_description = "Soft delete selected outbreaks"
+    
+    def restore_selected(self, request, queryset):
+        count = queryset.update(delete_field="no")
+        self.message_user(request, f"Successfully restored {count} outbreaks.")
+    restore_selected.short_description = "Restore selected outbreaks"
+    
+    def get_queryset(self, request):
+        return OutbreakFarmModel.default_objects.select_related(
+            'farm', 'reported_by', 'district', 'region', 'community', 'projectTbl_foreignkey'
+        ).all()
+
+
+@admin.register(GrowthMonitoringModel)
+class GrowthMonitoringAdmin(ImportExportModelAdmin):
+    """Admin for Growth Monitoring"""
+    resource_class = GrowthMonitoringResource
+    list_display = [
+        'plant_uid', 'qr_code_link', 'date_display', 'height', 'number_of_leaves',
+        'stem_size', 'leaf_color', 'agent_name', 'district_name', 'delete_field'
+    ]
+    list_display_links = ['plant_uid']
+    list_filter = [
+        'delete_field',
+        'leaf_color',
+        ('date', DateFieldListFilter),
+        ('created_date', DateFieldListFilter),
+        'district',
+        'projectTbl_foreignkey'
+    ]
+    search_fields = ['plant_uid', 'qr_code__uid', 'agent__first_name', 'agent__last_name']
+    readonly_fields = ['uid', 'created_date']
+    
+    fieldsets = (
+        ('Plant Information', {
+            'fields': (
+                'plant_uid',
+                'qr_code',
+                'date',
+            )
+        }),
+        ('Growth Metrics', {
+            'fields': (
+                'height',
+                'stem_size',
+                'number_of_leaves',
+                'leaf_color',
+            )
+        }),
+        ('Location', {
+            'fields': (
+                'lat',
+                'lng',
+                'district',
+            )
+        }),
+        ('Assignment', {
+            'fields': (
+                'agent',
+                'projectTbl_foreignkey',
+            )
+        }),
+        ('System Fields', {
+            'fields': (
+                'uid',
+                'created_date',
+                'delete_field',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def date_display(self, obj):
+        return obj.date.strftime("%Y-%m-%d") if obj.date else "-"
+    date_display.short_description = "Date"
+    date_display.admin_order_field = 'date'
+    
+    def qr_code_link(self, obj):
+        if obj.qr_code:
+            url = reverse('admin:portal_qr_codemodel_change', args=[obj.qr_code.id])
+            return format_html('<a href="{}">{}</a>', url, obj.qr_code.uid)
+        return "-"
+    qr_code_link.short_description = "QR Code"
+    
+    def agent_name(self, obj):
+        if obj.agent:
+            return f"{obj.agent.first_name} {obj.agent.last_name}"
+        return "-"
+    agent_name.short_description = "Agent"
+    agent_name.admin_order_field = 'agent'
+    
+    def district_name(self, obj):
+        return obj.district.name if obj.district else "-"
+    district_name.short_description = "District"
+    district_name.admin_order_field = 'district'
+    
+    actions = ['soft_delete_selected', 'restore_selected']
+    
+    def soft_delete_selected(self, request, queryset):
+        count = queryset.update(delete_field="yes")
+        self.message_user(request, f"Successfully soft-deleted {count} growth records.")
+    soft_delete_selected.short_description = "Soft delete selected records"
+    
+    def restore_selected(self, request, queryset):
+        count = queryset.update(delete_field="no")
+        self.message_user(request, f"Successfully restored {count} growth records.")
+    restore_selected.short_description = "Restore selected records"
+    
+    def get_queryset(self, request):
+        return GrowthMonitoringModel.default_objects.select_related(
+            'qr_code', 'agent', 'district', 'projectTbl_foreignkey'
+        ).all()
+
+
+# ============== INLINE ADMINS ==============
+
+class EquipmentAssignmentInline(admin.TabularInline):
+    """Inline for Equipment Assignments"""
+    model = EquipmentAssignmentModel
+    extra = 0
+    max_num = 10
+    fields = ['assigned_to', 'assignment_date', 'return_date', 'status', 'condition_at_assignment']
+    readonly_fields = ['assignment_date']
+    autocomplete_fields = ['assigned_to', 'assigned_by']
+
+
+class OutbreakInline(admin.TabularInline):
+    """Inline for Outbreaks related to farms"""
+    model = OutbreakFarmModel
+    extra = 0
+    max_num = 5
+    fields = ['outbreak_id', 'disease_type', 'severity', 'status', 'date_reported']
+    readonly_fields = ['outbreak_id', 'date_reported']
+    show_change_link = True
+
+
+# ============== INSTALL REQUIRED PACKAGES ==============
+# Run: pip install django-import-export
+# Add 'import_export' to INSTALLED_APPS in settings.py

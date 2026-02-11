@@ -61,12 +61,20 @@ urlpatterns = [
     # 15. Verification (Video Record) (POST only)
     path('v1/saveverificationrecord/', views.SaveVerificationRecordView.as_view(), name='save_verification_record'),
     
-    # 16. Area Calculation (POST only)
-    path('v1/savecalculatedarea/', views.SaveCalculatedAreaView.as_view(), name='save_calculated_area'),
-
-    # 17. Area Calculation (POST only)
-    path('v1/savecalculatedarea/', views.SaveCalculatedAreaView.as_view(), name='save_calculated_area'),
-
+    # Calculated Area APIs
+    path('api/v1/savecalculatedarea/', views.SaveCalculatedAreaView.as_view(), name='save_calculated_area'),
+    path('api/v1/fetchcalculatedareas/', views.FetchCalculatedAreasView.as_view(), name='fetch_calculated_areas'),
+    
+    # Equipment APIs
+    path('api/v1/saveequipment/', views.SaveEquipmentView.as_view(), name='save_equipment'),
+    path('api/v1/fetchallequipment/', views.FetchAllEquipmentView.as_view(), name='fetch_all_equipment'),
+    path('api/v1/equipment/<str:equipment_code>/', views.FetchEquipmentDetailView.as_view(), name='equipment_detail'),
+    
+    # Outbreak Farm APIs
+    path('api/v1/saveoutbreakfarm/', views.SaveOutbreakFarmView.as_view(), name='save_outbreak_farm'),
+    path('api/v1/fetchoutbreakfarmslist/', views.FetchOutbreakFarmsListView.as_view(), name='fetch_outbreak_farms'),
+    path('api/v1/outbreakfarm/<str:outbreak_id>/', views.FetchOutbreakFarmDetailView.as_view(), name='outbreak_farm_detail'),
+  
     # 18. save map farms
     path('v1/savemapfarms/', views.SaveMappedFarmView.as_view(), name='save_map_farms'),
 ]

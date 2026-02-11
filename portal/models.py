@@ -749,3 +749,125 @@ class SidebarConfiguration(models.Model):
         if self.is_active:
             SidebarConfiguration.objects.filter(is_active=True).update(is_active=False)
         super().save(*args, **kwargs)
+
+
+
+
+
+
+
+
+#######################################################################################################################################################################
+
+# ============== EQUIPMENT MANAGEMENT ==============
+
+class EquipmentModel(timeStamp):
+    """Model for Equipment Management module"""
+    equipment_code = models.CharField(max_length=100, unique=True, blank=True, null=True)
+    date_of_capturing = models.DateTimeField(auto_now_add=True)
+    equipment = models.CharField(max_length=250)
+    status = models.CharField(max_length=100, choices=[
+        ('Good', 'Good'),
+        ('Fair', 'Fair'),
+        ('Bad', 'Bad'),
+        ('Under Repair', 'Under Repair')
+    ], default='Good')
+    serial_number = models.CharField(max_length=100, unique=True)
+    manufacturer = models.CharField(max_length=250)
+    pic_serial_number = models.ImageField(upload_to='equipment/serial/', blank=True, null=True)
+    pic_equipment = models.ImageField(upload_to='equipment/device/', blank=True, null=True)
+    staff_name = models.ForeignKey(staffTbl, on_delete=models.SET_NULL, blank=True, null=True)
+    projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
+    district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    uid = models.CharField(max_length=2500, blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.equipment_code} - {self.equipment}"
+    
+    def save(self, *args, **kwargs):
+        if not self.equipment_code:
+            # Generate equipment code (e.g., EQ-2024-0001)
+            last_equip = EquipmentModel.objects.order_by('-id').first()
+            if last_equip and last_equip.equipment_code:
+                try:
+                    last_num = int(last_equip.equipment_code.split('-')[-1])
+                    new_num = last_num + 1
+                except:
+                    new_num = 1
+            else:
+                new_num = 1
+            self.equipment_code = f"EQ-{timezone.now().year}-{new_num:04d}"
+        super().save(*args, **kwargs)
+
+class EquipmentAssignmentModel(timeStamp):
+    """Model for Equipment Assignment to staff/projects"""
+    equipment = models.ForeignKey(EquipmentModel, on_delete=models.CASCADE)
+    assigned_to = models.ForeignKey(staffTbl, on_delete=models.CASCADE)
+    assigned_by = models.ForeignKey(staffTbl, on_delete=models.SET_NULL, null=True, related_name='equipment_assignments')
+    assignment_date = models.DateTimeField(auto_now_add=True)
+    return_date = models.DateTimeField(blank=True, null=True)
+    condition_at_assignment = models.CharField(max_length=100)
+    notes = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=50, default='Assigned')  # Assigned, Returned, Lost, Damaged
+    projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
+    district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    uid = models.CharField(max_length=2500, blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.equipment} assigned to {self.assigned_to}"
+
+# ============== OUTBREAK FARM MANAGEMENT ==============
+
+class OutbreakFarm(timeStamp):
+    """Model for Outbreak Farm module - Enhanced"""
+    farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    outbreak_id = models.CharField(max_length=100, unique=True, blank=True, null=True)
+    farm_location = models.CharField(max_length=250)
+    farmer_name = models.CharField(max_length=250)
+    farmer_age = models.IntegerField(blank=True, null=True)
+    id_type = models.CharField(max_length=50, blank=True, null=True)
+    id_number = models.CharField(max_length=50, blank=True, null=True)
+    farmer_contact = models.CharField(max_length=15, blank=True, null=True)
+    cocoa_type = models.CharField(max_length=100, blank=True, null=True)
+    age_class = models.CharField(max_length=50, blank=True, null=True)
+    farm_area = models.FloatField()
+    communitytbl = models.CharField(max_length=250, blank=True, null=True)
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, blank=True, null=True)
+    inspection_date = models.DateField()
+    temp_code = models.CharField(max_length=100, blank=True, null=True)
+    disease_type = models.CharField(max_length=250)
+    date_reported = models.DateField()
+    reported_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True)
+    status = models.IntegerField(default=0)  # 0=Pending, 1=Submitted, 2=Treated, 3=Resolved
+    coordinates = models.CharField(max_length=100, blank=True, null=True)
+    geom = GeometryField(blank=True, null=True)
+    severity = models.CharField(max_length=50, choices=[
+        ('Low', 'Low'),
+        ('Medium', 'Medium'),
+        ('High', 'High'),
+        ('Critical', 'Critical')
+    ], default='Medium')
+    treatment_applied = models.TextField(blank=True, null=True)
+    treatment_date = models.DateField(blank=True, null=True)
+    projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
+    district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, blank=True, null=True)
+    uid = models.CharField(max_length=2500, blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.outbreak_id} - {self.farmer_name} - {self.disease_type}"
+    
+    def save(self, *args, **kwargs):
+        if not self.outbreak_id:
+            # Generate outbreak ID (e.g., OB-2024-0001)
+            last_outbreak = OutbreakFarmModel.objects.order_by('-id').first()
+            if last_outbreak and last_outbreak.outbreak_id:
+                try:
+                    last_num = int(last_outbreak.outbreak_id.split('-')[-1])
+                    new_num = last_num + 1
+                except:
+                    new_num = 1
+            else:
+                new_num = 1
+            self.outbreak_id = f"OB-{timezone.now().year}-{new_num:04d}"
+        super().save(*args, **kwargs)
