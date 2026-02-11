@@ -335,6 +335,8 @@ class PersonnelModel(timeStamp):
     primary_phone_number = models.CharField(max_length=15)
     secondary_phone_number = models.CharField(max_length=15, blank=True, null=True)
     momo_number = models.CharField(max_length=15, blank=True, null=True)
+    momo_name = models.CharField(max_length=250, blank=True, null=True)
+    belongs_to_ra = models.CharField(max_length=250, blank=True, null=True)
     emergency_contact_person = models.CharField(max_length=250)
     emergency_contact_number = models.CharField(max_length=15)
     id_type = models.CharField(max_length=50)
@@ -346,8 +348,11 @@ class PersonnelModel(timeStamp):
     education_level = models.CharField(max_length=100)
     marital_status = models.CharField(max_length=50)
     bank_id = models.CharField(max_length=50, blank=True, null=True)
+    bank_name = models.CharField(max_length=50, blank=True, null=True)
+    bank_branch = models.CharField(max_length=50, blank=True, null=True)
     account_number = models.CharField(max_length=50, blank=True, null=True)
     branch_id = models.CharField(max_length=50, blank=True, null=True)
+    SSNIT_number = models.CharField(max_length=50, blank=True, null=True)
     sort_code = models.CharField(max_length=50, blank=True, null=True)
     personnel_type = models.CharField(max_length=50)
     ezwich_number = models.CharField(max_length=50, blank=True, null=True)
@@ -437,12 +442,7 @@ class ActivityReportingModel(timeStamp):
 class QR_CodeModel(timeStamp):
     """Model for QR Code module"""
     uid = models.CharField(max_length=2500, blank=True, null=True, db_index=True)
-    qr_code = models.ImageField(
-        upload_to='qr_codes/', 
-        blank=True, 
-        null=True,
-        help_text='QR code image file'
-    )
+    qr_code = models.ImageField(upload_to='qr_codes/', blank=True, null=True,help_text='QR code image file')
     
     def __str__(self):
         return self.uid or f"QR Code {self.id}"

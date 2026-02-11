@@ -1182,6 +1182,17 @@ class DetailedPaymentReportAdmin(ImportExportModelAdmin):
     readonly_fields = ('uid',)
     list_per_page = 50
 
+
+
+# class QR_CodeModelAdmin(ImportExportModelAdmin):
+#     resource_class = QR_CodeModelResource
+#     list_display = ('farm_reference', 'farmer_name', 'region', 'district', 'community', 'farm_size', 'sector', 'projectTbl_foreignkey')
+#     list_filter = ('region', 'district', 'sector', 'projectTbl_foreignkey')
+#     search_fields = ('farm_reference', 'farmer_name', 'location')
+#     readonly_fields = ('uid',)
+#     list_per_page = 50
+
+# admin.site.register(QR_CodeModel, QR_CodeModelAdmin)
 # ============================================
 # MENU MANAGEMENT ADMIN
 # ============================================

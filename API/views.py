@@ -576,6 +576,8 @@ class SaveRegisterView(View):
                 primary_phone_number=primary_phone,
                 secondary_phone_number=data.get("secondary_phone_number", ""),
                 momo_number=data.get("momo_number", ""),
+                momo_name=data.get("momo_name", ""),
+                belongs_to_ra=data.get("belongs_to_ra", False),
                 emergency_contact_person=data.get("emergency_contact_person", ""),
                 emergency_contact_number=data.get("emergency_contact_number", ""),
                 id_type=data.get("id_type", ""),
@@ -587,10 +589,13 @@ class SaveRegisterView(View):
                 education_level=data.get("education_level", ""),
                 marital_status=data.get("marital_status", ""),
                 bank_id=data.get("bank_id", ""),
+                bank_name=data.get("bank_name", ""),
+                bank_branch=data.get("bank_branch", ""),
                 account_number=data.get("account_number", ""),
                 branch_id=data.get("branch_id", ""),
                 sort_code=data.get("sort_code", ""),
                 personnel_type=data.get("personnel_type", ""),
+                SSNIT_number=data.get("SSNIT_number", ""),
                 ezwich_number=data.get("ezwich_number", ""),
                 date_joined=data.get("date_joined"),
                 supervisor_id=data.get("supervisor_id", ""),
@@ -1815,14 +1820,17 @@ class FetchPaymentsView(View):
                             "district": project.district.name if project.district else "",
                             "bank_name": person.bank_id or "",
                             "bank_branch": person.branch_id or "",
-                            "snnit_no": "",  # Would need additional field
+                            "bank_acc_no": person.account_number or "",
+
+                            "snnit_no": person.SSNIT_number or "",
                             "salary": "",  # Would need salary calculation logic
                             "year": year,
                             "po_number": staff.staffid if staff.staffid else "",
                             "month": month,
                             "week": week,
                             "payment_option": "Bank" if person.bank_id else "Momo" if person.momo_number else "Unknown",
-                            "momo_acc": person.momo_number or ""
+                            "momo_acc": person.momo_number or "",
+                            "momo_name": person.momo_name or "",
                         })
                     
                     status["status"] = True
