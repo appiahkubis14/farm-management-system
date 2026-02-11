@@ -1474,60 +1474,179 @@ class FetchJobOrderView(View):
                 "data": []
             }, status=500)
 
+# @method_decorator(csrf_exempt, name='dispatch')
+# class FetchRehabAssistantsView(View):
+#     """Load rehab assistants (GET)"""
+#     def get(self, request):
+#         try:
+#             user_id = request.GET.get('user_id')
+#             district_id = request.GET.get('district_id')
+            
+#             # Base query
+#             query = PersonnelModel.objects.all()
+            
+#             # Filter by district if provided
+#             if district_id:
+#                 try:
+#                     district = cocoaDistrict.objects.get(id=district_id)
+#                     query = query.filter(district=district)
+#                 except:
+#                     pass
+#             # Filter by user's district if user_id provided
+#             elif user_id:
+#                 try:
+#                     staff = staffTbl.objects.get(id=user_id)
+#                     if staff.projectTbl_foreignkey and staff.projectTbl_foreignkey.district:
+#                         query = query.filter(district=staff.projectTbl_foreignkey.district)
+#                 except:
+#                     pass
+            
+#             rehab_data = []
+#             for person in query:
+#                 rehab_data.append({
+#                     "id": person.id,
+#                     "uid": person.uid,
+#                     "name": f"{person.first_name} {person.surname}",
+#                     "phone_number": person.primary_phone_number,
+#                     "personnel_type": person.personnel_type,
+#                     "district_id": person.district.id if person.district else None,
+#                     "district_name": person.district.name if person.district else None,
+#                     "community_id": person.community.id if person.community else None,
+#                     "community_name": person.community.name if person.community else None,
+#                     "project_id": person.projectTbl_foreignkey.id if person.projectTbl_foreignkey else None,
+#                     "project_name": person.projectTbl_foreignkey.name if person.projectTbl_foreignkey else None
+#                 })
+            
+#             return JsonResponse({
+#                 "status": True,
+#                 "message": f"Found {len(rehab_data)} rehab assistants",
+#                 "data": rehab_data
+#             })
+            
+#         except Exception as e:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": f"Error occurred: {str(e)}",
+#                 "data": []
+#             }, status=500)
+
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views import View
+from django.http import JsonResponse
+
 @method_decorator(csrf_exempt, name='dispatch')
 class FetchRehabAssistantsView(View):
-    """Load rehab assistants (GET)"""
+    """Load rehab assistants (GET) with pagination"""
+    
     def get(self, request):
         try:
             user_id = request.GET.get('user_id')
             district_id = request.GET.get('district_id')
             
-            # Base query
-            query = PersonnelModel.objects.filter(personnel_type="Rehab Assistant")
+            # Pagination parameters
+            page = request.GET.get('page', 1)
+            page_size = request.GET.get('page_size', 20)  # Default 20 items per page
+            # Allow max 100 items per page to prevent abuse
+            try:
+                page_size = min(int(page_size), 100)
+            except (ValueError, TypeError):
+                page_size = 20
             
-            # Filter by district if provided
+            # Base query with optimized select_related
+            query = PersonnelModel.objects.select_related(
+                'district', 
+                'community', 
+                'projectTbl_foreignkey'
+            ).all().order_by('id')  # Add ordering for consistent pagination
+            
+            # Apply filters
             if district_id:
                 try:
                     district = cocoaDistrict.objects.get(id=district_id)
                     query = query.filter(district=district)
-                except:
+                except cocoaDistrict.DoesNotExist:
                     pass
-            # Filter by user's district if user_id provided
             elif user_id:
                 try:
-                    staff = staffTbl.objects.get(id=user_id)
+                    staff = staffTbl.objects.select_related(
+                        'projectTbl_foreignkey__district'
+                    ).get(id=user_id)
                     if staff.projectTbl_foreignkey and staff.projectTbl_foreignkey.district:
                         query = query.filter(district=staff.projectTbl_foreignkey.district)
-                except:
+                except staffTbl.DoesNotExist:
                     pass
             
+            # Get total count before pagination
+            total_count = query.count()
+            
+            # Apply pagination
+            paginator = Paginator(query, page_size)
+            
+            try:
+                page_obj = paginator.page(page)
+            except PageNotAnInteger:
+                page_obj = paginator.page(1)
+            except EmptyPage:
+                page_obj = paginator.page(paginator.num_pages)
+            
+            # Build response data
             rehab_data = []
-            for person in query:
+            for person in page_obj:
                 rehab_data.append({
                     "id": person.id,
                     "uid": person.uid,
-                    "name": f"{person.first_name} {person.surname}",
+                    "name": f"{person.first_name} {person.surname}".strip(),
+                    "first_name": person.first_name,
+                    "surname": person.surname,
                     "phone_number": person.primary_phone_number,
+                    "secondary_phone": person.secondary_phone_number,
+                    "momo_number": person.momo_number,
                     "personnel_type": person.personnel_type,
                     "district_id": person.district.id if person.district else None,
                     "district_name": person.district.name if person.district else None,
                     "community_id": person.community.id if person.community else None,
                     "community_name": person.community.name if person.community else None,
                     "project_id": person.projectTbl_foreignkey.id if person.projectTbl_foreignkey else None,
-                    "project_name": person.projectTbl_foreignkey.name if person.projectTbl_foreignkey else None
+                    "project_name": person.projectTbl_foreignkey.name if person.projectTbl_foreignkey else None,
+                    "gender": person.gender,
+                    "id_type": person.id_type,
+                    "id_number": person.id_number,
+                    "bank_id": person.bank_id,
+                    "account_number": person.account_number,
+                    "ezwich_number": person.ezwich_number,
+                    "date_joined": person.date_joined.strftime('%Y-%m-%d') if person.date_joined else None,
+                    "has_image": bool(person.image),
+                    "has_id_front": bool(person.id_image_front),
+                    "has_id_back": bool(person.id_image_back),
                 })
+            
+            # Pagination metadata
+            pagination_info = {
+                "current_page": page_obj.number,
+                "page_size": page_size,
+                "total_pages": paginator.num_pages,
+                "total_records": total_count,
+                "has_next": page_obj.has_next(),
+                "has_previous": page_obj.has_previous(),
+                "next_page": page_obj.next_page_number() if page_obj.has_next() else None,
+                "previous_page": page_obj.previous_page_number() if page_obj.has_previous() else None,
+            }
             
             return JsonResponse({
                 "status": True,
-                "message": f"Found {len(rehab_data)} rehab assistants",
-                "data": rehab_data
+                "message": f"Found {total_count} rehab assistants",
+                "data": rehab_data,
+                "pagination": pagination_info
             })
             
         except Exception as e:
             return JsonResponse({
                 "status": False,
                 "message": f"Error occurred: {str(e)}",
-                "data": []
+                "data": [],
+                "pagination": None
             }, status=500)
 
 @method_decorator(csrf_exempt, name='dispatch')

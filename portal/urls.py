@@ -3,6 +3,7 @@ from django.contrib.auth import views as auth_views
 from . import views
 from portal.view.farms import *
 from portal.view.map import *
+from portal.view.qr_code import *
 
 urlpatterns = [
     path('home/', views.index, name='home'),
@@ -38,4 +39,15 @@ urlpatterns = [
     path('api/create-assignment/', create_assignment, name='create_assignment'),
     path('api/delete-assignment/<int:assignment_id>/', delete_assignment, name='delete_assignment'),
     path('api/assignment-details/<int:assignment_id>/', get_assignment_details, name='get_assignment_details'),
+
+
+    path('qr-code-generator/', qr_code_generator, name='qr_code_generator'),
+    
+    # API endpoints
+    path('api/qr-codes/generate/', generate_qr_codes, name='generate_qr_codes'),
+    path('api/qr-codes/', get_qr_codes, name='get_qr_codes'),
+    path('api/qr-codes/<int:qr_id>/delete/', delete_qr_code, name='delete_qr_code'),
+    path('api/qr-codes/bulk-delete/', bulk_delete_qr_codes, name='bulk_delete_qr_codes'),
+    path('api/qr-codes/<int:qr_id>/download/', download_qr_code, name='download_qr_code'),
+    path('api/qr-codes/bulk-download/', download_bulk_qr_codes, name='download_bulk_qr_codes'),
 ]

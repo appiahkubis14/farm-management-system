@@ -1,0 +1,1192 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* QR Code Generator Styles - Optimized for compact display */
+    .qr-generator-wrapper {
+        background: linear-gradient(135deg, #1d5c37 0%, #1e7e66 100%);
+        border-radius: 12px;
+        padding: 25px;
+        color: white;
+        margin-bottom: 25px;
+    }
+
+    /* Compact QR Card */
+    .qr-card {
+        transition: all 0.2s ease;
+        border: none;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        height: 100%;
+        /* background: white; */
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .qr-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    /* Image container - perfect square aspect ratio */
+    .qr-code-img {
+        position: relative;
+        width: 100%;
+        padding-bottom: 100%; /* 1:1 Aspect Ratio */
+        /* background: #fafafa; */
+        border-bottom: 1px solid #f0f0f0;
+        overflow: hidden;
+    }
+
+    .qr-code-img img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* This makes the image cover the square */
+        object-position: center;
+        padding: 15px; /* Add some padding inside the square */
+        /* background: white; */
+    }
+
+    /* Compact info section */
+    .qr-info {
+        padding: 12px;
+        /* background: #fff; */
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Truncated UID */
+    .qr-uid {
+        font-family: 'Courier New', monospace;
+        background: #f8f9fa;
+        padding: 6px 10px;
+        border-radius: 5px;
+        font-size: 0.75rem;
+        word-break: break-all;
+        margin-bottom: 8px;
+        border-left: 3px solid #1d5c37;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .qr-uid code {
+        font-size: 0.75rem;
+        background: none;
+        padding: 0;
+    }
+
+    /* Compact date */
+    .qr-date {
+        color: #6c757d;
+        font-size: 0.7rem;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    /* Ultra-compact buttons */
+    .qr-actions {
+        display: flex;
+        gap: 4px;
+        margin-top: auto;
+    }
+
+    .qr-actions .btn {
+        flex: 1;
+        padding: 4px 6px;
+        font-size: 0.7rem;
+        border-radius: 4px;
+        line-height: 1.2;
+    }
+
+    .qr-actions .btn i {
+        font-size: 0.7rem;
+        margin-right: 2px;
+    }
+
+    /* Stats cards - more compact */
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+
+    .stats-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .stats-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        margin-right: 12px;
+        color: white;
+    }
+
+    .stats-number {
+        font-size: 1.4rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 3px;
+    }
+
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.75rem;
+        margin-bottom: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* View toggle - smaller */
+    .view-toggle {
+        display: flex;
+        gap: 3px;
+        background: #f8f9fa;
+        padding: 3px;
+        border-radius: 6px;
+    }
+
+    .view-toggle-btn {
+        border: none;
+        background: transparent;
+        padding: 5px 10px;
+        border-radius: 5px;
+        color: #6c757d;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        font-size: 0.75rem;
+    }
+
+    .view-toggle-btn.active {
+        background: white;
+        color: #1d5c37;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    /* Table preview - fixed size */
+    .table-qr-preview {
+        width: 35px;
+        height: 35px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+
+    /* Bulk actions - compact */
+    .bulk-actions {
+        background: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        border-left: 4px solid #1d5c37;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .bulk-actions.show {
+        display: flex;
+    }
+
+    /* Pagination - smaller */
+    .pagination {
+        margin-top: 20px;
+        justify-content: center;
+    }
+
+    .page-link {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    /* Empty state - compact */
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        background: white;
+        border-radius: 10px;
+        border: 1px dashed #dee2e6;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 12px;
+    }
+
+    /* Badge - smaller */
+    .badge-qr {
+        background: #e8f5e9;
+        color: #1d5c37;
+        padding: 3px 8px;
+        border-radius: 16px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    /* Checkbox - smaller */
+    .select-checkbox {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        margin: 0;
+    }
+
+    /* Generator input - adjusted */
+    .quantity-input-group {
+        max-width: 260px;
+        display: flex;
+    }
+
+    .quantity-input-group .form-control {
+        border-radius: 6px 0 0 6px;
+        border: 2px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.1);
+        color: white;
+        padding: 10px 14px;
+        height: auto;
+        font-size: 0.9rem;
+    }
+
+    .btn-generate {
+        background: white;
+        color: #1d5c37;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 0 6px 6px 0;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    /* Table styles - compact */
+    .table td {
+        padding: 0.6rem 0.5rem;
+        vertical-align: middle;
+        font-size: 0.8rem;
+    }
+
+    .table th {
+        padding: 0.6rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .code-text {
+        font-family: 'Courier New', monospace;
+        font-size: 0.75rem;
+        background: #f8f9fa;
+        padding: 3px 6px;
+        border-radius: 3px;
+    }
+
+    .date-badge {
+        background: #f8f9fa;
+        padding: 3px 8px;
+        border-radius: 16px;
+        font-size: 0.7rem;
+        color: #495057;
+        white-space: nowrap;
+    }
+
+    /* Button group in table */
+    .btn-group-sm > .btn, .btn-sm {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+        border-radius: 3px;
+    }
+
+    .btn-group-sm .btn i {
+        font-size: 0.7rem;
+    }
+
+    /* Background gradients */
+    .bg-soft-primary {
+        background: linear-gradient(135deg, #1d5c37 0%, #1e7e66 100%);
+    }
+    
+    .bg-soft-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+    
+    .bg-soft-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    }
+    
+    .bg-soft-warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .quantity-input-group {
+            max-width: 100%;
+            margin-top: 12px;
+        }
+        
+        .qr-code-img img {
+            padding: 10px;
+        }
+        
+        .stats-card {
+            padding: 12px;
+        }
+        
+        .stats-icon {
+            width: 35px;
+            height: 35px;
+            font-size: 1rem;
+        }
+        
+        .stats-number {
+            font-size: 1.2rem;
+        }
+    }
+
+    /* Toolbar compact */
+    .fs-16 {
+        font-size: 1rem;
+    }
+
+    /* Modal adjustments */
+    .modal-sm {
+        max-width: 280px;
+    }
+
+    .modal-header.py-2 {
+        padding: 0.5rem 1rem;
+    }
+
+    .modal-footer.py-2 {
+        padding: 0.5rem;
+    }
+
+    /* Card grid spacing */
+    .g-3, .gy-3 {
+        --bs-gutter-y: 0.8rem;
+    }
+
+    .mb-3 {
+        margin-bottom: 0.8rem !important;
+    }
+</style>
+
+<div class="container-fluid py-3">
+    <!-- Page Header -->
+    <!-- <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded">
+                <h4 class="mb-0 fs-5">
+                    <i class="fas fa-qrcode me-2" style="color: #1d5c37;"></i>
+                    QR Code Generator
+                </h4>
+                <div>
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item small"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active small">QR Code Generator</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+    <!-- Generator Section - Compact -->
+    <div class="qr-generator-wrapper mb-3">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h5 class="mb-1">
+                    <i class="fas fa-magic me-2"></i>
+                    Generate QR Codes
+                </h5>
+                <p class="mb-0 small opacity-75">
+                    Unique identifier format: <code class="bg-dark bg-opacity-25 text-white px-2 py-1 rounded">ACL-UUID</code>
+                </p>
+            </div>
+            <div class="col-lg-4">
+                <div class="quantity-input-group">
+                    <input type="number" 
+                           id="qrQuantity" 
+                           class="form-control form-control-sm" 
+                           placeholder="Qty (1-100)" 
+                           min="1" 
+                           max="100" 
+                           value="1">
+                    <button class="btn btn-generate btn-sm" id="generateQRBtn">
+                        <i class="fas fa-qrcode me-1"></i>
+                        Generate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards - Compact Grid -->
+    <div class="row mb-3 g-2">
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon bg-soft-primary">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+                <div>
+                    <div class="stats-number" id="totalQRCodes">0</div>
+                    <div class="stats-label">Total QR Codes</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon bg-soft-success">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div>
+                    <div class="stats-number" id="todayCount">0</div>
+                    <div class="stats-label">Today</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon bg-soft-info">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <div class="stats-number" id="last7Days">0</div>
+                    <div class="stats-label">Last 7 Days</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon bg-soft-warning">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <div class="stats-number" id="totalBatchCount">0</div>
+                    <div class="stats-label">Batches</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions" id="bulkActions">
+        <div class="d-flex align-items-center">
+            <span class="fw-bold me-1" id="selectedCount">0</span>
+            <span class="text-muted small">selected</span>
+        </div>
+        <div class="d-flex gap-1">
+            <button class="btn btn-outline-success btn-sm" id="bulkDownloadBtn">
+                <i class="fas fa-download me-1"></i> Download
+            </button>
+            <button class="btn btn-outline-danger btn-sm" id="bulkDeleteBtn">
+                <i class="fas fa-trash me-1"></i> Delete
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="clearSelectionBtn">
+                <i class="fas fa-times me-1"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar - Compact -->
+    <div class="row mb-2 align-items-center">
+        <div class="col-md-6">
+            <div class="d-flex align-items-center">
+                <h5 class="mb-0 me-2 fs-6">
+                    <i class="fas fa-cubes me-1" style="color: #1d5c37;"></i>
+                    QR Codes
+                </h5>
+                <span class="badge-qr">
+                    <span id="displayCount">0</span> total
+                </span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                <!-- Search -->
+                <div class="position-relative">
+                    <input type="text" 
+                           id="searchInput" 
+                           class="form-control form-control-sm ps-4" 
+                           placeholder="Search..." 
+                           style="width: 160px;">
+                    <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-2 text-muted" style="font-size: 0.7rem;"></i>
+                </div>
+                
+                <!-- View Toggle -->
+                <div class="view-toggle">
+                    <button class="view-toggle-btn active" id="cardViewBtn">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    <button class="view-toggle-btn" id="tableViewBtn">
+                        <i class="fas fa-table"></i>
+                    </button>
+                </div>
+                
+                <!-- Page Size -->
+                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: 70px;">
+                    <option value="8">8</option>
+                    <option value="12" selected>12</option>
+                    <option value="24">24</option>
+                    <option value="48">48</option>
+                    <option value="96">96</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center py-4" style="display: none;">
+        <div class="spinner-border text-primary spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-1 text-muted small">Loading QR codes...</p>
+    </div>
+
+    <!-- Card View - Compact Grid -->
+    <div id="cardViewContainer">
+        <div class="row g-2" id="qrCardsContainer"></div>
+    </div>
+
+    <!-- Table View (Hidden by default) -->
+    <div id="tableViewContainer" class="card" style="display: none;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" style="min-width: 600px;">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="35" class="ps-2">
+                                <input type="checkbox" class="select-checkbox" id="selectAll">
+                            </th>
+                            <th width="45">Preview</th>
+                            <th>UID</th>
+                            <th>Generated</th>
+                            <th width="100">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qrTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav id="paginationContainer" class="mt-3">
+        <ul class="pagination pagination-sm justify-content-center"></ul>
+    </nav>
+</div>
+
+<!-- View QR Modal - Compact -->
+<div class="modal fade" id="viewQRModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title fs-6">
+                    <i class="fas fa-qrcode me-1"></i> QR Code
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <div id="modalQRImage" class="mb-2"></div>
+                <div class="bg-light p-2 rounded">
+                    <small class="text-muted d-block mb-1">UID</small>
+                    <code id="modalQRUid" class="small" style="word-break: break-all;"></code>
+                </div>
+                <small class="text-muted d-block mt-2" id="modalQRDate"></small>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" class="btn btn-sm btn-primary" id="modalDownloadBtn">
+                    <i class="fas fa-download me-1"></i> Download
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal - Compact -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title fs-6">
+                    <i class="fas fa-trash me-1"></i> Confirm Delete
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <p class="mb-0 small" id="deleteMessage">Delete this QR code?</p>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-1"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    // ==================== STATE MANAGEMENT ====================
+    let currentView = 'card';
+    let currentPage = 1;
+    let pageSize = 12;
+    let searchTerm = '';
+    let selectedQRIds = new Set();
+    let qrData = [];
+    
+    // DOM Elements
+    const $cardView = $('#cardViewContainer');
+    const $tableView = $('#tableViewContainer');
+    const $cardsContainer = $('#qrCardsContainer');
+    const $tableBody = $('#qrTableBody');
+    const $pagination = $('.pagination');
+    const $loadingSpinner = $('#loadingSpinner');
+    const $bulkActions = $('#bulkActions');
+    const $selectedCount = $('#selectedCount');
+    const $selectAll = $('#selectAll');
+    const $searchInput = $('#searchInput');
+    const $displayCount = $('#displayCount');
+    
+    // ==================== INITIALIZATION ====================
+    loadStats();
+    loadQRCodes();
+    
+    // ==================== EVENT HANDLERS ====================
+    
+    // View Toggle
+    $('#cardViewBtn').click(function() {
+        $(this).addClass('active');
+        $('#tableViewBtn').removeClass('active');
+        $cardView.show();
+        $tableView.hide();
+        currentView = 'card';
+    });
+    
+    $('#tableViewBtn').click(function() {
+        $(this).addClass('active');
+        $('#cardViewBtn').removeClass('active');
+        $cardView.hide();
+        $tableView.show();
+        currentView = 'table';
+    });
+    
+    // Page Size Change
+    $('#pageSizeSelect').change(function() {
+        pageSize = parseInt($(this).val());
+        currentPage = 1;
+        loadQRCodes();
+    });
+    
+    // Search
+    let searchTimeout;
+    $searchInput.on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTerm = $(this).val();
+        searchTimeout = setTimeout(() => {
+            currentPage = 1;
+            loadQRCodes();
+        }, 500);
+    });
+    
+    // Generate QR Codes
+    $('#generateQRBtn').click(function() {
+        const quantity = $('#qrQuantity').val();
+        
+        if (!quantity || quantity < 1 || quantity > 100) {
+            Swal.fire('Invalid Quantity', 'Please enter 1-100', 'warning');
+            return;
+        }
+        
+        const $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Generating...');
+        
+        $.ajax({
+            url: '/api/qr-codes/generate/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ quantity: quantity }),
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    loadQRCodes();
+                    loadStats();
+                    $('#qrQuantity').val(1);
+                }
+            },
+            error: function(xhr) {
+                let msg = 'Failed to generate QR codes';
+                if (xhr.responseJSON?.message) msg = xhr.responseJSON.message;
+                Swal.fire('Error', msg, 'error');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="fas fa-qrcode me-1"></i>Generate');
+            }
+        });
+    });
+    
+    // ==================== LOAD QR CODES ====================
+    function loadQRCodes() {
+        $loadingSpinner.show();
+        
+        $.ajax({
+            url: '/api/qr-codes/',
+            type: 'GET',
+            data: {
+                page: currentPage,
+                page_size: pageSize,
+                search: searchTerm
+            },
+            success: function(response) {
+                if (response.success) {
+                    qrData = response.data || [];
+                    $displayCount.text(response.total_count || 0);
+                    
+                    if (currentView === 'card') {
+                        renderCardView(response);
+                    } else {
+                        renderTableView(response);
+                    }
+                    renderPagination(response);
+                    clearSelections();
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to load QR codes', 'error');
+            },
+            complete: function() {
+                $loadingSpinner.hide();
+            }
+        });
+    }
+    
+    // ==================== RENDER FUNCTIONS ====================
+    function renderCardView(response) {
+        const data = response.data || [];
+        
+        if (data.length === 0) {
+            $cardsContainer.html(`
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="fas fa-qrcode"></i>
+                        <h6 class="fs-6">No QR Codes Found</h6>
+                        <p class="text-muted small mb-0">${searchTerm ? 'No matches found' : 'Generate your first QR code'}</p>
+                    </div>
+                </div>
+            `);
+            return;
+        }
+        
+        let html = '';
+        data.forEach(qr => {
+            const uidShort = qr.uid.length > 15 ? qr.uid.substring(0, 12) + '...' : qr.uid;
+            html += `
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-2">
+                    <div class="qr-card">
+                        <div class="position-absolute top-0 end-0 m-1" style="z-index: 1;">
+                            <input type="checkbox" class="select-checkbox qr-select" data-id="${qr.id}">
+                        </div>
+                        <div class="qr-code-img">
+                            <img src="${qr.qr_code_url}" alt="QR Code" loading="lazy" onerror="this.src='/static/images/placeholder.png'">
+                        </div>
+                        <div class="qr-info">
+                            <div class="qr-uid">
+                                <i class="fas fa-tag me-1 text-primary"></i>
+                                <code title="${qr.uid}">${uidShort}</code>
+                            </div>
+                            <div class="qr-date">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span title="${qr.created_date}">${formatDate(qr.created_date)}</span>
+                            </div>
+                            <div class="qr-actions">
+                                <button class="btn btn-outline-primary view-qr" 
+                                        data-id="${qr.id}" 
+                                        data-uid="${qr.uid}" 
+                                        data-url="${qr.qr_code_url}" 
+                                        data-date="${qr.created_date_formatted || qr.created_date}"
+                                        title="View QR Code">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <a href="${qr.qr_code_url}" download="${qr.uid}.png" class="btn btn-outline-success" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <button class="btn btn-outline-danger delete-qr" data-id="${qr.id}" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        $cardsContainer.html(html);
+        attachCheckboxHandlers();
+    }
+    
+    function renderTableView(response) {
+        const data = response.data || [];
+        
+        if (data.length === 0) {
+            $tableBody.html(`
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        <i class="fas fa-qrcode fa-2x text-muted mb-2"></i>
+                        <p class="text-muted small mb-0">No QR Codes Found</p>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+        
+        let rows = '';
+        data.forEach(qr => {
+            rows += `
+                <tr>
+                    <td class="ps-2">
+                        <input type="checkbox" class="select-checkbox qr-select" data-id="${qr.id}">
+                    </td>
+                    <td>
+                        <img src="${qr.qr_code_url}" alt="QR" class="table-qr-preview" loading="lazy" onerror="this.src='/static/images/placeholder.png'">
+                    </td>
+                    <td>
+                        <code class="code-text" title="${qr.uid}">${qr.uid}</code>
+                    </td>
+                    <td>
+                        <span class="date-badge" title="${qr.created_date}">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            ${formatDate(qr.created_date)}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary view-qr" 
+                                    data-id="${qr.id}" 
+                                    data-uid="${qr.uid}" 
+                                    data-url="${qr.qr_code_url}" 
+                                    data-date="${qr.created_date_formatted || qr.created_date}"
+                                    title="View QR Code">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <a href="${qr.qr_code_url}" download="${qr.uid}.png" class="btn btn-outline-success" title="Download">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            <button class="btn btn-outline-danger delete-qr" data-id="${qr.id}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        $tableBody.html(rows);
+        attachCheckboxHandlers();
+    }
+    
+    // Helper function to format date
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+            return 'Today ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays === 1) {
+            return 'Yesterday';
+        } else if (diffDays < 7) {
+            return diffDays + ' days ago';
+        } else {
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+    }
+    
+    // ==================== CHECKBOX HANDLERS ====================
+    function attachCheckboxHandlers() {
+        $('.qr-select').off('change').on('change', function() {
+            const id = $(this).data('id');
+            if ($(this).prop('checked')) {
+                selectedQRIds.add(id);
+            } else {
+                selectedQRIds.delete(id);
+            }
+            updateBulkActions();
+        });
+    }
+    
+    $selectAll.on('change', function() {
+        const isChecked = $(this).prop('checked');
+        $('.qr-select').prop('checked', isChecked);
+        
+        if (isChecked) {
+            qrData.forEach(qr => selectedQRIds.add(qr.id));
+        } else {
+            selectedQRIds.clear();
+        }
+        updateBulkActions();
+    });
+    
+    function updateBulkActions() {
+        const count = selectedQRIds.size;
+        $selectedCount.text(count);
+        count > 0 ? $bulkActions.addClass('show') : $bulkActions.removeClass('show');
+    }
+    
+    function clearSelections() {
+        selectedQRIds.clear();
+        $('.qr-select').prop('checked', false);
+        $selectAll.prop('checked', false);
+        updateBulkActions();
+    }
+    
+    $('#clearSelectionBtn').click(clearSelections);
+    
+    // ==================== VIEW QR ====================
+    $(document).on('click', '.view-qr', function() {
+        const uid = $(this).data('uid');
+        const url = $(this).data('url');
+        const date = $(this).data('date');
+        
+        $('#modalQRUid').text(uid);
+        $('#modalQRDate').text(`Generated: ${date}`);
+        $('#modalQRImage').html(`<img src="${url}" alt="QR Code" style="max-width: 180px; width: 100%;" class="img-fluid border p-2 rounded">`);
+        $('#modalDownloadBtn').attr('href', url).attr('download', `${uid}.png`);
+        
+        $('#viewQRModal').modal('show');
+    });
+    
+    // ==================== DELETE QR ====================
+    let deleteQRId = null;
+    
+    $(document).on('click', '.delete-qr', function() {
+        deleteQRId = $(this).data('id');
+        $('#deleteConfirmModal').modal('show');
+    });
+    
+    $('#confirmDeleteBtn').click(function() {
+        if (!deleteQRId) return;
+        
+        const $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Deleting...');
+        
+        $.ajax({
+            url: `/api/qr-codes/${deleteQRId}/delete/`,
+            type: 'DELETE',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: response.message,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    $('#deleteConfirmModal').modal('hide');
+                    selectedQRIds.delete(deleteQRId);
+                    loadQRCodes();
+                    loadStats();
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to delete QR code', 'error');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="fas fa-trash me-1"></i>Delete');
+                deleteQRId = null;
+            }
+        });
+    });
+    
+    // ==================== BULK DELETE ====================
+    $('#bulkDeleteBtn').click(function() {
+        const ids = Array.from(selectedQRIds);
+        if (ids.length === 0) return;
+        
+        Swal.fire({
+            title: 'Delete QR Codes',
+            text: `Delete ${ids.length} QR code(s)?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Yes, delete',
+            showLoaderOnConfirm: true,
+            preConfirm: () => {
+                return $.ajax({
+                    url: '/api/qr-codes/bulk-delete/',
+                    type: 'DELETE',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ ids: ids }),
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value.success) {
+                Swal.fire('Deleted', result.value.message, 'success');
+                selectedQRIds.clear();
+                loadQRCodes();
+                loadStats();
+            }
+        });
+    });
+    
+    // ==================== BULK DOWNLOAD ====================
+    $('#bulkDownloadBtn').click(function() {
+        const ids = Array.from(selectedQRIds);
+        if (ids.length === 0) return;
+        
+        if (ids.length === 1) {
+            const qr = qrData.find(q => q.id === ids[0]);
+            if (qr) window.location.href = `/api/qr-codes/${qr.id}/download/`;
+        } else {
+            $.ajax({
+                url: '/api/qr-codes/bulk-download/',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ ids: ids }),
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                xhrFields: { responseType: 'blob' },
+                success: function(blob) {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qr_codes_${Date.now()}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Downloaded!',
+                        text: `${ids.length} QR code(s) downloaded`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                },
+                error: function() {
+                    Swal.fire('Error', 'Failed to download QR codes', 'error');
+                }
+            });
+        }
+    });
+    
+    // ==================== PAGINATION ====================
+    function renderPagination(response) {
+        let html = '';
+        if (response.total_pages > 1) {
+            html += `<li class="page-item ${!response.has_previous ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                     </li>`;
+            
+            for (let i = 1; i <= response.total_pages; i++) {
+                if (i === 1 || i === response.total_pages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" data-page="${i}">${i}</a>
+                            </li>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+            
+            html += `<li class="page-item ${!response.has_next ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                     </li>`;
+        }
+        $pagination.html(html);
+    }
+    
+    $(document).on('click', '.page-link', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        if (page && page !== currentPage) {
+            currentPage = page;
+            loadQRCodes();
+        }
+    });
+    
+    // ==================== STATISTICS ====================
+    function loadStats() {
+        $.ajax({
+            url: '/api/qr-codes/',
+            type: 'GET',
+            data: { page: 1, page_size: 1000 },
+            success: function(response) {
+                if (response.success) {
+                    $('#totalQRCodes').text(response.total_count || 0);
+                    $('#totalBatchCount').text(Math.ceil(response.total_count / 10) || 0);
+                    
+                    const today = new Date().toDateString();
+                    const oneWeekAgo = new Date();
+                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                    
+                    let todayCount = 0, weekCount = 0;
+                    
+                    (response.data || []).forEach(qr => {
+                        const date = new Date(qr.created_date);
+                        if (date.toDateString() === today) todayCount++;
+                        if (date >= oneWeekAgo) weekCount++;
+                    });
+                    
+                    $('#todayCount').text(todayCount);
+                    $('#last7Days').text(weekCount);
+                }
+            }
+        });
+    }
+    
+    // ==================== UTILITIES ====================
+    window.getCookie = function(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    };
+});
+</script>
+{% endblock %}

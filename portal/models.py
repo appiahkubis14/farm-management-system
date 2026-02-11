@@ -1,4 +1,5 @@
 # models.py
+import uuid
 from django.db import models
 from django.contrib.gis.db.models import GeometryField
 from django.utils import timezone
@@ -374,6 +375,10 @@ class PersonnelAssignmentModel(timeStamp):
     
     def __str__(self):
         return f"{self.po} -> {self.ra}"
+    
+    class Meta:
+        verbose_name = 'Rehab Assistant'
+        verbose_name_plural = 'Rehab Assistants'
 
 class DailyReportingModel(timeStamp):
     """Model for Daily Reporting and Activity Reporting modules"""
@@ -427,7 +432,37 @@ class ActivityReportingModel(timeStamp):
     
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
+    
+# models.py - Update your QR_CodeModel
+class QR_CodeModel(timeStamp):
+    """Model for QR Code module"""
+    uid = models.CharField(max_length=2500, blank=True, null=True, db_index=True)
+    qr_code = models.ImageField(
+        upload_to='qr_codes/', 
+        blank=True, 
+        null=True,
+        help_text='QR code image file'
+    )
+    
+    def __str__(self):
+        return self.uid or f"QR Code {self.id}"
+    
+    def save(self, *args, **kwargs):
+        # Ensure uid is set
+        if not self.uid and self.pk:
+            self.uid = f"ACL-{uuid.uuid4()}"
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        # Delete the image file when model is deleted
+        if self.qr_code:
+            storage = self.qr_code.storage
+            if storage.exists(self.qr_code.name):
+                storage.delete(self.qr_code.name)
+        super().delete(*args, **kwargs)
 
+
+        
 class GrowthMonitoringModel(timeStamp):
     """Model for Growth Monitoring module"""
     uid = models.CharField(max_length=2500, blank=True, null=True)
@@ -439,12 +474,16 @@ class GrowthMonitoringModel(timeStamp):
     date = models.DateField()
     lat = models.FloatField()
     lng = models.FloatField()
+    qr_code = models.ForeignKey(QR_CodeModel, on_delete=models.CASCADE, blank=True, null=True)
     agent = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
     
     def __str__(self):
         return f"{self.plant_uid} - {self.date}"
+    
+
+
 
 class OutbreakFarmModel(timeStamp):
     """Model for Outbreak Farm module"""

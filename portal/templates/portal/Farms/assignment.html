@@ -352,7 +352,7 @@
         // Load available farms
         function loadAvailableFarms(search = '') {
             $.ajax({
-                url: "{% url 'get_available_farms' %}",
+                url: "",
                 type: "GET",
                 data: { search: search },
                 beforeSend: function() {
@@ -472,7 +472,7 @@
                     
                     // Get available farms count
                     $.ajax({
-                        url: "{% url 'get_available_farms' %}",
+                        url: "",
                         type: "GET",
                         success: function(farmResponse) {
                             if (farmResponse.success) {

@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     'leaflet',
     'leaflet_admin_list',
     'drf_yasg',
-    'storages',
+    # 'storages',
     'crispy_forms',
     "crispy_bootstrap4",
     'django.contrib.humanize',
@@ -328,23 +328,23 @@ RISPY_TEMPLATE_PACK = 'bootstrap4'
 IMPORT_FORMATS = [CSV, JSON, XLS, XLSX]
 
 # DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-STORAGES = {
-    'default': {
-        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-    },
-    'staticfiles': {
-        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-    },
-}
+# STORAGES = {
+#     'default': {
+#         'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+#     },
+#     'staticfiles': {
+#         'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+#     },
+# }
 
-STORAGES = {
-    'default': {
-        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-    },
-    'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
-    },
-}
+# STORAGES = {
+#     'default': {
+#         'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+#     },
+#     'staticfiles': {
+#         'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+#     },
+# }
 
 
 STATIC_URL = '/static/'
