@@ -1,0 +1,1543 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+/* Page-specific styles */
+.card-h-50 {
+    height: 50%;
+}
+
+.report-details h6 {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 0.3rem;
+}
+
+.report-details p {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.modal-xl {
+    max-width: 95%;
+}
+
+@media (min-width: 1200px) {
+    .modal-xl {
+        max-width: 1140px;
+    }
+}
+
+/* Fix for DataTables buttons */
+.dt-buttons {
+    margin-bottom: 10px;
+}
+
+.dt-buttons .btn {
+    margin-right: 5px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Prevent ApexCharts errors on non-dashboard pages */
+.apexcharts-canvas {
+    display: none !important;
+}
+</style>
+
+<br>
+<!-- Page Header -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">Daily Reports</h4>
+            <div class="page-title-right">
+                <button class="btn btn-primary" id="addReportBtn">
+                    <i class="fas fa-plus me-1"></i> Create Daily Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Stats Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-60">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Reports</span>
+                        <h4 class="mb-3" id="totalReports">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-file-alt text-primary h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-60">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Approved</span>
+                        <h4 class="mb-3" id="approvedReports">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-success h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-60">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Pending</span>
+                        <h4 class="mb-3" id="pendingReports">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-clock text-warning h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-60">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Area</span>
+                        <h4 class="mb-3" id="totalArea">0 ha</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-map-marked-alt text-info h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+
+
+<!-- Main Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="dailyReportsTable" class="table table-striped" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Report Date</th>
+                                <th>Project Officer</th>
+                                <th>Main Activity</th>
+                                <th>Sub Activity</th>
+                                <th>Farm Ref</th>
+                                <th>Area (ha)</th>
+                                <th># RAs</th>
+                                <th>Status</th>
+                                <th>Community</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Daily Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTitle">Create Daily Report</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="reportForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="reportId" name="report_id">
+                    <input type="hidden" id="uid" name="uid">
+                    
+                    <!-- Section 1: Basic Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="reporting_date" class="form-label">Reporting Date *</label>
+                                        <input type="date" class="form-control" id="reporting_date" name="reporting_date" required>
+                                        <div class="invalid-feedback">Please select reporting date</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="completion_date" class="form-label">Completion Date</label>
+                                        <input type="date" class="form-control" id="completion_date" name="completion_date">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="agent" class="form-label">Project Officer *</label>
+                                        <select class="form-select" id="agent" name="agent_id" required>
+                                            <option value="">Select PO</option>
+                                        </select>
+                                        <div class="invalid-feedback">Please select Project Officer</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 2: Activity Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-tasks me-2"></i>Activity Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="main_activity" class="form-label">Main Activity *</label>
+                                        <select class="form-select" id="main_activity" name="main_activity_id" required>
+                                            <option value="">Select Main Activity</option>
+                                        </select>
+                                        <div class="invalid-feedback">Please select main activity</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="sub_activity" class="form-label">Sub Activity *</label>
+                                        <select class="form-select" id="sub_activity" name="sub_activity_id" required>
+                                            <option value="">Select Sub Activity</option>
+                                        </select>
+                                        <div class="invalid-feedback">Please select sub activity</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 3: Farm Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-tractor me-2"></i>Farm Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="farm_ref_number" class="form-label">Farm Reference</label>
+                                        <select class="form-select" id="farm_ref_number" name="farm_ref_number">
+                                            <option value="">Select Farm</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="farm_size_ha" class="form-label">Farm Size (ha)</label>
+                                        <input type="number" class="form-control" id="farm_size_ha" name="farm_size_ha" step="0.01" min="0" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="sector" class="form-label">Sector</label>
+                                        <input type="number" class="form-control" id="sector" name="sector" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="community" class="form-label">Community</label>
+                                        <input type="text" class="form-control" id="community" name="community" readonly>
+                                        <input type="hidden" id="community_id" name="community_id">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="district" class="form-label">District</label>
+                                        <input type="text" class="form-control" id="district" name="district" readonly>
+                                        <input type="hidden" id="district_id" name="district_id">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 4: Work Details -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Work Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="area_covered_ha" class="form-label">Area Covered (ha) *</label>
+                                        <input type="number" class="form-control" id="area_covered_ha" name="area_covered_ha" step="0.01" min="0" required>
+                                        <div class="invalid-feedback">Please enter area covered</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="group_work" class="form-label">Group Work</label>
+                                        <select class="form-select" id="group_work" name="group_work">
+                                            <option value="No">No</option>
+                                            <option value="Yes">Yes</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="number_of_people_in_group" class="form-label">People in Group</label>
+                                        <input type="number" class="form-control" id="number_of_people_in_group" name="number_of_people_in_group" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 5: Rehab Assistants -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-users me-2"></i>Rehab Assistants</h6>
+                            <button type="button" class="btn btn-sm btn-success" id="addRaBtn">
+                                <i class="fas fa-plus"></i> Add RA
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="ra_select" class="form-label">Select RA</label>
+                                        <select class="form-select" id="ra_select">
+                                            <option value="">Select RA to add</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="rasTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Phone</th>
+                                            <th>MoMo Number</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rasTableBody">
+                                        <!-- Selected RAs will appear here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <input type="hidden" id="ra_ids" name="ra_ids">
+                        </div>
+                    </div>
+                    
+                    <!-- Section 6: Remarks -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-comment me-2"></i>Remarks</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <div class="form-group">
+                                        <label for="remark" class="form-label">Remarks</label>
+                                        <textarea class="form-control" id="remark" name="remark" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 7: Status (Hidden for POs, visible for Admins) -->
+                    <div class="card mb-3" id="statusCard" style="display: none;">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-flag me-2"></i>Status</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="status" class="form-label">Report Status</label>
+                                        <select class="form-select" id="status" name="status">
+                                            <option value="0">Pending</option>
+                                            <option value="1">Submitted</option>
+                                            <option value="2">Approved</option>
+                                            <option value="3">Rejected</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="submitReportBtn" style="display: none;">
+                        <i class="fas fa-paper-plane me-1"></i> Submit
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        <i class="fas fa-save me-1"></i> Save Draft
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Daily Report Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Daily Report Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="reportDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="approveReportBtn" style="display: none;">
+                    <i class="fas fa-check-circle me-1"></i> Approve
+                </button>
+                <button type="button" class="btn btn-danger" id="rejectReportBtn" style="display: none;">
+                    <i class="fas fa-times-circle me-1"></i> Reject
+                </button>
+                <button type="button" class="btn btn-primary" id="printReportBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Reason Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Reject Report</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="rejectReason" class="form-label">Reason for Rejection *</label>
+                    <textarea class="form-control" id="rejectReason" rows="4" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmRejectBtn">Reject Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this daily report?</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+<script>
+
+    
+    $(document).ready(function() {
+        // Completely disable ApexCharts
+        if (typeof ApexCharts !== 'undefined') {
+            ApexCharts.prototype.render = function() { 
+                return Promise.resolve(); 
+            };
+        }
+        
+        // Define URLs for AJAX calls - using direct paths instead of reverse
+        var urls = {
+            reportList: "/api/daily-reports/",
+            reportCreate: "/api/daily-reports/create/",
+            reportDetail: "/api/daily-reports/",
+            reportUpdate: "/api/daily-reports/",
+            reportDelete: "/api/daily-reports/",
+            reportSubmit: "/api/daily-reports/",
+            reportApprove: "/api/daily-reports/",
+            reportReject: "/api/daily-reports/",
+            getAgents: "/api/get-agents/",
+            getMainActivities: "/api/get-main-activities/",
+            getSubActivities: "/api/get-sub-activities/",
+            getFarmsByPO: "/api/get-farms-by-po/",
+            getRAsByPO: "/api/get-ras-by-po/"
+        };
+        
+        // Check user role - safely check groups
+        // var isAdmin = {% if request.user.is_superuser %}true{% else %}false{% endif %};
+        // var isPO = false;
+        // var isM&E = false;
+        
+        // {% if request.user.groups.all %}
+        //     {% for group in request.user.groups.all %}
+        //         {% if group.name == 'Project Officer' %}
+        //             isPO = true;
+        //         {% endif %}
+        //         {% if group.name == 'Monitoring and Evaluation' %}
+        //             isM&E = true;
+        //         {% endif %}
+        //     {% endfor %}
+        // {% endif %}
+        
+        // Selected RAs array
+        var selectedRAs = [];
+        
+        // Destroy existing DataTable if it exists
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable('#dailyReportsTable')) {
+            $('#dailyReportsTable').DataTable().destroy();
+            $('#dailyReportsTable').empty();
+        }
+        
+        // Initialize DataTable
+        var dailyReportsTable = $('#dailyReportsTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: urls.reportList,
+                type: "GET",
+                data: function(d) {
+                    // Add filter parameters
+                    d.status = $('#filterStatus').val();
+                    d.date = $('#filterDate').val();
+                    d.po_id = $('#filterPO').val();
+                },
+                error: function(xhr, error, thrown) {
+                    console.error('DataTable AJAX error:', error);
+                    console.error('Response:', xhr.responseText);
+                }
+            },
+            columns: [
+                { 
+                    data: 'id',
+                    render: function(data) {
+                        return data ? 'DR-' + String(data).padStart(6, '0') : 'N/A';
+                    }
+                },
+                { 
+                    data: 'reporting_date',
+                    render: function(data) {
+                        return data || 'N/A';
+                    }
+                },
+                { 
+                    data: 'agent_name',
+                    render: function(data) {
+                        return data || 'N/A';
+                    }
+                },
+                { 
+                    data: 'main_activity',
+                    render: function(data) {
+                        return data || 'N/A';
+                    }
+                },
+                { 
+                    data: 'sub_activity',
+                    render: function(data) {
+                        return data || 'N/A';
+                    }
+                },
+                { 
+                    data: 'farm_ref_number',
+                    render: function(data) {
+                        return data || 'N/A';
+                    }
+                },
+                { 
+                    data: 'area_covered_ha',
+                    render: function(data) {
+                        return data ? parseFloat(data).toFixed(2) + ' ha' : '0.00 ha';
+                    }
+                },
+                { 
+                    data: 'no_rehab_assistants',
+                    render: function(data) {
+                        return data || 0;
+                    }
+                },
+                { 
+                    data: 'status',
+                    render: function(data) {
+                        var badgeClass = '';
+                        var statusText = '';
+                        switch(parseInt(data)) {
+                            case 0: 
+                                badgeClass = 'bg-warning'; 
+                                statusText = 'Pending';
+                                break;
+                            case 1: 
+                                badgeClass = 'bg-info'; 
+                                statusText = 'Submitted';
+                                break;
+                            case 2: 
+                                badgeClass = 'bg-success'; 
+                                statusText = 'Approved';
+                                break;
+                            case 3: 
+                                badgeClass = 'bg-danger'; 
+                                statusText = 'Rejected';
+                                break;
+                            default: 
+                                badgeClass = 'bg-secondary';
+                                statusText = 'Unknown';
+                        }
+                        return '<span class="badge ' + badgeClass + '">' + statusText + '</span>';
+                    }
+                },
+                { 
+                    data: 'community',
+                    render: function(data) {
+                        return data || 'N/A';
+                    }
+                },
+                {
+                    data: 'id',
+                    render: function(data, type, row) {
+                        if (!data) return '';
+                        
+                        var buttons = '<div class="btn-group btn-group-sm">';
+                        
+                        // View button - always visible
+                        buttons += '<button class="btn btn-info view-report" data-id="' + data + '" title="View"><i class="fas fa-eye"></i></button>';
+                        
+                        // Edit button - only for pending reports and if user has permission
+                        
+                            buttons += '<button class="btn btn-primary edit-report" data-id="' + data + '" title="Edit"><i class="fas fa-edit"></i></button>';
+                        
+                        
+                        // Submit button - for pending reports (PO only)
+                       
+                            buttons += '<button class="btn btn-success submit-report" data-id="' + data + '" title="Submit"><i class="fas fa-paper-plane"></i></button>';
+                        
+                        
+                        // Approve/Reject buttons - for submitted reports (Admin/M&E)
+                      
+                            // buttons += '<button class="btn btn-success approve-report" data-id="' + data + '" title="Approve"><i class="fas fa-check-circle"></i></button>';
+                            // buttons += '<button class="btn btn-danger reject-report" data-id="' + data + '" title="Reject"><i class="fas fa-times-circle"></i></button>';
+                        
+                        
+                        // Delete button - only for pending reports and admin
+                       
+                            buttons += '<button class="btn btn-danger delete-report" data-id="' + data + '" title="Delete"><i class="fas fa-trash"></i></button>';
+                        
+                        
+                        buttons += '</div>';
+                        return buttons;
+                    },
+                    orderable: false,
+                    searchable: false
+                }
+            ],
+            order: [[1, 'desc']],
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            language: {
+                emptyTable: "No daily reports found",
+                zeroRecords: "No matching reports found",
+                processing: "Loading..."
+            },
+            dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rtip',
+            buttons: [
+                {
+                    extend: "copy",
+                    text: '<i class="fas fa-copy"></i> Copy',
+                    className: "btn btn-sm btn-outline-secondary",
+                },
+                {
+                    extend: "csv",
+                    text: '<i class="fas fa-file-csv"></i> CSV',
+                    className: "btn btn-sm btn-outline-success",
+                },
+                {
+                    extend: "excel",
+                    text: '<i class="fas fa-file-excel"></i> Excel',
+                    className: "btn btn-sm btn-outline-primary",
+                },
+                {
+                    extend: "pdf",
+                    text: '<i class="fas fa-file-pdf"></i> PDF',
+                    className: "btn btn-sm btn-outline-danger",
+                },
+                {
+                    extend: "print",
+                    text: '<i class="fas fa-print"></i> Print',
+                    className: "btn btn-sm btn-outline-info",
+                }
+            ],
+            initComplete: function() {
+                console.log('DataTable initialized successfully');
+            }
+        });
+
+        // Load PO dropdown for filter
+        function loadPOFilter() {
+            $.ajax({
+                url: urls.getAgents,
+                type: "GET",
+                success: function(response) {
+                    if (response && response.success) {
+                        var $poSelect = $('#filterPO');
+                        $poSelect.empty().append('<option value="">All PO</option>');
+                        if (response.data && response.data.length) {
+                            response.data.forEach(function(agent) {
+                                $poSelect.append('<option value="' + agent.id + '">' + (agent.name || 'N/A') + '</option>');
+                            });
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error loading PO filter:', xhr);
+                }
+            });
+        }
+
+        // Load dropdowns for modal
+        function loadModalDropdowns() {
+            // Load agents/POs
+            $.ajax({
+                url: urls.getAgents,
+                type: "GET",
+                success: function(response) {
+                    if (response && response.success) {
+                        var $agentSelect = $('#agent');
+                        $agentSelect.empty().append('<option value="">Select PO</option>');
+                        if (response.data && response.data.length) {
+                            response.data.forEach(function(agent) {
+                                $agentSelect.append('<option value="' + agent.id + '">' + (agent.name || 'N/A') + '</option>');
+                            });
+                        }
+                    }
+                }
+            });
+
+            // Load main activities
+            $.ajax({
+                url: urls.getMainActivities,
+                type: "GET",
+                success: function(response) {
+                    if (response && response.success) {
+                        var $mainActivitySelect = $('#main_activity');
+                        $mainActivitySelect.empty().append('<option value="">Select Main Activity</option>');
+                        if (response.data && response.data.length) {
+                            response.data.forEach(function(activity) {
+                                $mainActivitySelect.append('<option value="' + activity.id + '">' + (activity.main_activity || 'N/A') + '</option>');
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load farms based on selected PO
+        function loadFarmsByPO(poId) {
+            if (!poId) return;
+            
+            $.ajax({
+                url: urls.getFarmsByPO,
+                type: "GET",
+                data: { po_id: poId },
+                success: function(response) {
+                    if (response && response.success) {
+                        var $farmSelect = $('#farm_ref_number');
+                        $farmSelect.empty().append('<option value="">Select Farm</option>');
+                        if (response.data && response.data.length) {
+                            response.data.forEach(function(farm) {
+                                $farmSelect.append('<option value="' + farm.farm_reference + '" data-size="' + (farm.farm_size || 0) + '">' + (farm.farm_reference || 'N/A') + ' - ' + (farm.farmer_name || 'N/A') + '</option>');
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load RAs based on selected PO
+        function loadRAsByPO(poId) {
+            if (!poId) return;
+            
+            $.ajax({
+                url: urls.getRAsByPO,
+                type: "GET",
+                data: { po_id: poId },
+                success: function(response) {
+                    if (response && response.success) {
+                        var $raSelect = $('#ra_select');
+                        $raSelect.empty().append('<option value="">Select RA to add</option>');
+                        if (response.data && response.data.length) {
+                            response.data.forEach(function(ra) {
+                                $raSelect.append('<option value="' + ra.id + '" data-name="' + (ra.name || '') + '" data-phone="' + (ra.phone || '') + '" data-momo="' + (ra.momo || '') + '">' + (ra.name || 'N/A') + ' - ' + (ra.phone || 'N/A') + '</option>');
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update RA table
+        function updateRATable() {
+            var tbody = $('#rasTableBody');
+            tbody.empty();
+            
+            selectedRAs.forEach(function(ra, index) {
+                var row = '<tr>' +
+                    '<td>' + (ra.name || 'N/A') + '</td>' +
+                    '<td>' + (ra.phone || 'N/A') + '</td>' +
+                    '<td>' + (ra.momo || 'N/A') + '</td>' +
+                    '<td><button type="button" class="btn btn-sm btn-danger remove-ra" data-index="' + index + '"><i class="fas fa-trash"></i></button></td>' +
+                    '</tr>';
+                tbody.append(row);
+            });
+            
+            // Update hidden input with RA IDs
+            $('#ra_ids').val(selectedRAs.map(ra => ra.id).join(','));
+            $('#no_rehab_assistants').val(selectedRAs.length);
+        }
+
+        // Add RA to selected list
+        $('#addRaBtn').click(function() {
+            var selectedOption = $('#ra_select option:selected');
+            var raId = selectedOption.val();
+            
+            if (!raId) {
+                Swal.fire('Warning', 'Please select an RA to add', 'warning');
+                return;
+            }
+            
+            // Check if already added
+            if (selectedRAs.some(ra => ra.id == raId)) {
+                Swal.fire('Warning', 'This RA is already added', 'warning');
+                return;
+            }
+            
+            var ra = {
+                id: raId,
+                name: selectedOption.data('name'),
+                phone: selectedOption.data('phone'),
+                momo: selectedOption.data('momo')
+            };
+            
+            selectedRAs.push(ra);
+            updateRATable();
+            
+            // Clear selection
+            $('#ra_select').val('');
+        });
+
+        // Remove RA from selected list
+        $(document).on('click', '.remove-ra', function() {
+            var index = $(this).data('index');
+            selectedRAs.splice(index, 1);
+            updateRATable();
+        });
+
+        // Load sub activities based on main activity
+        $('#main_activity').on('change', function() {
+            var mainActivityId = $(this).val();
+            var $subActivitySelect = $('#sub_activity');
+            
+            $subActivitySelect.empty().append('<option value="">Select Sub Activity</option>');
+            
+            if (mainActivityId) {
+                $.ajax({
+                    url: urls.getSubActivities,
+                    type: "GET",
+                    data: { main_activity_id: mainActivityId },
+                    success: function(response) {
+                        if (response && response.success) {
+                            if (response.data && response.data.length) {
+                                response.data.forEach(function(activity) {
+                                    $subActivitySelect.append('<option value="' + activity.id + '">' + (activity.sub_activity || 'N/A') + '</option>');
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        // Load farm details when farm is selected
+        $('#farm_ref_number').on('change', function() {
+            var selectedOption = $(this).find('option:selected');
+            var farmSize = selectedOption.data('size');
+            
+            if (farmSize) {
+                $('#farm_size_ha').val(farmSize);
+            }
+        });
+
+        // Load RAs when PO is selected
+        $('#agent').on('change', function() {
+            var poId = $(this).val();
+            if (poId) {
+                loadFarmsByPO(poId);
+                loadRAsByPO(poId);
+            }
+        });
+
+        // Load stats
+        function loadStats() {
+            $.ajax({
+                url: urls.reportList,
+                type: "GET",
+                data: { draw: 1, start: 0, length: 1000 },
+                success: function(response) {
+                    var data = response.data || [];
+                    var total = data.length;
+                    var approved = data.filter(a => a.status === 2).length;
+                    var pending = data.filter(a => a.status === 0 || a.status === 1).length;
+                    var totalArea = data.reduce((sum, a) => sum + (parseFloat(a.area_covered_ha) || 0), 0);
+                    
+                    $('#totalReports').text(total);
+                    $('#approvedReports').text(approved);
+                    $('#pendingReports').text(pending);
+                    $('#totalArea').text(totalArea.toFixed(2) + ' ha');
+                },
+                error: function() {
+                    console.error('Error loading stats');
+                }
+            });
+        }
+
+        // Apply filters
+        $('#applyFilters').click(function() {
+            dailyReportsTable.ajax.reload();
+        });
+
+        // Reset form
+        function resetForm() {
+            $('#reportForm')[0].reset();
+            $('#reportId').val('');
+            $('#uid').val('');
+            selectedRAs = [];
+            updateRATable();
+            $('#farm_size_ha').prop('readonly', true);
+            $('#statusCard').hide();
+            $('#submitReportBtn').hide();
+            $('#saveBtn').html('<i class="fas fa-save me-1"></i> Save Draft');
+        }
+
+        // Add Report Button
+        $('#addReportBtn').click(function() {
+            resetForm();
+            $('#modalTitle').text('Create Daily Report');
+            loadModalDropdowns();
+            
+            // Show submit button for PO
+           
+                $('#submitReportBtn').show();
+            
+            
+            // Show status card for admin
+            
+                $('#statusCard').show();
+            
+            
+            // Set default dates
+            var today = new Date().toISOString().split('T')[0];
+            $('#reporting_date').val(today);
+            $('#completion_date').val(today);
+            
+            $('#reportModal').modal('show');
+        });
+
+        // Form Submission (Save Draft)
+        $('#reportForm').submit(function(e) {
+            e.preventDefault();
+            
+            if (!this.checkValidity()) {
+                e.stopPropagation();
+                $(this).addClass('was-validated');
+                return;
+            }
+            
+            var formData = {
+                reporting_date: $('#reporting_date').val(),
+                completion_date: $('#completion_date').val(),
+                agent_id: $('#agent').val(),
+                main_activity_id: $('#main_activity').val(),
+                sub_activity_id: $('#sub_activity').val(),
+                no_rehab_assistants: selectedRAs.length,
+                area_covered_ha: $('#area_covered_ha').val() || 0,
+                farm_ref_number: $('#farm_ref_number').val(),
+                farm_size_ha: $('#farm_size_ha').val() || 0,
+                community_id: $('#community_id').val(),
+                district_id: $('#district_id').val(),
+                sector: $('#sector').val(),
+                group_work: $('#group_work').val(),
+                number_of_people_in_group: $('#number_of_people_in_group').val() || 0,
+                remark: $('#remark').val(),
+                status: $('#status').val() || 0,
+                ra_ids: selectedRAs.map(ra => ra.id)
+            };
+            
+            var reportId = $('#reportId').val();
+            var url = reportId ? urls.reportUpdate + reportId + '/update/' : urls.reportCreate;
+            
+            $.ajax({
+                url: url,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                beforeSend: function() {
+                    $('#saveBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+                },
+                success: function(response) {
+                    if (response && response.success) {
+                        Swal.fire('Success', response.message, 'success');
+                        $('#reportModal').modal('hide');
+                        dailyReportsTable.ajax.reload();
+                        loadStats();
+                    } else {
+                        Swal.fire('Error', response?.message || 'Unknown error', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    var errorMsg = 'An error occurred';
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        errorMsg = response.message || errorMsg;
+                    } catch(e) {
+                        errorMsg = xhr.statusText || errorMsg;
+                    }
+                    Swal.fire('Error', errorMsg, 'error');
+                },
+                complete: function() {
+                    $('#saveBtn').prop('disabled', false).html('<i class="fas fa-save me-1"></i> Save Draft');
+                }
+            });
+        });
+
+        // Submit Report
+        $('#submitReportBtn').click(function() {
+            var reportId = $('#reportId').val();
+            
+            if (!reportId) {
+                // If it's a new report, save it first then submit
+                $('#reportForm').submit();
+                return;
+            }
+            
+            Swal.fire({
+                title: 'Submit Report?',
+                text: 'Once submitted, this report will be sent for approval',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, submit it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: urls.reportSubmit + reportId + '/submit/',
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        success: function(response) {
+                            if (response && response.success) {
+                                Swal.fire('Success', response.message, 'success');
+                                $('#reportModal').modal('hide');
+                                dailyReportsTable.ajax.reload();
+                                loadStats();
+                            }
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error', 'Failed to submit report', 'error');
+                        }
+                    });
+                }
+            });
+        });
+
+        // Edit Report
+        $(document).on('click', '.edit-report', function() {
+            var reportId = $(this).data('id');
+            
+            $.ajax({
+                url: urls.reportDetail + reportId + '/',
+                type: 'GET',
+                success: function(response) {
+                    if (response && response.success) {
+                        var report = response.data;
+                        
+                        resetForm();
+                        loadModalDropdowns();
+                        
+                        $('#reportId').val(report.id);
+                        $('#uid').val(report.uid);
+                        $('#reporting_date').val(report.reporting_date);
+                        $('#completion_date').val(report.completion_date);
+                        $('#farm_ref_number').val(report.farm_ref_number);
+                        $('#farm_size_ha').val(report.farm_size_ha);
+                        $('#area_covered_ha').val(report.area_covered_ha);
+                        $('#sector').val(report.sector);
+                        $('#group_work').val(report.group_work);
+                        $('#number_of_people_in_group').val(report.number_of_people_in_group);
+                        $('#remark').val(report.remark);
+                        $('#status').val(report.status);
+                        $('#community').val(report.community);
+                        $('#community_id').val(report.community_id);
+                        $('#district').val(report.district);
+                        $('#district_id').val(report.district_id);
+                        
+                        // Set dropdowns
+                        setTimeout(function() {
+                            $('#agent').val(report.agent_id);
+                            $('#main_activity').val(report.main_activity_id).trigger('change');
+                            
+                            setTimeout(function() {
+                                $('#sub_activity').val(report.sub_activity_id);
+                            }, 500);
+                        }, 500);
+                        
+                        // Load RAs and farms for this PO
+                        loadFarmsByPO(report.agent_id);
+                        loadRAsByPO(report.agent_id);
+                        
+                        // Set selected RAs
+                        selectedRAs = report.ras || [];
+                        updateRATable();
+                        
+                        $('#modalTitle').text('Edit Daily Report');
+                        
+                        // Show submit button for PO if report is pending
+                        if (report.status == 0) {
+                            $('#submitReportBtn').show();
+                        }
+                        
+                        // Show status card for admin
+                        
+                            $('#statusCard').show();
+                        
+                        
+                        $('#reportModal').modal('show');
+                    }
+                }
+            });
+        });
+
+        // View Report
+        $(document).on('click', '.view-report', function() {
+            var reportId = $(this).data('id');
+            
+            $.ajax({
+                url: urls.reportDetail + reportId + '/',
+                type: 'GET',
+                beforeSend: function() {
+                    $('#reportDetails').html('<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">Loading report details...</p></div>');
+                },
+                success: function(response) {
+                    if (response && response.success) {
+                        var report = response.data;
+                        var statusClass = '';
+                        var statusText = '';
+                        
+                        switch(parseInt(report.status)) {
+                            case 0: statusText = 'Pending'; statusClass = 'warning'; break;
+                            case 1: statusText = 'Submitted'; statusClass = 'info'; break;
+                            case 2: statusText = 'Approved'; statusClass = 'success'; break;
+                            case 3: statusText = 'Rejected'; statusClass = 'danger'; break;
+                            default: statusText = 'Unknown'; statusClass = 'secondary';
+                        }
+                        
+                        var rasHtml = '';
+                        if (report.ras && report.ras.length > 0) {
+                            rasHtml = '<table class="table table-sm table-bordered"><thead><tr><th>Name</th><th>Phone</th><th>MoMo</th></tr></thead><tbody>';
+                            report.ras.forEach(function(ra) {
+                                rasHtml += '<tr><td>' + (ra.name || 'N/A') + '</td><td>' + (ra.contact || 'N/A') + '</td><td>' + (ra.momo_number || 'N/A') + '</td></tr>';
+                            });
+                            rasHtml += '</tbody></table>';
+                        } else {
+                            rasHtml = '<p class="text-muted">No RAs assigned</p>';
+                        }
+                        
+                        var html = `
+                            <div class="report-details">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Report ID</h6>
+                                        <p class="fw-bold">DR-${String(report.id).padStart(6, '0')}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Status</h6>
+                                        <p><span class="badge bg-${statusClass}">${statusText}</span></p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Reporting Date</h6>
+                                        <p class="fw-bold">${report.reporting_date || 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Completion Date</h6>
+                                        <p class="fw-bold">${report.completion_date || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Project Officer</h6>
+                                        <p class="fw-bold">${report.agent_name || 'N/A'}</p>
+                                        <p class="text-muted small">${report.agent_contact || ''}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">District</h6>
+                                        <p class="fw-bold">${report.district || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Main Activity</h6>
+                                        <p class="fw-bold">${report.main_activity || 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Sub Activity</h6>
+                                        <p class="fw-bold">${report.sub_activity || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <h6 class="text-muted">Farm Reference</h6>
+                                        <p class="fw-bold">${report.farm_ref_number || 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-muted">Farm Size</h6>
+                                        <p class="fw-bold">${report.farm_size_ha ? parseFloat(report.farm_size_ha).toFixed(2) + ' ha' : 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-muted">Area Covered</h6>
+                                        <p class="fw-bold">${report.area_covered_ha ? parseFloat(report.area_covered_ha).toFixed(2) + ' ha' : '0.00 ha'}</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <h6 class="text-muted"># of RAs</h6>
+                                        <p class="fw-bold">${report.no_rehab_assistants || 0}</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-muted">Group Work</h6>
+                                        <p class="fw-bold">${report.group_work || 'No'}</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-muted">People in Group</h6>
+                                        <p class="fw-bold">${report.number_of_people_in_group || 0}</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Community</h6>
+                                        <p class="fw-bold">${report.community || 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted">Sector</h6>
+                                        <p class="fw-bold">${report.sector || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <h6 class="text-muted">Rehab Assistants Assigned</h6>
+                                        ${rasHtml}
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <h6 class="text-muted">Remarks</h6>
+                                        <p class="fw-bold">${report.remark || 'No remarks'}</p>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <h6 class="text-muted">Created Date</h6>
+                                        <p class="fw-bold">${report.created_date || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        $('#reportDetails').html(html);
+                        
+                        // Show/hide approval buttons
+                        if (report.status == 1) {
+                            $('#approveReportBtn').show();
+                            $('#rejectReportBtn').show();
+                            $('#approveReportBtn').data('id', report.id);
+                            $('#rejectReportBtn').data('id', report.id);
+                        } else {
+                            $('#approveReportBtn').hide();
+                            $('#rejectReportBtn').hide();
+                        }
+                        
+                        $('#viewModal').modal('show');
+                    }
+                }
+            });
+        });
+
+        // Approve Report
+        $('#approveReportBtn').click(function() {
+            var reportId = $(this).data('id');
+            
+            Swal.fire({
+                title: 'Approve Report?',
+                text: 'This will mark the report as approved',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                confirmButtonText: 'Yes, approve it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: urls.reportApprove + reportId + '/approve/',
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        success: function(response) {
+                            if (response && response.success) {
+                                Swal.fire('Success', response.message, 'success');
+                                $('#viewModal').modal('hide');
+                                dailyReportsTable.ajax.reload();
+                                loadStats();
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        // Reject Report
+        $('#rejectReportBtn').click(function() {
+            var reportId = $(this).data('id');
+            $('#rejectModal').modal('show');
+            $('#confirmRejectBtn').data('id', reportId);
+        });
+
+        $('#confirmRejectBtn').click(function() {
+            var reportId = $(this).data('id');
+            var reason = $('#rejectReason').val();
+            
+            if (!reason.trim()) {
+                Swal.fire('Error', 'Please provide a reason for rejection', 'error');
+                return;
+            }
+            
+            $.ajax({
+                url: urls.reportReject + reportId + '/reject/',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ reason: reason }),
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                beforeSend: function() {
+                    $('#confirmRejectBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Rejecting...');
+                },
+                success: function(response) {
+                    if (response && response.success) {
+                        Swal.fire('Success', response.message, 'success');
+                        $('#rejectModal').modal('hide');
+                        $('#viewModal').modal('hide');
+                        dailyReportsTable.ajax.reload();
+                        loadStats();
+                    }
+                },
+                complete: function() {
+                    $('#confirmRejectBtn').prop('disabled', false).html('Reject Report');
+                    $('#rejectReason').val('');
+                }
+            });
+        });
+
+        // Delete Report
+        var deleteReportId = null;
+        $(document).on('click', '.delete-report', function() {
+            deleteReportId = $(this).data('id');
+            $('#deleteReason').val('');
+            $('#deleteModal').modal('show');
+        });
+
+        $('#confirmDeleteBtn').click(function() {
+            var reason = $('#deleteReason').val();
+            if (!reason.trim()) {
+                Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+                return;
+            }
+            
+            $.ajax({
+                url: urls.reportDelete + deleteReportId + '/delete/',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ reason: reason }),
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                beforeSend: function() {
+                    $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+                },
+                success: function(response) {
+                    if (response && response.success) {
+                        Swal.fire('Success', response.message, 'success');
+                        $('#deleteModal').modal('hide');
+                        dailyReportsTable.ajax.reload();
+                        loadStats();
+                    }
+                },
+                complete: function() {
+                    $('#confirmDeleteBtn').prop('disabled', false).html('Delete');
+                }
+            });
+        });
+
+        // Submit Report button in view modal
+        $(document).on('click', '.submit-report', function() {
+            var reportId = $(this).data('id');
+            
+            Swal.fire({
+                title: 'Submit Report?',
+                text: 'Once submitted, this report will be sent for approval',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                confirmButtonText: 'Yes, submit it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: urls.reportSubmit + reportId + '/submit/',
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        success: function(response) {
+                            if (response && response.success) {
+                                Swal.fire('Success', response.message, 'success');
+                                dailyReportsTable.ajax.reload();
+                                loadStats();
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        // Print Report
+        $('#printReportBtn').click(function() {
+            var printContent = $('#reportDetails').html();
+            var originalContent = $('body').html();
+            
+            $('body').html(`
+                <div class="container mt-5">
+                    <h2 class="text-center mb-4">Daily Report</h2>
+                    ${printContent}
+                    <div class="mt-5 text-center">
+                        <small>Printed on: ${new Date().toLocaleString()}</small>
+                    </div>
+                </div>
+            `);
+            
+            window.print();
+            $('body').html(originalContent);
+            $('#viewModal').modal('show');
+        });
+
+        // CSRF Token helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Initialize
+        loadStats();
+        loadPOFilter();
+    });
+
+</script>
+
+{% endblock %}

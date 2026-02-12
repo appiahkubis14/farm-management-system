@@ -734,63 +734,21 @@ class SaveRehabAssignmentView(View):
         return JsonResponse(status)
 
 # ============== 6. GROWTH MONITORING ==============
-
+# ============== 6. GROWTH MONITORING ==============
 @method_decorator(csrf_exempt, name='dispatch')
 class GrowthMonitoringView(View):
-    """Handle growth monitoring (POST only)"""
+    """Handle growth monitoring - supports single and batch POST"""
+    
     def post(self, request):
         try:
             data = json.loads(request.body)
-            status = {"status": False, "message": "", "data": {}}
             
-            uid = data.get("uid", "")
-            
-            # Check if UID already exists
-            if uid and GrowthMonitoringModel.objects.filter(uid=uid).exists():
-                status["message"] = "Growth monitoring record with this UID already exists"
-                status["data"] = {"uid": uid}
-                return JsonResponse(status)
-            
-            # Get agent
-            agent = None
-            agent_id = data.get("agent", "")
-            if agent_id:
-                try:
-                    agent = staffTbl.objects.get(id=agent_id)
-                except:
-                    pass
-            
-            # Get district (from agent's project)
-            district = None
-            project = None
-            if agent and agent.projectTbl_foreignkey:
-                project = agent.projectTbl_foreignkey
-                if project.district:
-                    district = project.district
-            
-            # Create growth monitoring record
-            record = GrowthMonitoringModel.objects.create(
-                uid=uid,
-                plant_uid=data.get("plant_uid", ""),
-                number_of_leaves=data.get("number_of_leaves", 0),
-                height=data.get("height", 0.0),
-                stem_size=data.get("stem_size", 0.0),
-                leaf_color=data.get("leaf_color", ""),
-                date=data.get("date"),
-                lat=data.get("lat", 0.0),
-                lng=data.get("lng", 0.0),
-                agent=agent,
-                projectTbl_foreignkey=project,
-                district=district
-            )
-            
-            status["status"] = True
-            status["message"] = "Growth monitoring record saved successfully"
-            status["data"] = {
-                "uid": record.uid,
-                "id": record.id
-            }
-            
+            # Check if it's a batch request (list) or single request (dict)
+            if isinstance(data, list):
+                return self.handle_batch_request(data)
+            else:
+                return self.handle_single_request(data)
+                
         except json.JSONDecodeError:
             return JsonResponse({
                 "status": False,
@@ -798,13 +756,214 @@ class GrowthMonitoringView(View):
                 "data": {}
             }, status=400)
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             return JsonResponse({
                 "status": False,
                 "message": f"Error occurred: {str(e)}",
                 "data": {}
             }, status=500)
-            
+    
+    def handle_single_request(self, data):
+        """Handle single growth monitoring record"""
+        status = {"status": False, "message": "", "data": {}}
+        
+        uid = data.get("uid", "")
+        
+        # Check if UID already exists
+        if uid and GrowthMonitoringModel.objects.filter(uid=uid).exists():
+            status["message"] = "Growth monitoring record with this UID already exists"
+            status["data"] = {"uid": uid}
+            return JsonResponse(status)
+        
+        # Get or create QR code based on plant_uid
+        plant_uid = data.get("plant_uid", "")
+        qr_code = None
+        
+        if plant_uid:
+            # Try to find existing QR code with this UID
+            try:
+                qr_code = QR_CodeModel.objects.get(uid=plant_uid)
+            except QR_CodeModel.DoesNotExist:
+                # Create new QR code if it doesn't exist
+                qr_code = QR_CodeModel.objects.create(
+                    uid=plant_uid,
+                    qr_code=None  # QR image will be generated later if needed
+                )
+        
+        # Get agent
+        agent = None
+        agent_id = data.get("agent", "")
+        if agent_id:
+            try:
+                agent = staffTbl.objects.get(id=agent_id)
+            except staffTbl.DoesNotExist:
+                pass
+        
+        # Get district and project from agent
+        district = None
+        project = None
+        if agent and agent.projectTbl_foreignkey:
+            project = agent.projectTbl_foreignkey
+            if project.district:
+                district = project.district
+        
+        # Create growth monitoring record
+        record = GrowthMonitoringModel.objects.create(
+            uid=uid or None,
+            plant_uid=plant_uid,
+            number_of_leaves=data.get("number_of_leaves", 0),
+            height=data.get("height", 0.0),
+            stem_size=data.get("stem_size", 0.0),
+            leaf_color=data.get("leaf_color", ""),
+            date=data.get("date", timezone.now().date()),
+            lat=data.get("lat", 0.0),
+            lng=data.get("lng", 0.0),
+            qr_code=qr_code,
+            agent=agent,
+            projectTbl_foreignkey=project,
+            district=district
+        )
+        
+        status["status"] = True
+        status["message"] = "Growth monitoring record saved successfully"
+        status["data"] = self.format_record_response(record, agent, district, project, qr_code)
+        
         return JsonResponse(status)
+    
+    def handle_batch_request(self, data_list):
+        """Handle multiple growth monitoring records"""
+        status = {"status": False, "message": "", "data": {}}
+        
+        successful_records = []
+        failed_records = []
+        
+        # Cache for QR codes and agents to avoid repeated DB queries
+        qr_code_cache = {}
+        agent_cache = {}
+        
+        for index, record_data in enumerate(data_list):
+            try:
+                uid = record_data.get("uid", "")
+                
+                # Skip if UID already exists
+                if uid and GrowthMonitoringModel.objects.filter(uid=uid).exists():
+                    failed_records.append({
+                        "index": index,
+                        "plant_uid": record_data.get("plant_uid", ""),
+                        "error": f"Record with UID {uid} already exists"
+                    })
+                    continue
+                
+                # Get or create QR code based on plant_uid
+                plant_uid = record_data.get("plant_uid", "")
+                qr_code = None
+                
+                if plant_uid:
+                    if plant_uid in qr_code_cache:
+                        qr_code = qr_code_cache[plant_uid]
+                    else:
+                        try:
+                            qr_code = QR_CodeModel.objects.get(uid=plant_uid)
+                        except QR_CodeModel.DoesNotExist:
+                            qr_code = QR_CodeModel.objects.create(
+                                uid=plant_uid,
+                                qr_code=None
+                            )
+                        qr_code_cache[plant_uid] = qr_code
+                
+                # Get agent
+                agent = None
+                agent_id = record_data.get("agent", "")
+                if agent_id:
+                    if agent_id in agent_cache:
+                        agent = agent_cache[agent_id]
+                    else:
+                        try:
+                            agent = staffTbl.objects.get(id=agent_id)
+                            agent_cache[agent_id] = agent
+                        except staffTbl.DoesNotExist:
+                            pass
+                
+                # Get district and project from agent
+                district = None
+                project = None
+                if agent and agent.projectTbl_foreignkey:
+                    project = agent.projectTbl_foreignkey
+                    if project.district:
+                        district = project.district
+                
+                # Create growth monitoring record
+                record = GrowthMonitoringModel.objects.create(
+                    uid=uid or None,
+                    plant_uid=plant_uid,
+                    number_of_leaves=record_data.get("number_of_leaves", 0),
+                    height=record_data.get("height", 0.0),
+                    stem_size=record_data.get("stem_size", 0.0),
+                    leaf_color=record_data.get("leaf_color", ""),
+                    date=record_data.get("date", timezone.now().date()),
+                    lat=record_data.get("lat", 0.0),
+                    lng=record_data.get("lng", 0.0),
+                    qr_code=qr_code,
+                    agent=agent,
+                    projectTbl_foreignkey=project,
+                    district=district
+                )
+                
+                successful_records.append(self.format_record_response(
+                    record, agent, district, project, qr_code
+                ))
+                
+            except Exception as e:
+                failed_records.append({
+                    "index": index,
+                    "plant_uid": record_data.get("plant_uid", ""),
+                    "error": str(e)
+                })
+        
+        status["status"] = True
+        status["message"] = f"Processed {len(successful_records)} records, {len(failed_records)} failed"
+        status["data"] = {
+            "successful": successful_records,
+            "failed": failed_records,
+            "total_processed": len(successful_records) + len(failed_records),
+            "success_count": len(successful_records),
+            "failure_count": len(failed_records)
+        }
+        
+        return JsonResponse(status)
+    
+    def format_record_response(self, record, agent, district, project, qr_code):
+        """Format record data for response"""
+        return {
+            "id": record.id,
+            "uid": record.uid,
+            "plant_uid": record.plant_uid,
+            "qr_code": {
+                "id": qr_code.id if qr_code else None,
+                "uid": qr_code.uid if qr_code else None,
+                "qr_image_url": qr_code.qr_code.url if qr_code and qr_code.qr_code else None
+            },
+            "measurements": {
+                "height": record.height,
+                "leaves": record.number_of_leaves,
+                "stem_size": record.stem_size,
+                "leaf_color": record.leaf_color
+            },
+            "location": {
+                "lat": record.lat,
+                "lng": record.lng
+            },
+            "agent": {
+                "id": agent.id if agent else None,
+                "name": f"{agent.first_name} {agent.last_name}".strip() if agent else None
+            },
+            "district": district.name if district else None,
+            "project": project.name if project else None,
+            # "date": record.date.strftime('%Y-%m-%d'),
+            # "created_at": record.created_date.strftime('%Y-%m-%d %H:%M:%S') if hasattr(record, 'created_date') else None
+        }
+    
 
 # ============== 7. OUTBREAK FARM ==============
 
@@ -1609,6 +1768,7 @@ class FetchRehabAssistantsView(View):
                     "secondary_phone": person.secondary_phone_number,
                     "momo_number": person.momo_number,
                     "momo_name": person.momo_name,
+                    "staff_id": person.staff_id,
                     "belongs_to_ra": person.belongs_to_ra,
                     "personnel_type": person.personnel_type,
                     "district_id": person.district.id if person.district else None,

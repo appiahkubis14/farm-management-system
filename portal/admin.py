@@ -2026,8 +2026,9 @@ class GrowthMonitoringAdmin(ImportExportModelAdmin):
     
     def qr_code_link(self, obj):
         if obj.qr_code:
-            url = reverse('admin:portal_qr_codemodel_change', args=[obj.qr_code.id])
-            return format_html('<a href="{}">{}</a>', url, obj.qr_code.uid)
+            pass
+            # url = reverse('admin:portal_qr_codemodel_change', args=[obj.qr_code.id])
+            # return format_html('<a href="{}">{}</a>', url, obj.qr_code.uid)
         return "-"
     qr_code_link.short_description = "QR Code"
     

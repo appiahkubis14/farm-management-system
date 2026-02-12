@@ -7,6 +7,10 @@ def index(request):
     return render(request, 'pages/index.html')
 
 
+def landing(request):
+    return render(request, 'portal/landing.html')
+
+
 import logging
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout

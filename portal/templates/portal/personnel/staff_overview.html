@@ -1,0 +1,1294 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<br>
+<!-- Page Header -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">Staff Overview Management</h4>
+            <div class="page-title-right">
+                <button class="btn btn-primary" id="addStaffBtn">
+                    <i class="fas fa-plus me-1"></i> Add New Staff
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Stats Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Staff</span>
+                        <h4 class="mb-3" id="totalStaff">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-users text-primary h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Rehab Assistants</span>
+                        <h4 class="mb-3" id="totalRAs">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-friends text-success h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Rehab Technicians</span>
+                        <h4 class="mb-3" id="totalRTs">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-cog text-info h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">POs & Coordinators</span>
+                        <h4 class="mb-3" id="totalPOs">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-tie text-warning h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Main Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="staffTable" class="table table-striped datatable" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Staff ID</th>
+                                <th>Full Name</th>
+                                <th>Gender</th>
+                                <th>Age</th>
+                                <th>Contact</th>
+                                <th>Personnel Type</th>
+                                <th>District</th>
+                                <th>Date Joined</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Staff Modal -->
+<div class="modal fade" id="staffModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTitle">Add New Staff</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="staffForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="staffId" name="staff_id">
+                    <input type="hidden" id="uid" name="uid">
+                    
+                    <!-- Personal Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="first_name" class="form-label">First Name *</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                    <div class="invalid-feedback">Please enter first name</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="surname" class="form-label">Surname *</label>
+                                    <input type="text" class="form-control" id="surname" name="surname" required>
+                                    <div class="invalid-feedback">Please enter surname</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="other_names" class="form-label">Other Names</label>
+                                    <input type="text" class="form-control" id="other_names" name="other_names">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label for="gender" class="form-label">Gender *</label>
+                                    <select class="form-select" id="gender" name="gender" required>
+                                        <option value="">Select Gender</option>
+                                        {% for value, label in genders %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select gender</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="date_of_birth" class="form-label">Date of Birth *</label>
+                                    <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" required>
+                                    <div class="invalid-feedback">Please enter date of birth</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="marital_status" class="form-label">Marital Status</label>
+                                    <select class="form-select" id="marital_status" name="marital_status">
+                                        <option value="">Select Marital Status</option>
+                                        {% for value, label in marital_statuses %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="education_level" class="form-label">Education Level</label>
+                                    <select class="form-select" id="education_level" name="education_level">
+                                        <option value="">Select Education Level</option>
+                                        {% for value, label in education_levels %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-address-book me-2"></i>Contact Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="primary_phone_number" class="form-label">Primary Phone *</label>
+                                    <input type="tel" class="form-control" id="primary_phone_number" name="primary_phone_number" required>
+                                    <div class="invalid-feedback">Please enter primary phone number</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="secondary_phone_number" class="form-label">Secondary Phone</label>
+                                    <input type="tel" class="form-control" id="secondary_phone_number" name="secondary_phone_number">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" name="email">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="address" class="form-label">Residential Address *</label>
+                                    <textarea class="form-control" id="address" name="address" rows="2" required></textarea>
+                                    <div class="invalid-feedback">Please enter address</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="community_id" class="form-label">Community</label>
+                                    <select class="form-select" id="community_id" name="community_id">
+                                        <option value="">Select Community</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="district_id" class="form-label">District *</label>
+                                    <select class="form-select" id="district_id" name="district_id">
+                                        <option value="">Select District</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select district</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="project_id" class="form-label">Project</label>
+                                    <select class="form-select" id="project_id" name="project_id">
+                                        <option value="">Select Project</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Emergency Contact -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-phone-alt me-2"></i>Emergency Contact</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergency_contact_person" class="form-label">Contact Person *</label>
+                                    <input type="text" class="form-control" id="emergency_contact_person" name="emergency_contact_person" required>
+                                    <div class="invalid-feedback">Please enter emergency contact person</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergency_contact_number" class="form-label">Contact Number *</label>
+                                    <input type="tel" class="form-control" id="emergency_contact_number" name="emergency_contact_number" required>
+                                    <div class="invalid-feedback">Please enter emergency contact number</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Identification -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Identification</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_type" class="form-label">ID Type *</label>
+                                    <select class="form-select" id="id_type" name="id_type" required>
+                                        <option value="">Select ID Type</option>
+                                        {% for value, label in id_types %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select ID type</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_number" class="form-label">ID Number *</label>
+                                    <input type="text" class="form-control" id="id_number" name="id_number" required>
+                                    <div class="invalid-feedback">Please enter ID number</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="SSNIT_number" class="form-label">SSNIT Number</label>
+                                    <input type="text" class="form-control" id="SSNIT_number" name="SSNIT_number">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employment Details -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-briefcase me-2"></i>Employment Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="personnel_type" class="form-label">Personnel Type *</label>
+                                    <select class="form-select" id="personnel_type" name="personnel_type" required>
+                                        <option value="">Select Personnel Type</option>
+                                        {% for value, label in personnel_types %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select personnel type</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="date_joined" class="form-label">Date Joined *</label>
+                                    <input type="date" class="form-control" id="date_joined" name="date_joined" required>
+                                    <div class="invalid-feedback">Please enter date joined</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="supervisor_id" class="form-label">Supervisor ID</label>
+                                    <input type="text" class="form-control" id="supervisor_id" name="supervisor_id">
+                                    <small class="text-muted">Staff ID of supervisor</small>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="belongs_to_ra" class="form-label">Belongs to RA</label>
+                                    <input type="text" class="form-control" id="belongs_to_ra" name="belongs_to_ra">
+                                    <small class="text-muted">For RA supervisors</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="staff_id_display" class="form-label">Staff ID</label>
+                                    <input type="text" class="form-control" id="staff_id_display" readonly disabled>
+                                    <small class="text-muted">Auto-generated on save</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-money-bill me-2"></i>Payment Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="bank_name" class="form-label">Bank Name</label>
+                                    <select class="form-select" id="bank_name" name="bank_name">
+                                        <option value="">Select Bank</option>
+                                        {% for value, label in banks %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="bank_branch" class="form-label">Bank Branch</label>
+                                    <input type="text" class="form-control" id="bank_branch" name="bank_branch">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="account_number" class="form-label">Account Number</label>
+                                    <input type="text" class="form-control" id="account_number" name="account_number">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="momo_number" class="form-label">Mobile Money Number</label>
+                                    <input type="tel" class="form-control" id="momo_number" name="momo_number">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="momo_name" class="form-label">Mobile Money Name</label>
+                                    <input type="text" class="form-control" id="momo_name" name="momo_name">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="ezwich_number" class="form-label">E-Zwich Number</label>
+                                    <input type="text" class="form-control" id="ezwich_number" name="ezwich_number">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="bank_id" class="form-label">Bank ID</label>
+                                    <input type="text" class="form-control" id="bank_id" name="bank_id">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="branch_id" class="form-label">Branch ID</label>
+                                    <input type="text" class="form-control" id="branch_id" name="branch_id">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="sort_code" class="form-label">Sort Code</label>
+                                    <input type="text" class="form-control" id="sort_code" name="sort_code">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Document Upload Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-file me-2"></i>Documents</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Document upload functionality requires file input handling. Currently displaying as placeholder.
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_image_front" class="form-label">ID Card (Front)</label>
+                                    <input type="file" class="form-control" id="id_image_front" name="id_image_front" accept="image/*" disabled>
+                                    <small class="text-muted">File upload disabled in this version</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_image_back" class="form-label">ID Card (Back)</label>
+                                    <input type="file" class="form-control" id="id_image_back" name="id_image_back" accept="image/*" disabled>
+                                    <small class="text-muted">File upload disabled in this version</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Staff</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this staff member? This action cannot be undone.</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Staff Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Staff Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="staffDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="printStaffBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                <button type="button" class="btn btn-warning" id="editFromViewBtn">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    
+    // Initialize DataTable
+    var staffTable = $('#staffTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'staff_list_api' %}",
+            type: "GET"
+        },
+        columns: [
+            { 
+                data: 'staff_id',
+                render: function(data) {
+                    return data || '<span class="text-muted">N/A</span>';
+                }
+            },
+            { 
+                data: 'full_name',
+                render: function(data, type, row) {
+                    return `<a href="#" class="view-staff-link" data-id="${row.id}">${data}</a>`;
+                }
+            },
+            { data: 'gender' },
+            { 
+                data: 'age',
+                render: function(data) {
+                    return data || '<span class="text-muted">N/A</span>';
+                }
+            },
+            { 
+                data: 'contact',
+                render: function(data) {
+                    return data || '<span class="text-muted">N/A</span>';
+                }
+            },
+            { 
+                data: 'personnel_type',
+                render: function(data) {
+                    if (data === 'Rehab Assistant') {
+                        return '<span class="badge bg-success">' + data + '</span>';
+                    } else if (data === 'Rehab Technician') {
+                        return '<span class="badge bg-info">' + data + '</span>';
+                    } else if (data === 'Project Officer') {
+                        return '<span class="badge bg-primary">' + data + '</span>';
+                    } else if (data === 'Project Coordinator') {
+                        return '<span class="badge bg-warning">' + data + '</span>';
+                    } else if (data === 'Regional Manager') {
+                        return '<span class="badge bg-danger">' + data + '</span>';
+                    } else if (data === 'Admin') {
+                        return '<span class="badge bg-dark">' + data + '</span>';
+                    }
+                    return data;
+                }
+            },
+            { data: 'district' },
+            { 
+                data: 'date_joined',
+                render: function(data) {
+                    if (data) {
+                        var date = new Date(data);
+                        return date.toLocaleDateString();
+                    }
+                    return '<span class="text-muted">N/A</span>';
+                }
+            },
+            { 
+                data: 'status',
+                render: function(data) {
+                    var badgeClass = 'bg-success';
+                    if (data === 'Inactive') badgeClass = 'bg-secondary';
+                    else if (data === 'On Leave') badgeClass = 'bg-warning';
+                    else if (data === 'Terminated') badgeClass = 'bg-danger';
+                    else if (data === 'Suspended') badgeClass = 'bg-dark';
+                    
+                    return '<span class="badge ' + badgeClass + '">' + (data || 'Active') + '</span>';
+                }
+            },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-staff" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary edit-staff" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger delete-staff" data-id="${data}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        responsive: true,
+        order: [[1, 'asc']],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: "copy",
+                text: '<i class="fas fa-copy"></i> Copy',
+                className: "btn btn-sm btn-outline-secondary",
+            },
+            {
+                extend: "csv",
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                className: "btn btn-sm btn-outline-success",
+            },
+            {
+                extend: "excel",
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                className: "btn btn-sm btn-outline-primary",
+            },
+            {
+                extend: "pdf",
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                className: "btn btn-sm btn-outline-danger",
+            },
+            {
+                extend: "print",
+                text: '<i class="fas fa-print"></i> Print',
+                className: "btn btn-sm btn-outline-info",
+            }
+        ],
+        language: {
+            emptyTable: "No staff members found",
+            zeroRecords: "No matching staff found"
+        }
+    });
+
+    // Load stats
+    function loadStats() {
+        $.ajax({
+            url: "{% url 'staff_list_api' %}",
+            type: "GET",
+            data: { draw: 1, start: 0, length: 1000 },
+            success: function(response) {
+                var data = response.data || [];
+                var total = data.length;
+                var ras = data.filter(s => s.personnel_type === 'Rehab Assistant').length;
+                var rts = data.filter(s => s.personnel_type === 'Rehab Technician').length;
+                var pos = data.filter(s => s.personnel_type === 'Project Officer' || s.personnel_type === 'Project Coordinator').length;
+                
+                $('#totalStaff').text(total);
+                $('#totalRAs').text(ras);
+                $('#totalRTs').text(rts);
+                $('#totalPOs').text(pos);
+            },
+            error: function() {
+                $('#totalStaff').text('0');
+                $('#totalRAs').text('0');
+                $('#totalRTs').text('0');
+                $('#totalPOs').text('0');
+            }
+        });
+    }
+
+    // Load districts
+    function loadDistricts(selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_districts' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $districtSelect = $('#district_id');
+                    $districtSelect.empty().append('<option value="">Select District</option>');
+                    
+                    response.data.forEach(function(district) {
+                        var selected = (selectedId && district.id == selectedId) ? 'selected' : '';
+                        $districtSelect.append(`<option value="${district.id}" ${selected}>${district.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+
+    // Load communities by district
+    function loadCommunities(districtId, selectedId = null) {
+        if (!districtId) {
+            $('#community_id').empty().append('<option value="">Select Community</option>');
+            return;
+        }
+        
+        $.ajax({
+            url: "{% url 'get_communities' %}",
+            type: "GET",
+            data: { district_id: districtId },
+            success: function(response) {
+                if (response.success) {
+                    var $communitySelect = $('#community_id');
+                    $communitySelect.empty().append('<option value="">Select Community</option>');
+                    
+                    response.data.forEach(function(community) {
+                        var selected = (selectedId && community.id == selectedId) ? 'selected' : '';
+                        $communitySelect.append(`<option value="${community.id}" ${selected}>${community.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+
+    // Load projects
+    function loadProjects(selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_projects' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $projectSelect = $('#project_id');
+                    $projectSelect.empty().append('<option value="">Select Project</option>');
+                    
+                    response.data.forEach(function(project) {
+                        var selected = (selectedId && project.id == selectedId) ? 'selected' : '';
+                        $projectSelect.append(`<option value="${project.id}" ${selected}>${project.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+
+    // District change event
+    $('#district_id').on('change', function() {
+        var districtId = $(this).val();
+        loadCommunities(districtId);
+    });
+
+    // Add Staff Button
+    $('#addStaffBtn').click(function() {
+        $('#staffForm')[0].reset();
+        $('#staffForm').removeClass('was-validated');
+        $('#modalTitle').text('Add New Staff');
+        $('#staffId').val('');
+        $('#staff_id_display').val('');
+        loadDistricts();
+        loadCommunities(null);
+        loadProjects();
+        $('#staffModal').modal('show');
+    });
+
+    // Form Submission
+    $('#staffForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        var formData = {
+            first_name: $('#first_name').val(),
+            surname: $('#surname').val(),
+            other_names: $('#other_names').val(),
+            gender: $('#gender').val(),
+            date_of_birth: $('#date_of_birth').val(),
+            primary_phone_number: $('#primary_phone_number').val(),
+            secondary_phone_number: $('#secondary_phone_number').val(),
+            momo_number: $('#momo_number').val(),
+            momo_name: $('#momo_name').val(),
+            belongs_to_ra: $('#belongs_to_ra').val(),
+            emergency_contact_person: $('#emergency_contact_person').val(),
+            emergency_contact_number: $('#emergency_contact_number').val(),
+            id_type: $('#id_type').val(),
+            id_number: $('#id_number').val(),
+            address: $('#address').val(),
+            community_id: $('#community_id').val() || null,
+            district_id: $('#district_id').val(),
+            project_id: $('#project_id').val() || null,
+            education_level: $('#education_level').val(),
+            marital_status: $('#marital_status').val(),
+            bank_id: $('#bank_id').val(),
+            bank_name: $('#bank_name').val(),
+            bank_branch: $('#bank_branch').val(),
+            account_number: $('#account_number').val(),
+            branch_id: $('#branch_id').val(),
+            SSNIT_number: $('#SSNIT_number').val(),
+            sort_code: $('#sort_code').val(),
+            personnel_type: $('#personnel_type').val(),
+            ezwich_number: $('#ezwich_number').val(),
+            date_joined: $('#date_joined').val(),
+            supervisor_id: $('#supervisor_id').val(),
+            email: $('#email').val(),
+            uid: $('#uid').val() || null
+        };
+        
+        var staffId = $('#staffId').val();
+        var url = staffId ? "{% url 'update_staff' 0 %}".replace('0', staffId) : "{% url 'create_staff' %}";
+        var method = 'POST';
+        
+        $.ajax({
+            url: url,
+            type: method,
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#saveBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#staffModal').modal('hide');
+                    staffTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#saveBtn').prop('disabled', false).html('Save Staff');
+            }
+        });
+    });
+
+    // Edit Staff
+    $(document).on('click', '.edit-staff', function() {
+        var staffId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'staff_detail_api' 0 %}".replace('0', staffId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var staff = response.data;
+                    
+                    // Load dependent data first
+                    loadDistricts(staff.district_id);
+                    
+                    if (staff.district_id) {
+                        loadCommunities(staff.district_id, staff.community_id);
+                    } else {
+                        loadCommunities(null);
+                    }
+                    
+                    loadProjects(staff.project_id);
+                    
+                    // Populate form fields
+                    $('#staffId').val(staff.id);
+                    $('#uid').val(staff.uid);
+                    $('#first_name').val(staff.first_name);
+                    $('#surname').val(staff.surname);
+                    $('#other_names').val(staff.other_names);
+                    $('#gender').val(staff.gender);
+                    $('#date_of_birth').val(staff.date_of_birth);
+                    $('#primary_phone_number').val(staff.primary_phone_number);
+                    $('#secondary_phone_number').val(staff.secondary_phone_number);
+                    $('#momo_number').val(staff.momo_number);
+                    $('#momo_name').val(staff.momo_name);
+                    $('#belongs_to_ra').val(staff.belongs_to_ra);
+                    $('#emergency_contact_person').val(staff.emergency_contact_person);
+                    $('#emergency_contact_number').val(staff.emergency_contact_number);
+                    $('#id_type').val(staff.id_type);
+                    $('#id_number').val(staff.id_number);
+                    $('#address').val(staff.address);
+                    $('#education_level').val(staff.education_level);
+                    $('#marital_status').val(staff.marital_status);
+                    $('#bank_id').val(staff.bank_id);
+                    $('#bank_name').val(staff.bank_name);
+                    $('#bank_branch').val(staff.bank_branch);
+                    $('#account_number').val(staff.account_number);
+                    $('#branch_id').val(staff.branch_id);
+                    $('#SSNIT_number').val(staff.SSNIT_number);
+                    $('#sort_code').val(staff.sort_code);
+                    $('#personnel_type').val(staff.personnel_type);
+                    $('#ezwich_number').val(staff.ezwich_number);
+                    $('#date_joined').val(staff.date_joined);
+                    $('#supervisor_id').val(staff.supervisor_id);
+                    $('#email').val(staff.email);
+                    $('#staff_id_display').val(staff.staff_id);
+                    
+                    $('#modalTitle').text('Edit Staff');
+                    $('#staffModal').modal('show');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to load staff details', 'error');
+            }
+        });
+    });
+
+    // View Staff
+    $(document).on('click', '.view-staff, .view-staff-link', function(e) {
+        if (e) e.preventDefault();
+        var staffId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'staff_detail_api' 0 %}".replace('0', staffId),
+            type: 'GET',
+            beforeSend: function() {
+                $('#staffDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading staff details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var staff = response.data;
+                    
+                    var statusBadge = 'bg-success';
+                    if (staff.status === 'Inactive') statusBadge = 'bg-secondary';
+                    else if (staff.status === 'On Leave') statusBadge = 'bg-warning';
+                    else if (staff.status === 'Terminated') statusBadge = 'bg-danger';
+                    else if (staff.status === 'Suspended') statusBadge = 'bg-dark';
+                    
+                    var personnelTypeBadge = 'bg-secondary';
+                    if (staff.personnel_type === 'Rehab Assistant') personnelTypeBadge = 'bg-success';
+                    else if (staff.personnel_type === 'Rehab Technician') personnelTypeBadge = 'bg-info';
+                    else if (staff.personnel_type === 'Project Officer') personnelTypeBadge = 'bg-primary';
+                    else if (staff.personnel_type === 'Project Coordinator') personnelTypeBadge = 'bg-warning';
+                    else if (staff.personnel_type === 'Regional Manager') personnelTypeBadge = 'bg-danger';
+                    else if (staff.personnel_type === 'Admin') personnelTypeBadge = 'bg-dark';
+                    
+                    var html = `
+                        <div class="staff-details">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Personal Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Full Name:</th>
+                                            <td><strong>${staff.full_name || ''}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Staff ID:</th>
+                                            <td><span class="badge bg-dark">${staff.staff_id || 'N/A'}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Personnel Type:</th>
+                                            <td><span class="badge ${personnelTypeBadge}">${staff.personnel_type || 'N/A'}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Gender:</th>
+                                            <td>${staff.gender || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Date of Birth:</th>
+                                            <td>${staff.date_of_birth || 'N/A'} ${staff.age ? '(' + staff.age + ' years)' : ''}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Marital Status:</th>
+                                            <td>${staff.marital_status || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Education Level:</th>
+                                            <td>${staff.education_level || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Contact Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Primary Phone:</th>
+                                            <td>${staff.primary_phone_number || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Secondary Phone:</th>
+                                            <td>${staff.secondary_phone_number || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Email:</th>
+                                            <td>${staff.email || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Address:</th>
+                                            <td>${staff.address || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>District:</th>
+                                            <td>${staff.district || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Community:</th>
+                                            <td>${staff.community || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Emergency Contact</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Contact Person:</th>
+                                            <td>${staff.emergency_contact_person || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Contact Number:</th>
+                                            <td>${staff.emergency_contact_number || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Identification</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">ID Type:</th>
+                                            <td>${staff.id_type || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>ID Number:</th>
+                                            <td>${staff.id_number || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>SSNIT Number:</th>
+                                            <td>${staff.SSNIT_number || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Employment Details</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Date Joined:</th>
+                                            <td>${staff.date_joined || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Supervisor ID:</th>
+                                            <td>${staff.supervisor_id || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Belongs to RA:</th>
+                                            <td>${staff.belongs_to_ra || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Payment Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Bank Name:</th>
+                                            <td>${staff.bank_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Account Number:</th>
+                                            <td>${staff.account_number || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Mobile Money:</th>
+                                            <td>${staff.momo_number || 'N/A'} ${staff.momo_name ? '(' + staff.momo_name + ')' : ''}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>E-Zwich:</th>
+                                            <td>${staff.ezwich_number || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">System Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="20%">Created Date:</th>
+                                            <td>${staff.created_date || 'N/A'}</td>
+                                            <th width="20%">UID:</th>
+                                            <td><small>${staff.uid || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $('#staffDetails').html(html);
+                    
+                    // Store staff ID for edit button
+                    $('#editFromViewBtn').data('id', staff.id);
+                    $('#viewModal').modal('show');
+                } else {
+                    $('#staffDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load staff details: ${response.message}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#staffDetails').html(`
+                    <div class="alert alert-danger">
+                        Failed to load staff details
+                    </div>
+                `);
+            }
+        });
+    });
+
+    // Edit from view modal
+    $('#editFromViewBtn').click(function() {
+        var staffId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        
+        // Trigger edit button
+        $(`.edit-staff[data-id="${staffId}"]`).click();
+    });
+
+    // Delete Staff
+    var deleteStaffId = null;
+    $(document).on('click', '.delete-staff', function() {
+        deleteStaffId = $(this).data('id');
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+
+    $('#confirmDeleteBtn').click(function() {
+        var reason = $('#deleteReason').val();
+        if (!reason.trim()) {
+            Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: "{% url 'delete_staff' 0 %}".replace('0', deleteStaffId),
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ reason: reason }),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deleteModal').modal('hide');
+                    staffTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmDeleteBtn').prop('disabled', false).html('Delete');
+            }
+        });
+    });
+
+    // Print Staff Details
+    $('#printStaffBtn').click(function() {
+        var printContent = $('#staffDetails').html();
+        var originalContent = $('body').html();
+        
+        $('body').html(`
+            <div class="container mt-5">
+                <h2 class="text-center mb-4">Staff Details Report</h2>
+                <div class="text-center mb-4">
+                    <h5>Staff Information</h5>
+                </div>
+                ${printContent}
+                <div class="mt-5 text-center">
+                    <small>Printed on: ${new Date().toLocaleString()}</small>
+                </div>
+            </div>
+        `);
+        
+        window.print();
+        $('body').html(originalContent);
+        
+        // Re-initialize DataTable after print
+        location.reload();
+    });
+
+    // CSRF Token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Set default date_joined to today
+    $('#date_joined').val(new Date().toISOString().split('T')[0]);
+
+    // Initial load
+    loadStats();
+    loadDistricts();
+    loadProjects();
+});
+</script>
+
+<style>
+.card-h-30 {
+    min-height: 120px;
+}
+
+.staff-details h5 {
+    color: #495057;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.staff-details table {
+    margin-bottom: 0;
+}
+
+.staff-details th {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.staff-details td {
+    font-size: 0.95rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.view-staff-link {
+    color: #0d6efd;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.view-staff-link:hover {
+    text-decoration: underline;
+}
+
+@media print {
+    .modal-header, .modal-footer, .btn, .btn-group {
+        display: none !important;
+    }
+    
+    .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .modal-body {
+        padding: 0 !important;
+    }
+    
+    .staff-details {
+        font-size: 12pt;
+    }
+}
+</style>
+{% endblock %}

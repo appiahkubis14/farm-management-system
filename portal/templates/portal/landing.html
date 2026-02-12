@@ -1,0 +1,736 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACL · Intelligent Farm Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- custom green/white theme -->
+    <style>
+        :root {
+            --primary: #0f6e4aff;      /* deep farm green */
+            --primary-dark: #0a5238ff;
+            --primary-light: #c8e9c5;  /* soft mint */
+            --secondary: #f5f7f2;      /* off-white */
+            --accent: #fbbf24;         /* harvest gold (subtle) */
+            --cream: #fefef7;
+            --leaf: #2b9348;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #1e2e1c;
+        }
+
+        .gradient-text {
+            background: linear-gradient(145deg, #0f6e4a 0%, #44a572 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .green-glow {
+            box-shadow: 0 8px 24px rgba(15, 110, 74, 0.12);
+        }
+
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 24px 32px -8px rgba(15, 110, 74, 0.16);
+        }
+
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .feature-badge {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-badge::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(to bottom right, rgba(255,255,255,0) 45%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 55%);
+            transform: rotate(25deg);
+            animation: shimmer 3.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(25deg); }
+            100% { transform: translateX(100%) rotate(25deg); }
+        }
+
+        /* Dotted pattern for capabilities section */
+        .bg-dotted-pattern {
+            background-image: radial-gradient(circle at 15px 15px, #0f6e4a 1.5px, transparent 1.5px);
+            background-size: 30px 30px;
+            background-color: #fafdfa;
+        }
+
+        .leaf-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5c-6 0-12 4-14 10-2-6-8-10-14-10 0 8 4 16 10 20-6 4-10 12-10 20 8 0 16-4 20-10 4 6 12 10 20 10 0-8-4-16-10-20 6-4 10-12 10-20-8 0-16 4-20 10-4-6-12-10-20-10z' fill='%230f6e4a' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+        }
+
+        .stat-card {
+            backdrop-filter: blur(6px);
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(15,110,74,0.1);
+        }
+
+        .module-card {
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
+        }
+        .module-card:hover {
+            border-bottom-color: #0f6e4a;
+        }
+
+        .process-node {
+            background: linear-gradient(145deg, #ffffff, #f8fbf8);
+            border: 1px solid #e2f0e2;
+        }
+
+        .bg-farm-pattern {
+            background-color: #fafdfa;
+            background-image: radial-gradient(circle at 10% 20%, rgba(15,110,74,0.03) 0%, transparent 30%);
+        }
+
+        .nav-link {
+            position: relative;
+            color: #2d3e2b;
+            font-weight: 500;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0%;
+            height: 2px;
+            background: #0f6e4a;
+            transition: width 0.25s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: #0f6e4a;
+            color: white;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background: #0a5238;
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px -8px rgba(15,110,74,0.4);
+        }
+
+        .btn-outline {
+            border: 2px solid #0f6e4a;
+            color: #0f6e4a;
+            background: transparent;
+        }
+        .btn-outline:hover {
+            background: #0f6e4a;
+            color: white;
+        }
+
+        .farm-hero {
+            background: linear-gradient(112deg, #f3faf0 0%, #e5f2e0 100%);
+        }
+
+        .stats-counter {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #0f6e4a;
+            line-height: 1.1;
+        }
+
+        /* Hero background image */
+        .hero-bg {
+            position: relative;
+            background-image: url('/static/assets/images/landing/5.jpg');
+            background-size: cover;
+            background-position: center 30%;
+            background-attachment: fixed;
+        }
+        
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* background: linear-gradient(105deg, rgba(184, 181, 181, 0.95) 0%, rgba(206, 203, 203, 0.85) 45%, rgba(15,110,74,0.25) 100%); */
+        }
+
+        /* Insights background image */
+        .insights-bg {
+            position: relative;
+            background-image: url('/static/assets/images/landing/2.webp');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        .insights-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* background: rgba(153, 148, 148, 0.88); */
+        }
+
+        /* Equipment/IoT background image */
+        .equipment-bg {
+            position: relative;
+            background-image: url('https://images.unsplash.com/photo-1581092335871-4c7cb6c8c4c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        .equipment-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(15,110,74,0.92) 0%, rgba(15,110,74,0.88) 100%);
+        }
+
+        /* Ensure relative positioning for sections with backgrounds */
+        .relative-bg-section {
+            position: relative;
+            isolation: isolate;
+        }
+
+        .bg-content {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Dotted pattern for capabilities - stronger visibility */
+        .bg-dotted-green {
+            background-color: #f6fcf6;
+            background-image: radial-gradient(#0f6e4a 1.2px, transparent 1.2px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="antialiased bg-white leaf-pattern">
+
+    <!-- ============ HEADER ============ -->
+    <header class="bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-50 border-b border-green-100">
+        <div class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <!-- brand -->
+            <div class="flex items-center space-x-2">
+                <span class="logo-lg"><img src="/static/assets/images/logo-dark-afarinick.png" alt="logo" style="width: 60px; height: 60px;"><span></span></span>
+                <!-- <img src="" alt=""> -->
+                
+                <div>
+                    <!-- <span class="text-2xl font-bold tracking-tight text-green-800">ACL</span> -->
+                    <!-- <span class="text-sm font-light text-green-600 block -mt-1">farm intelligence</span> -->
+                </div>
+            </div>
+
+            <!-- nav -->
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="#home" class="nav-link">Home</a>
+                <a href="#capabilities" class="nav-link">Capabilities</a>
+                <a href="#modules" class="nav-link">Modules</a>
+                <a href="#traceability" class="nav-link">Traceability</a>
+                <a href="#insights" class="nav-link">Insights</a>
+                <a href="#process" class="nav-link">Workflow</a>
+                <a href="#contact" class="nav-link">Contact</a>
+            </nav>
+
+            <!-- cta -->
+            <div class="flex items-center space-x-3">
+                <a href="/dashboard/" class="hidden sm:flex items-center space-x-2 btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition">
+                    <i class="fas fa-tractor"></i>
+                    <span>Farm Dashboard</span>
+                </a>
+                <button class="p-2 rounded-full bg-green-50 text-green-700 border border-green-200 md:hidden">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============ HERO (with background image) ============ -->
+    <section id="home" class="relative-bg-section hero-bg overflow-hidden pt-20 pb-28 md:pt-28 md:pb-36">
+        <!-- overlay gradient -->
+        <div class="hero-overlay"></div>
+        
+        <div class="container mx-auto px-6 relative z-20">
+            <div class="flex flex-col lg:flex-row items-center gap-12">
+                <!-- left -->
+                <div class="flex-1 animate__animated animate__fadeInLeft">
+                    <div class="inline-flex items-center bg-green-100/90 backdrop-blur-sm text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-6 border border-green-200 shadow-sm">
+                        <span class="w-2 h-2 bg-green-600 rounded-full mr-2 animate-pulse"></span>
+                        end-to-end digital agriculture
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 leading-tight drop-shadow-sm">
+                        <span class="gradient-text">Intelligent</span> management<br>for modern cocoa farms
+                    </h1>
+                    <p class="text-lg text-gray-700 mt-6 max-w-xl leading-relaxed font-medium drop-shadow-sm bg-white/30 backdrop-blur-sm p-4 rounded-xl">
+                        From polygon mapping and IoT soil sensors to RA payroll and outbreak tracking — ACL unifies 
+                        every layer of farm operations into a single, geospatial command center.
+                    </p>
+                    <div class="flex flex-wrap gap-4 mt-8">
+                        <a href="#modules" class="btn-primary px-8 py-3.5 rounded-xl font-semibold shadow-lg flex items-center gap-2">
+                            Explore platform <i class="fas fa-arrow-right text-sm"></i>
+                        </a>
+                        <a href="#traceability" class="btn-outline px-8 py-3.5 rounded-xl font-semibold flex items-center gap-2 bg-white/90 backdrop-blur-sm border-2">
+                            <i class="fas fa-qrcode"></i> QR traceability
+                        </a>
+                    </div>
+                    <div class="flex items-center gap-6 mt-10 text-sm text-gray-700 bg-white/40 backdrop-blur-sm p-3 rounded-2xl">
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-700"></i> 12+ districts</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-700"></i> 4,200+ mapped farms</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-700"></i> realtime IoT</div>
+                    </div>
+                </div>
+                <!-- right visual: green abstract / farm elements -->
+                <div class="flex-1 relative animate__animated animate__fadeInRight">
+                    <div class="relative w-full h-80 md:h-96">
+                        <!-- decorative hex/leaf -->
+                        <div class="absolute top-10 right-10 w-40 h-40 bg-green-200/50 rounded-full blur-3xl"></div>
+                        <div class="absolute bottom-0 left-10 w-60 h-60 bg-green-100/70 rounded-full blur-3xl"></div>
+                        <div class="relative bg-white/80 backdrop-blur-md border border-green-200/60 rounded-3xl shadow-2xl p-6 flex items-center justify-center h-full">
+                            <div class="grid grid-cols-2 gap-4 w-full">
+                                <div class="space-y-3">
+                                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-3 green-glow">
+                                        <i class="fas fa-draw-polygon text-green-700 text-xl"></i>
+                                        <span class="font-medium text-sm">polygon mapping</span>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-3">
+                                        <i class="fas fa-water text-green-600 text-xl"></i>
+                                        <span class="font-medium text-sm">irrigation AI</span>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-3">
+                                        <i class="fas fa-chart-line text-green-600 text-xl"></i>
+                                        <span class="font-medium text-sm">growth monitoring</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-3 mt-6">
+                                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-3">
+                                        <i class="fas fa-leaf text-green-700 text-xl"></i>
+                                        <span class="font-medium text-sm">outbreak control</span>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-3">
+                                        <i class="fas fa-truck text-green-600 text-xl"></i>
+                                        <span class="font-medium text-sm">contractor cert</span>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-3 bg-green-50 border-green-200">
+                                        <i class="fas fa-credit-card text-green-700 text-xl"></i>
+                                        <span class="font-medium text-sm">RA payment</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- floating badge -->
+                            <div class="absolute -top-6 -right-6 bg-green-600 text-white px-5 py-3 rounded-2xl shadow-lg flex items-center gap-2 floating">
+                                <i class="fas fa-satellite-dish"></i>
+                                <span class="font-bold">GIS native</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-green-300 via-green-500 to-green-300 z-30"></div>
+    </section>
+
+    <!-- ============ TRUST / STATS ============ -->
+    <section class="py-16 bg-white border-y border-green-100">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div class="stat-card p-6 rounded-2xl">
+                    <div class="stats-counter">48k+</div>
+                    <p class="text-gray-600 font-medium">hectares managed</p>
+                </div>
+                <div class="stat-card p-6 rounded-2xl">
+                    <div class="stats-counter">1,200+</div>
+                    <p class="text-gray-600 font-medium">rehab assistants</p>
+                </div>
+                <div class="stat-card p-6 rounded-2xl">
+                    <div class="stats-counter">34k</div>
+                    <p class="text-gray-600 font-medium">daily reports</p>
+                </div>
+                <div class="stat-card p-6 rounded-2xl">
+                    <div class="stats-counter">99.7%</div>
+                    <p class="text-gray-600 font-medium">traceability</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ CAPABILITIES (with dotted background) ============ -->
+    <section id="capabilities" class="py-20 bg-dotted-green relative-bg-section">
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="text-center max-w-2xl mx-auto mb-14">
+                <span class="bg-green-100 text-green-800 px-4 py-1.5 rounded-full text-sm font-semibold">unified platform</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mt-5 mb-4">Everything from soil to salary</h2>
+                <p class="text-gray-600 text-lg">ACL fuses geospatial farm data, personnel management, IoT telemetry, and smart payments — designed for Africa's cocoa sector.</p>
+            </div>
+
+            <!-- capability grid - mapping to model domains -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
+                <!-- 1. Farm mapping & GIS -->
+                <div class="bg-white p-7 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition card-hover">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-700 text-2xl mb-5">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Precision mapping</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">MultiPolygon farm boundaries, district & region geometries, community operational areas. Validate area with GPS accuracy.</p>
+                    <span class="inline-block mt-4 text-xs bg-green-50 px-3 py-1.5 rounded-full text-green-700 font-mono">mappedFarms · Farms · GEOS</span>
+                </div>
+                <!-- 2. Personnel & RA management -->
+                <div class="bg-white p-7 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition card-hover">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-700 text-2xl mb-5">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">RA workforce hub</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Onboard rehab assistants, technicians, assign to POs, track ID, SSNIT, bank details, consent forms, daily attendance.</p>
+                    <span class="inline-block mt-4 text-xs bg-green-50 px-3 py-1.5 rounded-full text-green-700 font-mono">Personnel · Assignment · staff</span>
+                </div>
+                <!-- 3. Daily & activity reporting -->
+                <div class="bg-white p-7 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition card-hover">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-700 text-2xl mb-5">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Activity & job orders</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Main/sub activities, area covered, group work, job order generation. Link farms, sectors, and contractor certificates.</p>
+                    <span class="inline-block mt-4 text-xs bg-green-50 px-3 py-1.5 rounded-full text-green-700 font-mono">DailyReporting · Joborder · Activities</span>
+                </div>
+                <!-- 4. IoT & growth monitoring -->
+                <div class="bg-white p-7 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition card-hover">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-700 text-2xl mb-5">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">IoT field intelligence</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Soil moisture, temperature, humidity sensors; plant growth monitoring (leaves, height, stem), irrigation tracking.</p>
+                    <span class="inline-block mt-4 text-xs bg-green-50 px-3 py-1.5 rounded-full text-green-700 font-mono">Device · SensorReading · GrowthMonitoring</span>
+                </div>
+                <!-- 5. Outbreak & compliance -->
+                <div class="bg-white p-7 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition card-hover">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-700 text-2xl mb-5">
+                        <i class="fas fa-biohazard"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Outbreak & treatment</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Disease surveillance, farm severity mapping, treatment records, contractor certificate verification.</p>
+                    <span class="inline-block mt-4 text-xs bg-green-50 px-3 py-1.5 rounded-full text-green-700 font-mono">OutbreakFarm · ContractorCertificate</span>
+                </div>
+                <!-- 6. Payment & payroll engine -->
+                <div class="bg-white p-7 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition card-hover">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-700 text-2xl mb-5">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">RA performance pay</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Payment reports by week/month, detailed per diem, Po number, bank/MoMo, achievement-based salary.</p>
+                    <span class="inline-block mt-4 text-xs bg-green-50 px-3 py-1.5 rounded-full text-green-700 font-mono">PaymentReport · DetailedPayment</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ MODULES DEEP DIVE ============ -->
+    <section id="modules" class="py-20 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col lg:flex-row gap-16 items-center">
+                <div class="lg:w-1/2">
+                    <span class="text-sm font-bold uppercase tracking-wider text-green-600">complete modular suite</span>
+                    <h2 class="text-3xl lg:text-4xl font-bold text-gray-800 mt-2 mb-6">One system, twelve specialised modules</h2>
+                    <p class="text-gray-600 mb-8 text-lg">From QR-coded traceability to equipment assignment and video verification — each module reflects a real operational layer.</p>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-600"></i> QR Code engine</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-600"></i> Farm validation</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-600"></i> PO route monitoring</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-600"></i> Contractor certification</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-600"></i> Equipment lifecycle</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-600"></i> Issue & feedback</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-600"></i> Calculated area</div>
+                        <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-600"></i> Video verification</div>
+                    </div>
+                    <a href="#" class="inline-flex items-center mt-8 text-green-700 font-semibold hover:underline gap-1">
+                        Explore module matrix <i class="fas fa-arrow-right text-xs"></i>
+                    </a>
+                </div>
+                <div class="lg:w-1/2 bg-green-50/70 p-6 rounded-3xl border border-green-100">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white p-5 rounded-xl shadow-sm flex flex-col items-start module-card">
+                            <i class="fas fa-qrcode text-2xl text-green-700 mb-2"></i>
+                            <span class="font-semibold">Dynamic QR</span>
+                            <span class="text-xs text-gray-500">UID: ACL-2025-7K3M-9P2T</span>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm flex flex-col items-start module-card">
+                            <i class="fas fa-video text-2xl text-green-700 mb-2"></i>
+                            <span class="font-semibold">VerifyRecord</span>
+                            <span class="text-xs text-gray-500">video · farmRef</span>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm flex flex-col items-start module-card">
+                            <i class="fas fa-tools text-2xl text-green-700 mb-2"></i>
+                            <span class="font-semibold">Equipment</span>
+                            <span class="text-xs text-gray-500">assignment · status</span>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm flex flex-col items-start module-card">
+                            <i class="fas fa-hand-holding-usd text-2xl text-green-700 mb-2"></i>
+                            <span class="font-semibold">Payroll</span>
+                            <span class="text-xs text-gray-500">detailedPayment</span>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm flex flex-col items-start module-card col-span-2">
+                            <i class="fas fa-sliders-h text-2xl text-green-700 mb-2"></i>
+                            <span class="font-semibold">Menu & role engine</span>
+                            <span class="text-xs text-gray-500">MenuItem · Group · sidebar config</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ TRACEABILITY SHOWCASE (QR) ============ -->
+    <section id="traceability" class="py-20 bg-gradient-to-br from-green-800 to-green-900 text-white">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col lg:flex-row items-center gap-14">
+                <div class="lg:w-5/12 flex justify-center">
+                    <div class="relative">
+                        <div class="w-64 h-64 bg-white/10 backdrop-blur-md rounded-3xl border border-white/30 flex items-center justify-center p-4">
+                            <div class="bg-white p-3 rounded-2xl shadow-2xl">
+                                <i class="fas fa-qrcode text-green-800 text-8xl"></i>
+                            </div>
+                        </div>
+                        <div class="absolute -top-6 -right-6 bg-amber-300 text-green-900 px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                            ACL-2025-1A2B
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:w-7/12">
+                    <span class="bg-white/20 px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide">QR · unique farm identity</span>
+                    <h2 class="text-3xl lg:text-4xl font-bold mt-6 mb-4">Every farm, every plant, every asset — digitally twin</h2>
+                    <p class="text-white/80 text-lg mb-6">We generate cryptographically random UIDs (prefix ACL-YYYY-XXXX-XXXX) bound to farm records, growth points, and verification history. Printable, scannable, permanent.</p>
+                    <div class="flex flex-wrap gap-4 text-sm">
+                        <div class="bg-white/10 px-5 py-3 rounded-xl flex items-center gap-2"><i class="fas fa-check-circle"></i> Farmreference</div>
+                        <div class="bg-white/10 px-5 py-3 rounded-xl flex items-center gap-2"><i class="fas fa-check-circle"></i> Plant UID</div>
+                        <div class="bg-white/10 px-5 py-3 rounded-xl flex items-center gap-2"><i class="fas fa-check-circle"></i> Equipment tag</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ INSIGHTS + GIS (with background image) ============ -->
+    <section id="insights" class="relative-bg-section insights-bg py-20">
+        <div class="insights-overlay"></div>
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="bg-green-600/90 text-white px-5 py-2 rounded-full text-sm font-semibold tracking-wide inline-block mb-4">GEOSPATIAL CORE</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-white">Geospatial at its core</h2>
+                <p class="text-gray-700 mt-3 text-lg font-medium bg-white/60 backdrop-blur-sm p-3 rounded-xl">Every model speaks geometry. Region, district, farm polygons, route points — analytics you can see on the map.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="border border-green-100 p-7 rounded-2xl shadow-sm bg-white/90 backdrop-blur-sm card-hover">
+                    <i class="fas fa-chart-pie text-3xl text-green-700 mb-4"></i>
+                    <h4 class="font-bold text-gray-800 mb-2">Calculated area</h4>
+                    <p class="text-gray-600 text-sm">Precise hectare values from GEOS multipolygons, saved to CalculatedArea model.</p>
+                </div>
+                <div class="border border-green-100 p-7 rounded-2xl shadow-sm bg-white/90 backdrop-blur-sm card-hover">
+                    <i class="fas fa-route text-3xl text-green-700 mb-4"></i>
+                    <h4 class="font-bold text-gray-800 mb-2">PO route monitoring</h4>
+                    <p class="text-gray-600 text-sm">Lat/lng + accuracy, auto geom generation. Track extension officers in real time.</p>
+                </div>
+                <div class="border border-green-100 p-7 rounded-2xl shadow-sm bg-white/90 backdrop-blur-sm card-hover">
+                    <i class="fas fa-layer-group text-3xl text-green-700 mb-4"></i>
+                    <h4 class="font-bold text-gray-800 mb-2">District/region ops</h4>
+                    <p class="text-gray-600 text-sm">Shape_area, reg_code, district boundaries — all loaded and queryable.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ IMPLEMENTATION PROCESS ============ -->
+    <section id="process" class="py-20 bg-green-50/80">
+        <div class="container mx-auto px-6">
+            <div class="text-center max-w-2xl mx-auto mb-14">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800">From field to finance</h2>
+                <p class="text-gray-600 mt-2">Five integrated steps — no data silos.</p>
+            </div>
+            <div class="relative flex flex-col md:flex-row justify-center items-start md:items-stretch gap-6">
+                <!-- step 1 -->
+                <div class="process-node bg-white p-6 rounded-2xl flex-1 text-center shadow-md">
+                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mx-auto mb-4">1</div>
+                    <h4 class="font-bold text-gray-800">Farm mapping</h4>
+                    <p class="text-gray-500 text-sm mt-2">GPS polygon capture, farm_reference generation, community linkage</p>
+                </div>
+                <div class="flex items-center text-green-600 text-2xl md:mt-8"><i class="fas fa-arrow-right hidden md:block"></i></div>
+                <!-- step 2 -->
+                <div class="process-node bg-white p-6 rounded-2xl flex-1 text-center shadow-md">
+                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mx-auto mb-4">2</div>
+                    <h4 class="font-bold text-gray-800">RA assignment</h4>
+                    <p class="text-gray-500 text-sm mt-2">Personnel profile, district assignment, project linking</p>
+                </div>
+                <div class="flex items-center text-green-600 text-2xl md:mt-8"><i class="fas fa-arrow-right hidden md:block"></i></div>
+                <!-- step 3 -->
+                <div class="process-node bg-white p-6 rounded-2xl flex-1 text-center shadow-md">
+                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mx-auto mb-4">3</div>
+                    <h4 class="font-bold text-gray-800">Daily activity</h4>
+                    <p class="text-gray-500 text-sm mt-2">Area covered, group size, sub-activity, job order creation</p>
+                </div>
+                <div class="flex items-center text-green-600 text-2xl md:mt-8"><i class="fas fa-arrow-right hidden md:block"></i></div>
+                <!-- step 4 -->
+                <div class="process-node bg-white p-6 rounded-2xl flex-1 text-center shadow-md">
+                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mx-auto mb-4">4</div>
+                    <h4 class="font-bold text-gray-800">Verification</h4>
+                    <p class="text-gray-500 text-sm mt-2">Farm validation, video proof, QR scan, outbreak control</p>
+                </div>
+                <div class="flex items-center text-green-600 text-2xl md:mt-8"><i class="fas fa-arrow-right hidden md:block"></i></div>
+                <!-- step 5 -->
+                <div class="process-node bg-white p-6 rounded-2xl flex-1 text-center shadow-md">
+                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xl font-bold mx-auto mb-4">5</div>
+                    <h4 class="font-bold text-gray-800">Payment & reporting</h4>
+                    <p class="text-gray-500 text-sm mt-2">Weekly/monthly payroll, detailed reports, analytics</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ EQUIPMENT + IOT TEASER (with background image) ============ -->
+    <section class="relative-bg-section equipment-bg py-16">
+        <div class="equipment-overlay"></div>
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="bg-gradient-to-r from-green-600/20 to-green-500/20 backdrop-blur-sm rounded-3xl p-10 md:p-14 text-white relative overflow-hidden border border-white/20">
+                <div class="absolute -right-10 -top-10 w-60 h-60 bg-white/20 rounded-full blur-3xl"></div>
+                <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div>
+                        <h3 class="text-2xl md:text-3xl font-bold mb-3 drop-shadow-lg">Smart equipment & sensor network</h3>
+                        <p class="text-white/95 max-w-xl text-lg drop-shadow-md font-medium">Manage serial numbers, device status, assignment history. Real-time soil raw values, battery, signal strength.</p>
+                        <div class="flex mt-6 space-x-4 flex-wrap gap-2">
+                            <span class="bg-white/30 backdrop-blur-sm px-4 py-2 rounded-full text-sm border border-white/40">EquipmentModel</span>
+                            <span class="bg-white/30 backdrop-blur-sm px-4 py-2 rounded-full text-sm border border-white/40">SensorReading</span>
+                            <span class="bg-white/30 backdrop-blur-sm px-4 py-2 rounded-full text-sm border border-white/40">Device</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 text-6xl opacity-95">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <i class="fas fa-bluetooth-b"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ FINAL CTA ============ -->
+    <!-- <section class="py-20 bg-white">
+        <div class="container mx-auto px-6 text-center max-w-4xl">
+            <span class="bg-green-100 text-green-700 px-5 py-2 rounded-full text-sm font-semibold">ready for season 2025</span>
+            <h2 class="text-4xl md:text-5xl font-extrabold text-gray-800 mt-6 mb-4">Deploy ACL in your district</h2>
+            <p class="text-gray-600 text-xl mb-10">Used by leading cocoa institutions, from farm mapping to last-mile payroll.</p>
+            <div class="flex flex-col sm:flex-row gap-5 justify-center">
+                <a href="#" class="btn-primary px-10 py-4 rounded-xl text-lg font-semibold shadow-xl flex items-center justify-center gap-2">
+                    <i class="fas fa-calendar-check"></i> Schedule demo
+                </a>
+                <a href="#" class="bg-white border-2 border-green-600 text-green-700 px-10 py-4 rounded-xl text-lg font-semibold hover:bg-green-50 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-file-alt"></i> View case study
+                </a>
+            </div>
+        </div>
+    </section> -->
+
+    <!-- ============ FOOTER ============ -->
+    <footer id="contact" class="bg-gray-900 text-white pt-16 pb-10">
+        <div class="container mx-auto px-6">
+            <div class="grid md:grid-cols-4 gap-10">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <span class="logo-lg"><img src="/static/assets/images/logo-dark-afarinick.png" alt="logo" style="width: 60px; height: 60px;"><span></span></span>
+                <!-- <img src="" alt=""> -->
+                
+                        <!-- <span class="text-xl font-bold">ACL</span> -->
+                    </div>
+                    <p class="text-gray-400 text-sm leading-relaxed">Intelligent farm management · traceability · GIS · IoT.</p>
+                    <div class="flex space-x-4 mt-5">
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-github"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h5 class="font-semibold text-white mb-4">Modules</h5>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="#" class="hover:text-green-300">Farm mapping</a></li>
+                        <li><a href="#" class="hover:text-green-300">Rehab assistant</a></li>
+                        <li><a href="#" class="hover:text-green-300">Activity reporting</a></li>
+                        <li><a href="#" class="hover:text-green-300">Outbreak & treatment</a></li>
+                        <li><a href="#" class="hover:text-green-300">Payroll</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold text-white mb-4">Resources</h5>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="#" class="hover:text-green-300">API docs</a></li>
+                        <li><a href="#" class="hover:text-green-300">Farmers' portal</a></li>
+                        <li><a href="#" class="hover:text-green-300">Training</a></li>
+                        <li><a href="#" class="hover:text-green-300">System status</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold text-white mb-4">Contact</h5>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li class="flex items-start gap-2"><i class="fas fa-map-marker-alt mt-1 text-green-400"></i> Cocoa House, Accra</li>
+                        <li class="flex items-start gap-2"><i class="fas fa-envelope mt-1 text-green-400"></i> farm@acl.ag</li>
+                        <li class="flex items-start gap-2"><i class="fas fa-phone mt-1 text-green-400"></i> +233 30 200 4455</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-14 pt-8 text-sm text-gray-500 flex flex-col md:flex-row justify-between">
+                <span>© 2025 ACL — Advanced Crop Logistics. All rights reserved.</span>
+                <span class="flex gap-6 mt-3 md:mt-0">
+                    <a href="#" class="hover:text-white">Privacy</a>
+                    <a href="#" class="hover:text-white">Terms</a>
+                    <a href="#" class="hover:text-white">Cookies</a>
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- simple scroll animation -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('a[href^="#"]');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -473,8 +473,8 @@
 <div class="container-fluid py-3">
     <!-- Generator Section - Compact -->
     <div class="qr-generator-wrapper mb-3">
-        <div class="row align-items-center">
-            <div class="col-lg-8">
+        <div class="" style="display: flex;justify-content: space-between;">
+            <div class="">
                 <h5 class="mb-1">
                     <i class="fas fa-magic me-2"></i>
                     Generate QR Codes
@@ -483,7 +483,7 @@
                     Unique identifier format: <code class="bg-dark bg-opacity-25 text-white px-2 py-1 rounded">ACL-PLT-YEAR-TIME-00001</code>
                 </p>
             </div>
-            <div class="col-lg-4">
+            <div class="">
                 <div class="quantity-input-group">
                     <input type="number" 
                            id="qrQuantity" 
@@ -502,7 +502,7 @@
     </div>
 
     <!-- Stats Cards - Compact Grid -->
-    <div class="row mb-3 g-2">
+    <!-- <div class="row mb-3 g-2">
         <div class="col-xl-3 col-md-6">
             <div class="stats-card">
                 <div class="stats-icon bg-soft-primary">
@@ -547,7 +547,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- Bulk Actions Bar -->
     <div class="bulk-actions" id="bulkActions">
@@ -604,12 +604,17 @@
                 </div>
                 
                 <!-- Page Size -->
-                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: 70px;">
+                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: 80px;">
                     <option value="8">8</option>
                     <option value="12" selected>12</option>
-                    <option value="24">24</option>
-                    <option value="48">48</option>
-                    <option value="96">96</option>
+                    <option value="24">10</option>
+                    <option value="48">50</option>
+                    <option value="96">150</option>
+                    <option value="192">300</option>
+                    <option value="384">600</option>
+                    <option value="768">1200</option>
+                    <option value="1536">2400</option>
+                    <option value="3072">4800</option>
                 </select>
             </div>
         </div>
@@ -886,7 +891,7 @@ $(document).ready(function() {
         
         let html = '';
         data.forEach(qr => {
-            const uidShort = qr.uid.length > 20 ? qr.uid.substring(0, 18) + '...' : qr.uid;
+            const uidShort = qr.uid.length > 40 ? qr.uid.substring(0, 30) + '...' : qr.uid;
             
             // Image HTML with conditional rendering - NO onerror attribute
             let imageHtml;
@@ -1362,6 +1367,8 @@ $(document).ready(function() {
             data: { page: 1, page_size: 1000 },
             success: function(response) {
                 if (response.success) {
+                    console.log('Stats loaded successfully');
+                    console.log(response);
                     $('#totalQRCodes').text(response.total_count || 0);
                     $('#totalBatchCount').text(Math.ceil((response.total_count || 0) / 10) || 0);
                     

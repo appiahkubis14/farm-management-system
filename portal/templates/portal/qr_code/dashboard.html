@@ -1,0 +1,1763 @@
+<!-- templates/growth_monitoring/dashboard.html -->
+{% extends 'web_base.html' %}
+{% load static %}
+
+
+{% block content %}
+<!-- Dashboard specific CSS -->
+<style>
+    :root {
+        --primary: #2A5C4A;
+        --primary-light: #3E7C66;
+        --secondary: #F4B942;
+        --success: #28a745;
+        --info: #17a2b8;
+        --warning: #ffc107;
+        --danger: #dc3545;
+        --dark: #343a40;
+        --light: #f8f9fa;
+    }
+
+    body {
+        background-color: #e0e2e4;
+    }
+
+    /* Dashboard Layout */
+    .dashboard-container {
+        /* padding: 20px; */
+        max-width: 2800px;
+        margin: 0 auto;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.05);
+    }
+
+    .kpi-info {
+        flex: 1;
+    }
+
+    .kpi-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2d3436;
+        line-height: 1;
+        margin-bottom: 5px;
+    }
+
+    .kpi-trend {
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: #6c757d;
+    }
+
+    .trend-up { color: #28a745; }
+    .trend-down { color: #dc3545; }
+
+    .kpi-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+    }
+
+    .icon-bg-primary { background: rgba(42, 92, 74, 0.1); color: var(--primary); }
+    .icon-bg-success { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .icon-bg-warning { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .icon-bg-info { background: rgba(23, 162, 184, 0.1); color: #17a2b8; }
+    .icon-bg-danger { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+
+    /* Main Dashboard Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    /* Map Section */
+    .map-section {
+        grid-column: span 8;
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    .map-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .map-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .map-title h5 {
+        margin: 0;
+        font-weight: 600;
+        color: #2d3436;
+    }
+
+    .map-controls {
+        display: flex;
+        gap: 10px;
+    }
+
+    .map-container {
+        height: 500px;
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Stats Cards */
+    .stats-sidebar {
+        grid-column: span 4;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    .stats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .stats-header h6 {
+        margin: 0;
+        font-weight: 600;
+        color: #2d3436;
+        font-size: 1rem;
+    }
+
+    /* Health Status */
+    .health-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #f1f3f5;
+    }
+
+    .health-indicator:last-child {
+        border-bottom: none;
+    }
+
+    .health-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .health-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .health-excellent { background: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,0.2); }
+    .health-good { background: #17a2b8; box-shadow: 0 0 0 2px rgba(23,162,184,0.2); }
+    .health-fair { background: #ffc107; box-shadow: 0 0 0 2px rgba(255,193,7,0.2); }
+    .health-poor { background: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,0.2); }
+
+    .health-percentage {
+        font-weight: 600;
+        color: #2d3436;
+    }
+
+    /* Progress Bars */
+    .progress-item {
+        margin-bottom: 15px;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 0.85rem;
+    }
+
+    .progress {
+        height: 8px;
+        background: #f1f3f5;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        background: var(--primary);
+        border-radius: 4px;
+        transition: width 0.6s ease;
+    }
+
+    /* Growth Charts */
+    .chart-card {
+        grid-column: span 6;
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+
+    /* Activity Timeline */
+    .timeline-card {
+        grid-column: span 6;
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .timeline-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 15px 0;
+        border-bottom: 1px solid #f1f3f5;
+    }
+
+    .timeline-item:last-child {
+        border-bottom: none;
+    }
+
+    .timeline-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(42, 92, 74, 0.1);
+        color: var(--primary);
+    }
+
+    .timeline-content {
+        flex: 1;
+    }
+
+    .timeline-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #2d3436;
+    }
+
+    .timeline-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    /* District Performance */
+    .district-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .district-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #f1f3f5;
+    }
+
+    .district-name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .district-rank {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: #f1f3f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #6c757d;
+    }
+
+    .district-stats {
+        text-align: right;
+    }
+
+    .district-count {
+        font-weight: 600;
+        color: #2d3436;
+    }
+
+    .district-growth {
+        font-size: 0.8rem;
+    }
+
+    /* Date Filter */
+    .date-filter {
+        background: white;
+        border-radius: 12px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .filter-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .filter-select {
+        padding: 8px 16px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        color: #495057;
+        background: white;
+        cursor: pointer;
+    }
+
+    .date-range {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .date-input {
+        padding: 8px 16px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    /* Quick Stats */
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .quick-stat-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+    }
+
+    .quick-stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .quick-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2d3436;
+        line-height: 1;
+    }
+
+    .quick-stat-unit {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-left: 2px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+        .map-section, .stats-sidebar, .chart-card, .timeline-card {
+            grid-column: span 1;
+        }
+    }
+
+    /* Loading States */
+    .loading-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 4px;
+    }
+
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Map Popup Customization */
+    .leaflet-popup-content-wrapper {
+        border-radius: 12px;
+        padding: 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .leaflet-popup-content {
+        margin: 0;
+        padding: 15px;
+        min-width: 250px;
+    }
+
+    .map-popup {
+        text-align: left;
+    }
+
+    .map-popup h6 {
+        margin: 0 0 10px 0;
+        color: #2d3436;
+        font-weight: 600;
+        border-bottom: 1px solid #f1f3f5;
+        padding-bottom: 8px;
+    }
+
+    .map-popup-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .popup-stat {
+        text-align: center;
+    }
+
+    .popup-stat-label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+
+    .popup-stat-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    /* Tooltips */
+    .custom-tooltip {
+        background: #2d3436 !important;
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Replace the map-container CSS with: */
+.map-container {
+    height: 500px;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+/* Ensure map controls are visible */
+.leaflet-control-fullscreen {
+    margin: 10px !important;
+}
+
+.leaflet-control-fullscreen a {
+    background: white !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+}
+
+.leaflet-control-scale {
+    margin-bottom: 20px !important;
+    margin-left: 20px !important;
+}
+</style>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet Heatmap -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<!-- Moment.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+<div class="dashboard-container">
+    <br>
+    
+    <!-- Header with Date Filter -->
+    <div class="date-filter">
+        <div class="filter-group">
+            <i class="fas fa-calendar-alt text-muted"></i>
+            <span class="fw-bold">Growth Monitoring Dashboard</span>
+            <span class="badge bg-success ms-2" id="liveIndicator">
+                <i class="fas fa-circle fa-beat-fade" style="font-size: 0.5rem;"></i> LIVE
+            </span>
+        </div>
+        <div class="filter-group">
+            <div class="date-range">
+                <input type="date" class="date-input" id="startDate" value="{{ start_date|default:'' }}">
+                <span>to</span>
+                <input type="date" class="date-input" id="endDate" value="{{ end_date|default:'' }}">
+            </div>
+            <!-- <select class="filter-select" id="districtFilter">
+                <option value="">All Districts</option>
+            </select> -->
+            <button class="btn btn-sm btn-primary" id="refreshDashboard">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards Grid -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-info">
+                <div class="kpi-label">Total Plants</div>
+                <div class="kpi-value" id="totalPlants">0</div>
+                <div class="kpi-trend">
+                    <span id="plantsTrend"><i class="fas fa-minus"></i> 0% vs last month</span>
+                </div>
+            </div>
+            <div class="kpi-icon icon-bg-primary">
+                <i class="fas fa-seedling"></i>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-info">
+                <div class="kpi-label">Avg. Height</div>
+                <div class="kpi-value" id="avgHeight">0<span style="font-size: 1rem;">cm</span></div>
+                <div class="kpi-trend">
+                    <span id="heightTrend"><i class="fas fa-minus"></i> 0% vs last month</span>
+                </div>
+            </div>
+            <div class="kpi-icon icon-bg-success">
+                <i class="fas fa-arrow-up"></i>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-info">
+                <div class="kpi-label">Avg. Leaves</div>
+                <div class="kpi-value" id="avgLeaves">0</div>
+                <div class="kpi-trend">
+                    <span id="leavesTrend"><i class="fas fa-minus"></i> 0% vs last month</span>
+                </div>
+            </div>
+            <div class="kpi-icon icon-bg-warning">
+                <i class="fas fa-leaf"></i>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-info">
+                <div class="kpi-label">Health Index</div>
+                <div class="kpi-value" id="healthIndex">0<span style="font-size: 1rem;">%</span></div>
+                <div class="kpi-trend">
+                    <span id="healthTrend"><i class="fas fa-minus"></i> 0% vs last month</span>
+                </div>
+            </div>
+            <div class="kpi-icon icon-bg-info">
+                <i class="fas fa-heartbeat"></i>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-info">
+                <div class="kpi-label">Measurements</div>
+                <div class="kpi-value" id="totalMeasurements">0</div>
+                <div class="kpi-trend">
+                    <span id="measurementsTrend"><i class="fas fa-minus"></i> 0% vs last month</span>
+                </div>
+            </div>
+            <div class="kpi-icon icon-bg-danger">
+                <i class="fas fa-chart-line"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+        <!-- Map Section -->
+        <div class="map-section">
+            <div class="map-header">
+                <div class="map-title">
+                    <div class="kpi-icon icon-bg-primary" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <div>
+                        <h5>Growth Monitoring Map</h5>
+                        <small class="text-muted">Real-time plant health distribution</small>
+                    </div>
+                </div>
+                <div class="map-controls">
+                    <button class="btn btn-sm btn-outline-secondary" id="zoomToFit">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="toggleHeatmap">
+                        <i class="fas fa-fire"></i>
+                    </button>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-layer-group"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="showAllPoints">All Points</a></li>
+                            <li><a class="dropdown-item" href="#" id="showHealthClusters">Health Clusters</a></li>
+                            <li><a class="dropdown-item" href="#" id="showDensity">Density Map</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div id="growthMap" class="map-container"></div>
+            
+            <!-- Map Legend -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                <div style="display: flex; gap: 20px;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #28a745; border-radius: 50%;"></span>
+                        <span style="font-size: 0.8rem;">Excellent</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #17a2b8; border-radius: 50%;"></span>
+                        <span style="font-size: 0.8rem;">Good</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #ffc107; border-radius: 50%;"></span>
+                        <span style="font-size: 0.8rem;">Fair</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #dc3545; border-radius: 50%;"></span>
+                        <span style="font-size: 0.8rem;">Poor</span>
+                    </div>
+                </div>
+                <div>
+                    <span style="font-size: 0.8rem; color: #6c757d;">
+                        <i class="fas fa-circle"></i> Size represents plant height
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Sidebar -->
+        <div class="stats-sidebar">
+            <!-- Plant Health Overview -->
+            <div class="stats-card">
+                <div class="stats-header">
+                    <h6><i class="fas fa-heartbeat me-2" style="color: var(--primary);"></i>Plant Health Overview</h6>
+                    <span class="badge bg-light text-dark" id="healthUpdateTime">Updated now</span>
+                </div>
+                <div id="healthStats">
+                    <div class="health-indicator">
+                        <div class="health-info">
+                            <span class="health-dot health-excellent"></span>
+                            <span>Excellent</span>
+                        </div>
+                        <div>
+                            <span class="health-percentage" id="excellentPercent">0%</span>
+                            <span class="text-muted ms-2" id="excellentCount">(0)</span>
+                        </div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-info">
+                            <span class="health-dot health-good"></span>
+                            <span>Good</span>
+                        </div>
+                        <div>
+                            <span class="health-percentage" id="goodPercent">0%</span>
+                            <span class="text-muted ms-2" id="goodCount">(0)</span>
+                        </div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-info">
+                            <span class="health-dot health-fair"></span>
+                            <span>Fair</span>
+                        </div>
+                        <div>
+                            <span class="health-percentage" id="fairPercent">0%</span>
+                            <span class="text-muted ms-2" id="fairCount">(0)</span>
+                        </div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-info">
+                            <span class="health-dot health-poor"></span>
+                            <span>Poor</span>
+                        </div>
+                        <div>
+                            <span class="health-percentage" id="poorPercent">0%</span>
+                            <span class="text-muted ms-2" id="poorCount">(0)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-stats">
+                    <div class="quick-stat-item">
+                        <div class="quick-stat-label">Avg Height by Health</div>
+                        <div>
+                            <span class="quick-stat-value" id="avgHeightHealthy">0</span>
+                            <span class="quick-stat-unit">cm</span>
+                        </div>
+                    </div>
+                    <div class="quick-stat-item">
+                        <div class="quick-stat-label">Avg Leaves by Health</div>
+                        <div>
+                            <span class="quick-stat-value" id="avgLeavesHealthy">0</span>
+                            <span class="quick-stat-unit"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- District Performance -->
+            <!-- <div class="stats-card">
+                <div class="stats-header">
+                    <h6><i class="fas fa-trophy me-2" style="color: var(--primary);"></i>Top Performing Districts</h6>
+                    <span class="badge bg-light text-dark">by health score</span>
+                </div>
+                <div class="district-list" id="districtPerformance">
+                   
+                </div>
+            </div> -->
+
+            <!-- Recent Activity -->
+            <div class="stats-card">
+                <div class="stats-header">
+                    <h6><i class="fas fa-clock me-2" style="color: var(--primary);"></i>Recent Measurements</h6>
+                    <span class="badge bg-light text-dark" id="activityCount">Latest</span>
+                </div>
+                <div id="recentActivity">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </div>
+
+
+        <div class="chart-card" style="grid-column: span 12; width: 100%;">
+            <div class="stats-header">
+                <div>
+                    <h6><i class="fas fa-chart-line me-2" style="color: var(--primary);"></i>Growth Trends</h6>
+                    <small class="text-muted">Average height and leaves over time</small>
+                </div>
+                <div class="filter-group">
+                    <select class="filter-select" id="trendPeriod" style="padding: 4px 12px;">
+                        <option value="7">Last 7 days</option>
+                        <option value="30" selected>Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-container" style="width: 100%; height: 400px; position: relative;">
+                <canvas id="growthTrendChart" style="width: 100% !important; height: 100% !important;"></canvas>
+            </div>
+        </div>
+        <!-- Growth Trends Chart -->
+        
+        <!-- Health Distribution Chart -->
+        <div class="chart-card">
+            <div class="stats-header">
+                <div>
+                    <h6><i class="fas fa-chart-pie me-2" style="color: var(--primary);"></i>Health Distribution</h6>
+                    <small class="text-muted">By leaf color and condition</small>
+                </div>
+                <div>
+                    <span class="badge bg-success" id="healthScore">Health Score: 0%</span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="healthDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Growth Stages -->
+        <div class="chart-card">
+            <div class="stats-header">
+                <h6><i class="fas fa-chart-bar me-2" style="color: var(--primary);"></i>Growth Stages</h6>
+            </div>
+            <div class="chart-container">
+                <canvas id="growthStagesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- <div class="chart-card">
+            <div class="stats-header">
+                <div>
+                    <h6><i class="fas fa-chart-line me-2" style="color: var(--primary);"></i>Growth Trends</h6>
+                    <small class="text-muted">Average height and leaves over time</small>
+                </div>
+                <div class="filter-group">
+                    <select class="filter-select" id="trendPeriod" style="padding: 4px 12px;">
+                        <option value="7">Last 7 days</option>
+                        <option value="30" selected>Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="growthTrendChart"></canvas>
+            </div>
+        </div> -->
+
+
+        <!-- Officer Performance -->
+        <!-- <div class="chart-card">
+            <div class="stats-header">
+                <h6><i class="fas fa-user-check me-2" style="color: var(--primary);"></i>Top Project Officers</h6>
+            </div>
+            <div style="height: 300px; overflow-y: auto;" id="officerPerformance">
+                
+            </div>
+        </div> -->
+    </div>
+
+    <!-- Insights Section -->
+    <div style="margin-top: 30px;">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <h6><i class="fas fa-lightbulb me-2" style="color: var(--primary);"></i>Insights & Recommendations</h6>
+                    </div>
+                    <div id="insights" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                        <!-- Dynamic insights -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script> -->
+
+<script>
+$(document).ready(function() {
+    // ============ GLOBAL VARIABLES ============
+    let map = null;
+    let heatLayer = null;
+    let markers = [];
+    let currentMapLayer = 'points';
+    let dashboardData = null;
+    let charts = {};
+
+    // ============ API CONFIGURATION ============
+    const API = {
+        dashboard: '/api/growth-monitoring/dashboard/',
+        map: '/api/growth-monitoring/map-data/',
+        trends: '/api/growth-monitoring/trends/',
+        districts: '/api/growth-monitoring/district-stats/'
+    };
+
+    // ============ INITIALIZATION ============
+    function init() {
+        loadDistricts();
+        initMap();
+        loadDashboardData();
+        setupEventListeners();
+    }
+
+    // ============ MAP INITIALIZATION ============
+    function initMap() {
+        if ($('#growthMap').length === 0) {
+            console.error('Map container not found!');
+            return;
+        }
+        
+        try {
+            map = L.map('growthMap', {
+                fullscreenControl: true,
+                fullscreenControlOptions: {
+                    position: 'topleft'
+                }
+            }).setView([6.5, -0.5], 7);
+            
+            // Add Fullscreen control
+            if (L.control.fullscreen) {
+                L.control.fullscreen().addTo(map);
+            }
+            
+            // Base layers
+            L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Satellite'
+    }).addTo(map);
+
+            // Scale bar
+            L.control.scale({ 
+                imperial: false, 
+                metric: true,
+                position: 'bottomleft'
+            }).addTo(map);
+
+            // Add legend
+            // addMapLegend();
+            
+            console.log('Map initialized successfully');
+        } catch (error) {
+            console.error('Map initialization error:', error);
+        }
+    }
+
+    // ============ LOAD DASHBOARD DATA ============
+    function loadDashboardData() {
+        showLoading();
+        
+        const params = {
+            start_date: $('#startDate').val(),
+            end_date: $('#endDate').val(),
+            district_id: $('#districtFilter').val()
+        };
+
+        $.ajax({
+            url: API.dashboard,
+            type: 'GET',
+            data: params,
+            success: function(response) {
+                if (response.success) {
+                    dashboardData = response.data;
+                    updateKPIs(response.data.kpis);
+                    updateHealthStats(response.data.health);
+                    updateDistrictPerformance(response.data.districts);
+                    updateRecentActivity(response.data.recent);
+                    updateOfficerPerformance(response.data.officers);
+                    updateInsights(response.data.insights);
+                    updateCharts(response.data);
+                    loadMapData(params);
+                } else {
+                    showError('Failed to load data: ' + (response.error || 'Unknown error'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Dashboard data error:', error);
+                showError('Failed to load dashboard data');
+            },
+            complete: function() {
+                hideLoading();
+            }
+        });
+    }
+
+    // ============ LOAD MAP DATA ============
+    function loadMapData(params) {
+        $.ajax({
+            url: API.map,
+            type: 'GET',
+            data: params,
+            success: function(response) {
+                if (response.success) {
+                    updateMapMarkers(response.data.points);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Map data error:', error);
+            }
+        });
+    }
+
+    // ============ UPDATE MAP MARKERS ============
+    function updateMapMarkers(points) {
+        if (!map) {
+            console.error('Map not initialized');
+            return;
+        }
+        
+        // Clear existing markers
+        markers.forEach(marker => {
+            if (map.hasLayer(marker)) {
+                map.removeLayer(marker);
+            }
+        });
+        markers = [];
+        
+        if (heatLayer && map.hasLayer(heatLayer)) {
+            map.removeLayer(heatLayer);
+            heatLayer = null;
+        }
+
+        if (!points || points.length === 0) {
+            console.log('No map points to display');
+            return;
+        }
+
+        if (currentMapLayer === 'heatmap') {
+            // Create heatmap
+            const heatData = points.map(p => [p.lat, p.lng, (p.health_score || 50) / 100]);
+            heatLayer = L.heatLayer(heatData, {
+                radius: 25,
+                blur: 15,
+                maxZoom: 10,
+                gradient: {
+                    0.2: '#17a2b8',
+                    0.4: '#ffc107',
+                    0.6: '#fd7e14',
+                    0.8: '#dc3545'
+                }
+            }).addTo(map);
+        } else {
+            // Create markers
+            points.forEach(point => {
+                if (!point.lat || !point.lng) return;
+                
+                const healthColor = getHealthColor(point.health_score);
+                const size = getMarkerSize(point.height);
+                
+                try {
+                    const marker = L.circleMarker([parseFloat(point.lat), parseFloat(point.lng)], {
+                        radius: size,
+                        fillColor: healthColor,
+                        color: '#fff',
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map);
+
+                    marker.bindPopup(createPopupContent(point));
+                    markers.push(marker);
+                } catch (e) {
+                    console.error('Error creating marker:', e);
+                }
+            });
+            
+            // Fit bounds if we have markers
+            if (markers.length > 0) {
+                try {
+                    const group = L.featureGroup(markers);
+                    map.fitBounds(group.getBounds().pad(0.1));
+                } catch (e) {
+                    console.error('Error fitting bounds:', e);
+                }
+            }
+        }
+    }
+
+    // ============ HELPER FUNCTIONS ============
+    function getHealthColor(score) {
+        if (score >= 80) return '#28a745';
+        if (score >= 60) return '#17a2b8';
+        if (score >= 40) return '#ffc107';
+        return '#dc3545';
+    }
+
+    function getMarkerSize(height) {
+        const base = 6;
+        const scale = height ? height / 50 : 1;
+        return Math.max(6, Math.min(12, base + (scale * 6)));
+    }
+
+    function createPopupContent(point) {
+        return `
+            <div class="map-popup">
+                <h6 style="margin:0 0 10px 0; color:#2d3436; font-weight:600; border-bottom:1px solid #f1f3f5; padding-bottom:8px;">
+                    Plant: ${point.plant_uid || 'N/A'}
+                </h6>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:0.7rem; color:#6c757d; text-transform:uppercase;">Height</div>
+                        <div style="font-size:1.1rem; font-weight:600; color:#2A5C4A;">${(point.height || 0).toFixed(1)}cm</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.7rem; color:#6c757d; text-transform:uppercase;">Leaves</div>
+                        <div style="font-size:1.1rem; font-weight:600; color:#2A5C4A;">${point.leaves || 0}</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.7rem; color:#6c757d; text-transform:uppercase;">Health</div>
+                        <div style="font-size:1.1rem; font-weight:600; color:#2A5C4A;">${point.health_score || 0}%</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.7rem; color:#6c757d; text-transform:uppercase;">Date</div>
+                        <div style="font-size:1.1rem; font-weight:600; color:#2A5C4A;">${point.date ? moment(point.date).format('DD/MM') : 'N/A'}</div>
+                    </div>
+                </div>
+                
+            </div>
+        `;
+    }
+
+    // ============ UPDATE KPIs ============
+    function updateKPIs(kpis) {
+        $('#totalPlants').text(kpis.total_plants || 0);
+        $('#avgHeight').text((kpis.avg_height || 0).toFixed(1));
+        $('#avgLeaves').text(Math.round(kpis.avg_leaves || 0));
+        $('#healthIndex').text(Math.round(kpis.health_index || 0));
+        $('#totalMeasurements').text(kpis.total_measurements || 0);
+        
+        // Trends
+        $('#plantsTrend').html(getTrendHtml('plants', kpis.plants_trend));
+        $('#heightTrend').html(getTrendHtml('height', kpis.height_trend));
+        $('#leavesTrend').html(getTrendHtml('leaves', kpis.leaves_trend));
+        $('#healthTrend').html(getTrendHtml('health', kpis.health_trend));
+        $('#measurementsTrend').html(getTrendHtml('measurements', kpis.measurements_trend));
+    }
+
+    function getTrendHtml(type, trend) {
+        const vs = 'vs last month';
+        if (trend > 0) {
+            return `<i class="fas fa-arrow-up trend-up"></i> +${trend}% ${vs}`;
+        } else if (trend < 0) {
+            return `<i class="fas fa-arrow-down trend-down"></i> ${trend}% ${vs}`;
+        }
+        return `<i class="fas fa-minus"></i> 0% ${vs}`;
+    }
+
+    // ============ UPDATE HEALTH STATS ============
+    function updateHealthStats(health) {
+        if (!health) return;
+        
+        $('#excellentPercent').text((health.excellent?.percent || 0) + '%');
+        $('#excellentCount').text('(' + (health.excellent?.count || 0) + ')');
+        $('#goodPercent').text((health.good?.percent || 0) + '%');
+        $('#goodCount').text('(' + (health.good?.count || 0) + ')');
+        $('#fairPercent').text((health.fair?.percent || 0) + '%');
+        $('#fairCount').text('(' + (health.fair?.count || 0) + ')');
+        $('#poorPercent').text((health.poor?.percent || 0) + '%');
+        $('#poorCount').text('(' + (health.poor?.count || 0) + ')');
+        
+        $('#avgHeightHealthy').text((health.avg_height_healthy || 0).toFixed(1));
+        $('#avgLeavesHealthy').text(Math.round(health.avg_leaves_healthy || 0));
+        $('#healthScore').text('Health Score: ' + Math.round(health.overall_score || 0) + '%');
+    }
+
+    // ============ UPDATE DISTRICT PERFORMANCE ============
+    function updateDistrictPerformance(districts) {
+        let html = '';
+        
+        if (!districts || districts.length === 0) {
+            html = '<div class="text-center p-4 text-muted">No district data available</div>';
+        } else {
+            districts.slice(0, 5).forEach((district, index) => {
+                const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : '📌'));
+                const trendIcon = district.trend > 0 ? 'up' : (district.trend < 0 ? 'down' : 'minus');
+                const trendColor = district.trend > 0 ? 'success' : (district.trend < 0 ? 'danger' : 'muted');
+                
+                html += `
+                    <div class="district-item">
+                        <div class="district-name">
+                            <span class="district-rank">${medal}</span>
+                            <div>
+                                <strong>${district.name || 'Unknown'}</strong>
+                                <div style="font-size: 0.8rem; color: #6c757d;">
+                                    <i class="fas fa-user"></i> ${district.officer_count || 0} officers
+                                </div>
+                            </div>
+                        </div>
+                        <div class="district-stats">
+                            <div class="district-count">${district.total_plants || 0} plants</div>
+                            <div class="district-growth text-${trendColor}">
+                                <i class="fas fa-arrow-${trendIcon}"></i>
+                                ${district.growth_rate || 0}%
+                            </div>
+                            <div style="font-size: 0.75rem; color: #6c757d;">
+                                Health: ${district.health_score || 0}%
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        $('#districtPerformance').html(html);
+    }
+
+    // ============ UPDATE RECENT ACTIVITY ============
+    function updateRecentActivity(activities) {
+        let html = '';
+        
+        if (!activities || activities.length === 0) {
+            html = '<div class="text-center p-4 text-muted">No recent activity</div>';
+        } else {
+            activities.slice(0, 8).forEach(activity => {
+                const timeAgo = activity.date ? moment(activity.date).fromNow() : 'N/A';
+                const healthColor = getHealthColor(activity.health_score);
+                
+                html += `
+                    <div class="timeline-item">
+                        <div class="timeline-icon">
+                            <i class="fas fa-leaf"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">${activity.plant_uid || 'Unknown Plant'}</div>
+                            <div class="timeline-meta">
+                                <span><i class="fas fa-ruler"></i> ${activity.height || 0}cm</span>
+                                <span><i class="fas fa-leaf"></i> ${activity.leaves || 0}</span>
+                                <span><i class="fas fa-user"></i> ${activity.officer || 'N/A'}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+                                <span class="badge" style="background: ${healthColor}; color: white;">
+                                    Health: ${activity.health_score || 0}%
+                                </span>
+                                <span class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="far fa-calendar"></i> ${timeAgo}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        $('#recentActivity').html(html);
+        $('#activityCount').text((activities?.length || 0) + ' records');
+    }
+
+    // ============ UPDATE OFFICER PERFORMANCE ============
+    function updateOfficerPerformance(officers) {
+        let html = '<div style="padding: 5px;">';
+        
+        if (!officers || officers.length === 0) {
+            html += '<div class="text-center p-4 text-muted">No officer data available</div>';
+        } else {
+            const maxPlants = Math.max(...officers.map(o => o.total_plants || 0), 1);
+            
+            officers.slice(0, 8).forEach((officer, index) => {
+                const progressPercent = ((officer.total_plants || 0) / maxPlants) * 100;
+                const healthBadgeColor = officer.avg_health >= 70 ? 'success' : 
+                                       (officer.avg_health >= 50 ? 'warning' : 'danger');
+                
+                html += `
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <div>
+                                <strong>${index + 1}. ${officer.name || 'Unknown'}</strong>
+                                <span class="text-muted ms-2">
+                                    <i class="fas fa-seedling"></i> ${officer.total_plants || 0} plants
+                                </span>
+                            </div>
+                            <div>
+                                <span class="badge bg-${healthBadgeColor}">
+                                    <i class="fas fa-heartbeat"></i> ${Math.round(officer.avg_health || 0)}% health
+                                </span>
+                            </div>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: ${progressPercent}%"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.75rem; color: #6c757d;">
+                            <span>
+                                <i class="fas fa-ruler"></i> Avg: ${(officer.avg_height || 0).toFixed(1)}cm | 
+                                <i class="fas fa-leaf"></i> ${Math.round(officer.avg_leaves || 0)} leaves
+                            </span>
+                            <span>
+                                <i class="fas fa-map-marker-alt"></i> ${officer.district || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        html += '</div>';
+        $('#officerPerformance').html(html);
+    }
+
+    // ============ UPDATE CHARTS ============
+    function updateCharts(data) {
+        if (data.trends) updateGrowthTrendChart(data.trends);
+        if (data.health_distribution) updateHealthDistributionChart(data.health_distribution);
+        if (data.growth_stages) updateGrowthStagesChart(data.growth_stages);
+    }
+
+    function updateGrowthTrendChart(trendData) {
+        const ctx = document.getElementById('growthTrendChart')?.getContext('2d');
+        if (!ctx) return;
+        
+        if (charts.growth) charts.growth.destroy();
+        
+        charts.growth = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trendData.labels || [],
+                datasets: [
+                    {
+                        label: 'Average Height (cm)',
+                        data: trendData.height || [],
+                        borderColor: '#2A5C4A',
+                        backgroundColor: 'rgba(42, 92, 74, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Average Leaves',
+                        data: trendData.leaves || [],
+                        borderColor: '#F4B942',
+                        backgroundColor: 'rgba(244, 185, 66, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { usePointStyle: true }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Height (cm)'
+                        },
+                        beginAtZero: true
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Number of Leaves'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function updateHealthDistributionChart(distributionData) {
+        const ctx = document.getElementById('healthDistributionChart')?.getContext('2d');
+        if (!ctx) return;
+        
+        if (charts.health) charts.health.destroy();
+        
+        charts.health = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: distributionData.labels || ['Excellent', 'Good', 'Fair', 'Poor'],
+                datasets: [{
+                    data: distributionData.values || [0, 0, 0, 0],
+                    backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#dc3545'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { usePointStyle: true }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    function updateGrowthStagesChart(stagesData) {
+        const ctx = document.getElementById('growthStagesChart')?.getContext('2d');
+        if (!ctx) return;
+        
+        if (charts.stages) charts.stages.destroy();
+        
+        charts.stages = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: stagesData.labels || ['Seedling', 'Young', 'Mature', 'Old'],
+                datasets: [{
+                    label: 'Number of Plants',
+                    data: stagesData.values || [0, 0, 0, 0],
+                    backgroundColor: [
+                        'rgba(42, 92, 74, 0.7)',
+                        'rgba(62, 124, 102, 0.7)',
+                        'rgba(82, 156, 130, 0.7)',
+                        'rgba(102, 188, 158, 0.7)'
+                    ],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { drawBorder: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // ============ UPDATE INSIGHTS ============
+    function updateInsights(insights) {
+        let html = '';
+        
+        if (!insights || insights.length === 0) {
+            html = '<div class="col-12 text-center p-4 text-muted">No insights available</div>';
+        } else {
+            insights.forEach(insight => {
+                const icon = insight.type === 'warning' ? 'exclamation-triangle' : 
+                           (insight.type === 'success' ? 'check-circle' : 'info-circle');
+                const color = insight.type === 'warning' ? 'warning' : 
+                            (insight.type === 'success' ? 'success' : 'info');
+                
+                html += `
+                    <div class="alert alert-${color} mb-0" style="border-left: 4px solid var(--bs-${color});">
+                        <div style="display: flex; align-items: start; gap: 10px;">
+                            <i class="fas fa-${icon}" style="font-size: 1.2rem;"></i>
+                            <div>
+                                <strong>${insight.title || ''}</strong>
+                                <p class="mb-1" style="font-size: 0.9rem;">${insight.message || ''}</p>
+                                ${insight.action ? `<small class="text-muted"><i class="fas fa-arrow-right"></i> ${insight.action}</small>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        $('#insights').html(html);
+    }
+
+    // ============ LOAD DISTRICTS ============
+    function loadDistricts() {
+        $.ajax({
+            url: '/api/get-districts/',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const $select = $('#districtFilter');
+                    $select.find('option:not(:first)').remove();
+                    response.data.forEach(d => {
+                        $select.append(`<option value="${d.id}">${d.name}</option>`);
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Failed to load districts:', error);
+            }
+        });
+    }
+
+    // ============ EVENT LISTENERS ============
+    function setupEventListeners() {
+        // Refresh dashboard
+        $('#refreshDashboard').click(function() {
+            loadDashboardData();
+        });
+
+        // Period change for trends
+        $('#trendPeriod').change(function() {
+            if (dashboardData) {
+                $.ajax({
+                    url: API.trends,
+                    type: 'GET',
+                    data: { 
+                        period: $(this).val(),
+                        district_id: $('#districtFilter').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            updateGrowthTrendChart(response.data);
+                        }
+                    }
+                });
+            }
+        });
+
+        // Map controls
+        $('#zoomToFit').click(function() {
+            if (markers.length > 0) {
+                try {
+                    const group = L.featureGroup(markers);
+                    map.fitBounds(group.getBounds().pad(0.1));
+                } catch (e) {
+                    console.error('Error zooming to fit:', e);
+                }
+            }
+        });
+
+        $('#toggleHeatmap').click(function() {
+            currentMapLayer = currentMapLayer === 'heatmap' ? 'points' : 'heatmap';
+            $(this).toggleClass('active');
+            $(this).toggleClass('btn-primary btn-outline-secondary');
+            loadMapData({
+                start_date: $('#startDate').val(),
+                end_date: $('#endDate').val(),
+                district_id: $('#districtFilter').val()
+            });
+        });
+
+        $('#showAllPoints').click(function(e) {
+            e.preventDefault();
+            currentMapLayer = 'points';
+            loadMapData({
+                start_date: $('#startDate').val(),
+                end_date: $('#endDate').val(),
+                district_id: $('#districtFilter').val()
+            });
+        });
+
+        $('#showDensity').click(function(e) {
+            e.preventDefault();
+            currentMapLayer = 'heatmap';
+            loadMapData({
+                start_date: $('#startDate').val(),
+                end_date: $('#endDate').val(),
+                district_id: $('#districtFilter').val()
+            });
+        });
+
+        // Date filters change
+        $('#startDate, #endDate, #districtFilter').change(function() {
+            loadDashboardData();
+        });
+
+        // Window resize handler for charts
+        let resizeTimer;
+        $(window).on('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                if (charts.growth) charts.growth.resize();
+                if (charts.health) charts.health.resize();
+                if (charts.stages) charts.stages.resize();
+            }, 250);
+        });
+    }
+
+    // ============ UTILITY FUNCTIONS ============
+    function showLoading() {
+        $('.kpi-value').addClass('loading-skeleton');
+        $('#totalPlants, #avgHeight, #avgLeaves, #healthIndex, #totalMeasurements').addClass('loading-skeleton');
+    }
+
+    function hideLoading() {
+        $('.kpi-value, #totalPlants, #avgHeight, #avgLeaves, #healthIndex, #totalMeasurements').removeClass('loading-skeleton');
+    }
+
+    function showError(message) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: message,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        } else {
+            console.error(message);
+        }
+    }
+
+    function addMapLegend() {
+        if (!map) return;
+        
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML = `
+                <div style="background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                    <strong style="display: block; margin-bottom: 8px; color: #2d3436;">Plant Health</strong>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <span style="display:inline-block; width:12px; height:12px; background:#28a745; border-radius:50%; margin-right: 8px;"></span>
+                        <span style="font-size: 0.85rem;">Excellent (80-100%)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <span style="display:inline-block; width:12px; height:12px; background:#17a2b8; border-radius:50%; margin-right: 8px;"></span>
+                        <span style="font-size: 0.85rem;">Good (60-79%)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <span style="display:inline-block; width:12px; height:12px; background:#ffc107; border-radius:50%; margin-right: 8px;"></span>
+                        <span style="font-size: 0.85rem;">Fair (40-59%)</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <span style="display:inline-block; width:12px; height:12px; background:#dc3545; border-radius:50%; margin-right: 8px;"></span>
+                        <span style="font-size: 0.85rem;">Poor (0-39%)</span>
+                    </div>
+                    <hr style="margin: 10px 0 5px 0;">
+                    <div style="font-size: 0.75rem; color: #6c757d;">
+                        <i class="fas fa-circle"></i> Size = Plant height
+                    </div>
+                </div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
+    }
+
+    // Auto-refresh every 5 minutes
+    let refreshInterval = setInterval(function() {
+        loadDashboardData();
+    }, 300000);
+
+    // Clear interval on page unload
+    $(window).on('beforeunload', function() {
+        clearInterval(refreshInterval);
+    });
+
+    // Initialize dashboard
+    init();
+});
+</script>
+
+<!-- Dashboard specific styles for loading states -->
+<style>
+    .loading-skeleton {
+        color: transparent !important;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 4px;
+    }
+    
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
+    .badge.bg-success-light {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+    
+    .fa-beat-fade {
+        animation: beat-fade 1s infinite;
+    }
+    
+    @keyframes beat-fade {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    /* Scrollbar styling */
+    .district-list::-webkit-scrollbar,
+    #recentActivity::-webkit-scrollbar,
+    #officerPerformance::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .district-list::-webkit-scrollbar-track,
+    #recentActivity::-webkit-scrollbar-track,
+    #officerPerformance::-webkit-scrollbar-track {
+        background: #f1f3f5;
+        border-radius: 3px;
+    }
+    
+    .district-list::-webkit-scrollbar-thumb,
+    #recentActivity::-webkit-scrollbar-thumb,
+    #officerPerformance::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 3px;
+    }
+    
+    .district-list::-webkit-scrollbar-thumb:hover,
+    #recentActivity::-webkit-scrollbar-thumb:hover,
+    #officerPerformance::-webkit-scrollbar-thumb:hover {
+        background: #a0aec0;
+    }
+</style>
+{% endblock %}

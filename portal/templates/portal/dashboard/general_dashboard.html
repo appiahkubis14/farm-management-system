@@ -1,0 +1,1230 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+
+
+{% block content %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<!-- ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<!-- Moment.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+<!-- FullCalendar -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+
+<div class="container-fluid">
+    <!-- Welcome Header -->
+    <!-- <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <h2 class="fw-bold mb-0">Welcome back, {{ request.user.first_name }}!</h2>
+                    <p class="text-muted mt-1">
+                        <i class="fas fa-calendar-alt me-2"></i>{{ current_date }}
+                        <span class="mx-2">|</span>
+                        <i class="fas fa-clock me-2"></i>{{ current_time }}
+                    </p>
+                </div>
+                <div class="mt-2 mt-sm-0">
+                    <button class="btn btn-primary me-2" id="refreshDashboardBtn">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    </button>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-download me-2"></i>Export Report
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="exportPDF"><i class="fas fa-file-pdf me-2 text-danger"></i>PDF</a></li>
+                            <li><a class="dropdown-item" href="#" id="exportExcel"><i class="fas fa-file-excel me-2 text-success"></i>Excel</a></li>
+                            <li><a class="dropdown-item" href="#" id="exportPrint"><i class="fas fa-print me-2 text-primary"></i>Print</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> -->
+    <br>
+
+    <!-- Key Performance Indicators (KPI Cards) -->
+    <div class="row mb-1">
+        <!-- Personnel KPI -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                <i class="fas fa-users me-1"></i> Personnel
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_personnel }} Total
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <span class="badge bg-success">{{ ra_count }} RA</span>
+                                <span class="badge bg-info">{{ rt_count }} RT</span>
+                                <span class="badge bg-primary">{{ po_count }} PO</span>
+                                <span class="badge bg-secondary">{{ staff_count }} Staff</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-tie fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Farms KPI -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                <i class="fas fa-tractor me-1"></i> Farms
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_farms }} Total
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <span class="badge bg-success">{{ treatment_farms }} Treatment</span>
+                                <span class="badge bg-info">{{ establishment_farms }} Establishment</span>
+                                <span class="badge bg-warning">{{ maintenance_farms }} Maintenance</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-leaf fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignments KPI -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                <i class="fas fa-user-tag me-1"></i> Assignments
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_assignments }} Total
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <span class="badge bg-success">{{ active_assignments }} Active</span>
+                                <span class="badge bg-warning">{{ pending_assignments }} Pending</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-tasks fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contractors KPI -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                <i class="fas fa-handshake me-1"></i> Contractors
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_contractors }} Total
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <span class="badge bg-success">{{ certified_contractors }} Certified</span>
+                                <span class="badge bg-secondary">{{ total_contractors|add:"-certified_contractors" }} Pending</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-signature fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row KPI Cards -->
+    <div class="row mb-2">
+        <!-- Equipment KPI -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-secondary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                <i class="fas fa-tools me-1"></i> Equipment
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_equipment }} Total
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <span class="badge bg-info">{{ equipment_assigned }} Assigned</span>
+                                <span class="badge bg-warning">{{ equipment_under_repair }} Under Repair</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-cog fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outbreaks KPI -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Outbreaks
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ active_outbreaks|add:resolved_outbreaks }} Total
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <span class="badge bg-danger">{{ active_outbreaks }} Active</span>
+                                <span class="badge bg-success">{{ resolved_outbreaks }} Resolved</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-biohazard fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activities KPI -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                <i class="fas fa-clipboard-list me-1"></i> Activities
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_activities }} Total
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <span class="badge bg-primary">{{ daily_reports_today }} Reports Today</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geographic KPI -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-dark shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                                <i class="fas fa-map-marked-alt me-1"></i> Coverage
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_districts }} Districts
+                            </div>
+                            <div class="mt-2 small text-muted">
+                                <span class="badge bg-primary">{{ total_regions }} Regions</span>
+                                <span class="badge bg-success">{{ total_communities }} Communities</span>
+                                <span class="badge bg-info">{{ total_projects }} Projects</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-globe-africa fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row mb-4">
+        <!-- Personnel Distribution Chart -->
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-pie me-2"></i>Personnel Distribution
+                    </h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="personnelChartDropdown" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right shadow animated--fade-in">
+                            <li><a class="dropdown-item" href="#" onclick="exportChart('personnelChart', 'png')">Export as PNG</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportChart('personnelChart', 'jpg')">Export as JPG</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 300px;">
+                        <canvas id="personnelChart"></canvas>
+                    </div>
+                    <div class="mt-3 text-center small">
+                        <span class="me-2">
+                            <i class="fas fa-circle text-success"></i> Rehab Assistants
+                        </span>
+                        <span class="me-2">
+                            <i class="fas fa-circle text-info"></i> Rehab Technicians
+                        </span>
+                        <span class="me-2">
+                            <i class="fas fa-circle text-primary"></i> Project Officers
+                        </span>
+                        <span class="me-2">
+                            <i class="fas fa-circle text-secondary"></i> Other Staff
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Farms by Status Chart -->
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-chart-bar me-2"></i>Farms by Status
+                    </h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="farmsChartDropdown" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right shadow animated--fade-in">
+                            <li><a class="dropdown-item" href="#" onclick="exportChart('farmsChart', 'png')">Export as PNG</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportChart('farmsChart', 'jpg')">Export as JPG</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 300px;">
+                        <canvas id="farmsChart"></canvas>
+                    </div>
+                    <div class="mt-3 text-center small">
+                        <span class="me-2">
+                            <i class="fas fa-circle text-success"></i> Treatment
+                        </span>
+                        <span class="me-2">
+                            <i class="fas fa-circle text-info"></i> Establishment
+                        </span>
+                        <span class="me-2">
+                            <i class="fas fa-circle text-warning"></i> Maintenance
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row mb-4">
+        <!-- Assignments by Status Chart -->
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-chart-pie me-2"></i>Assignments Status
+                    </h6>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary active" onclick="loadAssignmentChart('pie')">Pie</button>
+                        <button class="btn btn-outline-secondary" onclick="loadAssignmentChart('bar')">Bar</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 300px;">
+                        <canvas id="assignmentsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outbreaks by Severity Chart -->
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Outbreaks by Severity
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area" style="height: 300px;">
+                        <canvas id="outbreaksChart"></canvas>
+                    </div>
+                    <div class="mt-3 text-center small">
+                        <span class="me-2">
+                            <i class="fas fa-circle text-success"></i> Low
+                        </span>
+                        <span class="me-2">
+                            <i class="fas fa-circle text-warning"></i> Medium
+                        </span>
+                        <span class="me-2">
+                            <i class="fas fa-circle text-danger"></i> High
+                        </span>
+                        <span class="me-2">
+                            <i class="fas fa-circle text-dark"></i> Critical
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 3 - Trend Lines -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-line me-2"></i>Activity Trends (Last 30 Days)
+                    </h6>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="loadTrendChart('farms')">Farms</button>
+                        <button class="btn btn-outline-primary" onclick="loadTrendChart('reports')">Reports</button>
+                        <button class="btn btn-outline-primary" onclick="loadTrendChart('assignments')">Assignments</button>
+                        <button class="btn btn-outline-primary" onclick="loadTrendChart('outbreaks')">Outbreaks</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="trendChart" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity and Upcoming Tasks Row -->
+    <div class="row mb-4">
+        <!-- Recent Activities -->
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-history me-2"></i>Recent Activities
+                    </h6>
+                    <a href="#" class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#allActivitiesModal">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="recentActivitiesList">
+                        <!-- Activities loaded via AJAX -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Tasks & Deadlines -->
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-tasks me-2"></i>Upcoming Tasks & Deadlines
+                    </h6>
+                    <a href="#" class="btn btn-sm btn-link">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="upcomingTasksList">
+                        <!-- Tasks loaded via AJAX -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-warning" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geographic Distribution and Top Performers Row -->
+    <div class="row mb-4">
+        <!-- Top Districts by Farms -->
+        <div class="col-xl-4 col-lg-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-map-marker-alt me-2"></i>Top Districts by Farms
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="topDistrictsFarmsChart" style="height: 250px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Districts by RAs -->
+        <div class="col-xl-4 col-lg-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-users me-2"></i>Top Districts by Rehab Assistants
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="topDistrictsRAsChart" style="height: 250px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Contractors by Services -->
+        <div class="col-xl-4 col-lg-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-handshake me-2"></i>Contractors by Service Type
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="contractorsByServiceChart" style="height: 250px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Mapped Farms</h6>
+                            <h3 class="mt-2 mb-0">{{ mapped_farms_count }}</h3>
+                        </div>
+                        <i class="fas fa-draw-polygon fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Validated Farms</h6>
+                            <h3 class="mt-2 mb-0">{{ validated_farms_count }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Open Feedback</h6>
+                            <h3 class="mt-2 mb-0">{{ open_feedback }}</h3>
+                        </div>
+                        <i class="fas fa-comment-dots fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-danger text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Open Issues</h6>
+                            <h3 class="mt-2 mb-0">{{ open_issues }}</h3>
+                        </div>
+                        <i class="fas fa-bug fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Activities Modal -->
+<div class="modal fade" id="allActivitiesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">All Recent Activities</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="allActivitiesTable">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Activity</th>
+                                <th>Description</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allActivitiesBody">
+                            <!-- Loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+
+<script>
+$(document).ready(function() {
+    // Initialize all charts
+    initPersonnelChart();
+    initFarmsChart();
+    initAssignmentsChart();
+    initOutbreaksChart();
+    initTrendChart('farms');
+    initTopDistrictsCharts();
+    initContractorsChart();
+    
+    // Load recent activities
+    loadRecentActivities();
+    
+    // Load upcoming tasks
+    loadUpcomingTasks();
+    
+    // Load notifications
+    loadNotifications();
+    
+    // Refresh button
+    $('#refreshDashboardBtn').click(function() {
+        location.reload();
+    });
+});
+
+// ============== CHART INITIALIZATION ==============
+
+function initPersonnelChart() {
+    $.ajax({
+        url: "{% url 'chart_data' %}",
+        type: "GET",
+        data: { type: 'personnel_by_type' },
+        success: function(response) {
+            if (response.success) {
+                var ctx = document.getElementById('personnelChart').getContext('2d');
+                
+                // Map colors based on personnel type
+                var backgroundColors = [];
+                var labels = response.labels;
+                
+                labels.forEach(function(label) {
+                    if (label === 'Rehab Assistant') backgroundColors.push('#28a745');
+                    else if (label === 'Rehab Technician') backgroundColors.push('#17a2b8');
+                    else if (label === 'Project Officer') backgroundColors.push('#007bff');
+                    else if (label === 'Project Coordinator') backgroundColors.push('#ffc107');
+                    else if (label === 'Regional Manager') backgroundColors.push('#dc3545');
+                    else if (label === 'Admin') backgroundColors.push('#6c757d');
+                    else backgroundColors.push('#6c757d');
+                });
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: response.labels,
+                        datasets: [{
+                            data: response.data,
+                            backgroundColor: backgroundColors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+}
+
+function initFarmsChart() {
+    $.ajax({
+        url: "{% url 'chart_data' %}",
+        type: "GET",
+        data: { type: 'farms_by_status' },
+        success: function(response) {
+            if (response.success) {
+                var ctx = document.getElementById('farmsChart').getContext('2d');
+                
+                var backgroundColors = {
+                    'Treatment': '#28a745',
+                    'Establishment': '#17a2b8',
+                    'Maintenance': '#ffc107'
+                };
+                
+                var colors = response.labels.map(function(label) {
+                    return backgroundColors[label] || '#6c757d';
+                });
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: response.labels,
+                        datasets: [{
+                            label: 'Number of Farms',
+                            data: response.data,
+                            backgroundColor: colors,
+                            borderColor: colors.map(c => c),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+}
+
+function initAssignmentsChart(type = 'pie') {
+    $.ajax({
+        url: "{% url 'chart_data' %}",
+        type: "GET",
+        data: { type: 'assignments_by_status' },
+        success: function(response) {
+            if (response.success) {
+                var ctx = document.getElementById('assignmentsChart').getContext('2d');
+                
+                var statusColors = {
+                    'Pending': '#ffc107',
+                    'Submitted': '#17a2b8',
+                    'Approved': '#28a745',
+                    'Rejected': '#dc3545',
+                    'Completed': '#007bff',
+                    'Revoked': '#6c757d'
+                };
+                
+                var colors = response.labels.map(function(label) {
+                    return statusColors[label] || '#6c757d';
+                });
+                
+                new Chart(ctx, {
+                    type: type,
+                    data: {
+                        labels: response.labels,
+                        datasets: [{
+                            data: response.data,
+                            backgroundColor: colors,
+                            borderColor: colors.map(c => c),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: type === 'pie'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+}
+
+function initOutbreaksChart() {
+    $.ajax({
+        url: "{% url 'chart_data' %}",
+        type: "GET",
+        data: { type: 'outbreaks_by_severity' },
+        success: function(response) {
+            if (response.success) {
+                var ctx = document.getElementById('outbreaksChart').getContext('2d');
+                
+                var severityColors = {
+                    'Low': '#28a745',
+                    'Medium': '#ffc107',
+                    'High': '#fd7e14',
+                    'Critical': '#dc3545'
+                };
+                
+                var colors = response.labels.map(function(label) {
+                    return severityColors[label] || '#6c757d';
+                });
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: response.labels,
+                        datasets: [{
+                            data: response.data,
+                            backgroundColor: colors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+}
+
+function initTrendChart(chartType) {
+    $.ajax({
+        url: "{% url 'chart_data' %}",
+        type: "GET",
+        data: { type: chartType === 'farms' ? 'farms_trend' : 
+                      chartType === 'reports' ? 'daily_reports_trend' : 
+                      chartType === 'assignments' ? 'assignments_trend' : 'outbreaks_trend' },
+        success: function(response) {
+            if (response.success) {
+                var options = {
+                    series: [{
+                        name: chartType.charAt(0).toUpperCase() + chartType.slice(1),
+                        data: response.data
+                    }],
+                    chart: {
+                        height: 350,
+                        type: 'area',
+                        toolbar: {
+                            show: true
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        curve: 'smooth',
+                        width: 2
+                    },
+                    xaxis: {
+                        categories: response.labels,
+                        type: 'datetime'
+                    },
+                    tooltip: {
+                        x: {
+                            format: 'dd MMM yyyy'
+                        }
+                    },
+                    colors: ['#007bff'],
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            shadeIntensity: 1,
+                            opacityFrom: 0.7,
+                            opacityTo: 0.3,
+                            stops: [0, 90, 100]
+                        }
+                    }
+                };
+                
+                var chart = new ApexCharts(document.querySelector("#trendChart"), options);
+                chart.render();
+            }
+        }
+    });
+}
+
+function initTopDistrictsCharts() {
+    // Top districts by farms
+    $.ajax({
+        url: "{% url 'chart_data' %}",
+        type: "GET",
+        data: { type: 'farms_by_district', limit: 5 },
+        success: function(response) {
+            if (response.success) {
+                var options = {
+                    series: [{
+                        data: response.data
+                    }],
+                    chart: {
+                        height: 250,
+                        type: 'bar'
+                    },
+                    plotOptions: {
+                        bar: {
+                            borderRadius: 4,
+                            horizontal: true
+                        }
+                    },
+                    xaxis: {
+                        categories: response.labels
+                    },
+                    colors: ['#28a745']
+                };
+                
+                var chart = new ApexCharts(document.querySelector("#topDistrictsFarmsChart"), options);
+                chart.render();
+            }
+        }
+    });
+    
+    // Top districts by RAs - we need a separate API call
+    $.ajax({
+        url: "{% url 'chart_data' %}",
+        type: "GET",
+        data: { type: 'ras_by_district', limit: 5 },
+        success: function(response) {
+            if (response.success) {
+                var options = {
+                    series: [{
+                        data: response.data
+                    }],
+                    chart: {
+                        height: 250,
+                        type: 'bar'
+                    },
+                    plotOptions: {
+                        bar: {
+                            borderRadius: 4,
+                            horizontal: true
+                        }
+                    },
+                    xaxis: {
+                        categories: response.labels
+                    },
+                    colors: ['#17a2b8']
+                };
+                
+                var chart = new ApexCharts(document.querySelector("#topDistrictsRAsChart"), options);
+                chart.render();
+            }
+        }
+    });
+}
+
+function initContractorsChart() {
+    $.ajax({
+        url: "{% url 'chart_data' %}",
+        type: "GET",
+        data: { type: 'contractors_by_service', limit: 5 },
+        success: function(response) {
+            if (response.success) {
+                var options = {
+                    series: response.data,
+                    labels: response.labels,
+                    chart: {
+                        height: 250,
+                        type: 'pie'
+                    },
+                    colors: ['#007bff', '#28a745', '#17a2b8', '#ffc107', '#dc3545']
+                };
+                
+                var chart = new ApexCharts(document.querySelector("#contractorsByServiceChart"), options);
+                chart.render();
+            }
+        }
+    });
+}
+
+// ============== LOAD FUNCTIONS ==============
+
+function loadRecentActivities() {
+    $.ajax({
+        url: "{% url 'recent_activities' %}",
+        type: "GET",
+        data: { limit: 10 },
+        success: function(response) {
+            if (response.success) {
+                var html = '';
+                
+                response.activities.forEach(function(activity) {
+                    html += `
+                        <a href="${activity.url}" class="list-group-item list-group-item-action">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="icon-circle ${activity.icon_bg}">
+                                        <i class="${activity.icon} text-white"></i>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">${activity.title}</h6>
+                                        <small class="text-muted">${moment(activity.time).fromNow()}</small>
+                                    </div>
+                                    <p class="mb-1 small text-muted">${activity.description}</p>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                });
+                
+                $('#recentActivitiesList').html(html);
+                $('#allActivitiesBody').html(html);
+            }
+        }
+    });
+}
+
+function loadUpcomingTasks() {
+    $.ajax({
+        url: "{% url 'upcoming_tasks' %}",
+        type: "GET",
+        success: function(response) {
+            if (response.success) {
+                var html = '';
+                
+                response.tasks.forEach(function(task) {
+                    var priorityClass = '';
+                    var priorityIcon = '';
+                    
+                    if (task.priority === 'high') {
+                        priorityClass = 'text-danger';
+                        priorityIcon = 'fa-exclamation-circle';
+                    } else if (task.priority === 'medium') {
+                        priorityClass = 'text-warning';
+                        priorityIcon = 'fa-clock';
+                    } else {
+                        priorityClass = 'text-success';
+                        priorityIcon = 'fa-check-circle';
+                    }
+                    
+                    html += `
+                        <a href="${task.url}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">${task.title}</h6>
+                                <small class="${priorityClass}">
+                                    <i class="fas ${priorityIcon} me-1"></i>${task.priority}
+                                </small>
+                            </div>
+                            <p class="mb-1 small text-muted">${task.description}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>Due: ${moment(task.due_date).format('MMM DD, YYYY')}
+                            </small>
+                        </a>
+                    `;
+                });
+                
+                $('#upcomingTasksList').html(html);
+            }
+        }
+    });
+}
+
+function loadNotifications() {
+    $.ajax({
+        url: "{% url 'notifications' %}",
+        type: "GET",
+        success: function(response) {
+            if (response.success) {
+                // Update notification badge in navbar
+                var count = response.notifications.length;
+                $('#notificationBadge').text(count);
+                
+                // Update notification dropdown
+                var html = '';
+                response.notifications.forEach(function(notification) {
+                    html += `
+                        <a class="dropdown-item" href="#">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="icon-circle ${notification.icon_bg}">
+                                        <i class="${notification.icon} text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="font-weight-bold">${notification.title}</span>
+                                    <div class="small text-gray-500">${notification.description}</div>
+                                    <div class="small text-muted">${notification.time}</div>
+                                </div>
+                            </div>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                    `;
+                });
+                
+                $('#notificationList').html(html);
+            }
+        }
+    });
+}
+
+// ============== UTILITY FUNCTIONS ==============
+
+function loadAssignmentChart(type) {
+    initAssignmentsChart(type);
+}
+
+function loadTrendChart(type) {
+    initTrendChart(type);
+}
+
+function exportChart(chartId, format) {
+    var canvas = document.getElementById(chartId);
+    var url = canvas.toDataURL('image/' + format);
+    var link = document.createElement('a');
+    link.download = chartId + '.' + format;
+    link.href = url;
+    link.click();
+}
+
+// ============== CSS STYLES ==============
+</script>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+.border-left-secondary {
+    border-left: 0.25rem solid #858796 !important;
+}
+.border-left-dark {
+    border-left: 0.25rem solid #5a5c69 !important;
+}
+
+.icon-circle {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bg-primary {
+    background-color: #4e73df !important;
+}
+.bg-success {
+    background-color: #1cc88a !important;
+}
+.bg-info {
+    background-color: #36b9cc !important;
+}
+.bg-warning {
+    background-color: #f6c23e !important;
+}
+.bg-danger {
+    background-color: #e74a3b !important;
+}
+.bg-secondary {
+    background-color: #858796 !important;
+}
+.bg-dark {
+    background-color: #5a5c69 !important;
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.chart-area {
+    position: relative;
+    width: 100%;
+}
+
+#trendChart {
+    min-height: 350px;
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .h5 {
+        font-size: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+

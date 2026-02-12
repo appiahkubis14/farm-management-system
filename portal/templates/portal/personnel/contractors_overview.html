@@ -1,0 +1,1228 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<br>
+<!-- Page Header -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">Contractors Management</h4>
+            <div class="page-title-right">
+                <button class="btn btn-primary" id="addContractorBtn">
+                    <i class="fas fa-plus me-1"></i> Add New Contractor
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Stats Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Contractors</span>
+                        <h4 class="mb-3" id="totalContractors">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-handshake text-primary h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Active Contractors</span>
+                        <h4 class="mb-3" id="activeContractors">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-success h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Certified</span>
+                        <h4 class="mb-3" id="certifiedContractors">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-certificate text-warning h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Districts Covered</span>
+                        <h4 class="mb-3" id="districtsCovered">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-map-marker-alt text-info h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Main Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="contractorsTable" class="table table-striped datatable" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Contractor Name</th>
+                                <th>Contact Person</th>
+                                <th>Contact Number</th>
+                                <th>Services</th>
+                                <th>Primary District</th>
+                                <th>Assigned Districts</th>
+                                <th>Certificates</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Contractor Modal -->
+<div class="modal fade" id="contractorModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTitle">Add New Contractor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="contractorForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="contractorId" name="contractor_id">
+                    <input type="hidden" id="uid" name="uid">
+                    
+                    <!-- Basic Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-building me-2"></i>Basic Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="contractor_name" class="form-label">Contractor Name *</label>
+                                    <input type="text" class="form-control" id="contractor_name" name="contractor_name" required>
+                                    <div class="invalid-feedback">Please enter contractor name</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="contact_person" class="form-label">Contact Person *</label>
+                                    <input type="text" class="form-control" id="contact_person" name="contact_person" required>
+                                    <div class="invalid-feedback">Please enter contact person</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="contact_number" class="form-label">Contact Number *</label>
+                                    <input type="tel" class="form-control" id="contact_number" name="contact_number" required>
+                                    <div class="invalid-feedback">Please enter contact number</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="district_id" class="form-label">Primary District *</label>
+                                    <select class="form-select" id="district_id" name="district_id" >
+                                        <option value="">Select Primary District</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select primary district</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="address" class="form-label">Business Address *</label>
+                                    <textarea class="form-control" id="address" name="address" rows="2" required></textarea>
+                                    <div class="invalid-feedback">Please enter business address</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Services & Target -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Services & Target</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="interested_services" class="form-label">Services Offered *</label>
+                                    <select class="form-select" id="interested_services" name="interested_services" required>
+                                        <option value="">Select Service Type</option>
+                                        {% for value, label in service_types %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select service type</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="target" class="form-label">Target Scale *</label>
+                                    <select class="form-select" id="target" name="target" required>
+                                        <option value="">Select Target Scale</option>
+                                        {% for value, label in target_types %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select target scale</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- District Assignments -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>District Assignments</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="assigned_districts" class="form-label">Additional Districts</label>
+                                    <select class="form-select" id="assigned_districts" name="assigned_districts" multiple>
+                                        <option value="">Select Districts to Assign</option>
+                                    </select>
+                                    <small class="text-muted">Hold Ctrl/Cmd to select multiple districts</small>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div id="assignedDistrictsList" class="mt-2">
+                                        <!-- Assigned districts will be displayed here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Certificates Section (Read-only in main form) -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-certificate me-2"></i>Certificates</h6>
+                            <button type="button" class="btn btn-sm btn-success" id="manageCertificatesBtn" style="display: none;">
+                                <i class="fas fa-plus me-1"></i> Manage Certificates
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="certificatesList">
+                                <p class="text-muted mb-0">Certificates can be managed after saving the contractor.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Contractor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Certificates Modal -->
+<div class="modal fade" id="certificateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Manage Certificates - <span id="certContractorName"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="certContractorId">
+                
+                <!-- Add Certificate Form -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Add New Certificate</h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="certificateForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="cert_work_type" class="form-label">Work Type *</label>
+                                    <select class="form-select" id="cert_work_type" required>
+                                        <option value="">Select Work Type</option>
+                                        {% for value, label in service_types %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="cert_status" class="form-label">Status *</label>
+                                    <select class="form-select" id="cert_status" required>
+                                        {% for value, label in certification_status %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="cert_start_date" class="form-label">Start Date *</label>
+                                    <input type="date" class="form-control" id="cert_start_date" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="cert_end_date" class="form-label">End Date *</label>
+                                    <input type="date" class="form-control" id="cert_end_date" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="cert_remarks" class="form-label">Remarks</label>
+                                    <textarea class="form-control" id="cert_remarks" rows="2"></textarea>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <button type="submit" class="btn btn-success" id="saveCertBtn">
+                                        <i class="fas fa-save me-1"></i> Add Certificate
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Certificates List -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Existing Certificates</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm" id="certificatesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Work Type</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Status</th>
+                                        <th>Verification</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="certificatesTableBody">
+                                    <!-- Certificates loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this contractor? This action cannot be undone.</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Contractor Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Contractor Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="contractorDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="printContractorBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                <button type="button" class="btn btn-warning" id="editFromViewBtn">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </button>
+                <button type="button" class="btn btn-success" id="viewCertificatesBtn">
+                    <i class="fas fa-certificate me-1"></i> Certificates
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    
+    // Initialize DataTable
+    var contractorsTable = $('#contractorsTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'contractors_list_api' %}",
+            type: "GET"
+        },
+        columns: [
+            { 
+                data: 'contractor_name',
+                render: function(data, type, row) {
+                    return `<a href="#" class="view-contractor-link" data-id="${row.id}">${data}</a>`;
+                }
+            },
+            { data: 'contact_person' },
+            { data: 'contact_number' },
+            { 
+                data: 'interested_services',
+                render: function(data) {
+                    return data || '<span class="text-muted">N/A</span>';
+                }
+            },
+            { data: 'primary_district' },
+            { data: 'assigned_districts' },
+            { 
+                data: null,
+                render: function(data) {
+                    var badgeClass = data.active_certificates > 0 ? 'bg-success' : 'bg-secondary';
+                    return `<span class="badge ${badgeClass}">${data.active_certificates} Active</span>
+                            <br><small class="text-muted">Total: ${data.certificate_count}</small>`;
+                }
+            },
+            { 
+                data: 'status',
+                render: function(data) {
+                    var badgeClass = 'bg-success';
+                    if (data === 'Inactive') badgeClass = 'bg-secondary';
+                    else if (data === 'Under Review') badgeClass = 'bg-warning';
+                    else if (data === 'Suspended') badgeClass = 'bg-danger';
+                    else if (data === 'Terminated') badgeClass = 'bg-dark';
+                    
+                    return '<span class="badge ' + badgeClass + '">' + (data || 'Active') + '</span>';
+                }
+            },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-contractor" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary edit-contractor" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-success manage-certificates" data-id="${data}" title="Certificates">
+                                <i class="fas fa-certificate"></i>
+                            </button>
+                            <button class="btn btn-danger delete-contractor" data-id="${data}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        responsive: true,
+        order: [[0, 'asc']],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: "copy",
+                text: '<i class="fas fa-copy"></i> Copy',
+                className: "btn btn-sm btn-outline-secondary",
+            },
+            {
+                extend: "csv",
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                className: "btn btn-sm btn-outline-success",
+            },
+            {
+                extend: "excel",
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                className: "btn btn-sm btn-outline-primary",
+            },
+            {
+                extend: "pdf",
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                className: "btn btn-sm btn-outline-danger",
+            },
+            {
+                extend: "print",
+                text: '<i class="fas fa-print"></i> Print',
+                className: "btn btn-sm btn-outline-info",
+            }
+        ],
+        language: {
+            emptyTable: "No contractors found",
+            zeroRecords: "No matching contractors found"
+        }
+    });
+
+    // Load stats
+    function loadStats() {
+        $.ajax({
+            url: "{% url 'contractors_list_api' %}",
+            type: "GET",
+            data: { draw: 1, start: 0, length: 1000 },
+            success: function(response) {
+                var data = response.data || [];
+                var total = data.length;
+                var active = data.filter(s => s.status === 'Active' || !s.status).length;
+                var certified = data.filter(s => s.active_certificates > 0).length;
+                
+                // Calculate unique districts covered
+                var districtsSet = new Set();
+                data.forEach(function(c) {
+                    if (c.primary_district && c.primary_district !== 'N/A') {
+                        districtsSet.add(c.primary_district);
+                    }
+                });
+                
+                $('#totalContractors').text(total);
+                $('#activeContractors').text(active);
+                $('#certifiedContractors').text(certified);
+                $('#districtsCovered').text(districtsSet.size);
+            },
+            error: function() {
+                $('#totalContractors').text('0');
+                $('#activeContractors').text('0');
+                $('#certifiedContractors').text('0');
+                $('#districtsCovered').text('0');
+            }
+        });
+    }
+
+    // Load districts
+    function loadDistricts(selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_districts' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $districtSelect = $('#district_id');
+                    var $assignedSelect = $('#assigned_districts');
+                    
+                    $districtSelect.empty().append('<option value="">Select Primary District</option>');
+                    $assignedSelect.empty().append('<option value="">Select Districts to Assign</option>');
+                    
+                    response.data.forEach(function(district) {
+                        var selected = (selectedId && district.id == selectedId) ? 'selected' : '';
+                        $districtSelect.append(`<option value="${district.id}" ${selected}>${district.name}</option>`);
+                        $assignedSelect.append(`<option value="${district.id}">${district.name}</option>`);
+                    });
+                    
+                    // Initialize Select2 for multiple select
+                    $assignedSelect.select2({
+                        placeholder: "Select districts to assign",
+                        allowClear: true,
+                        width: '100%'
+                    });
+                }
+            }
+        });
+    }
+
+    // Add Contractor Button
+    $('#addContractorBtn').click(function() {
+        $('#contractorForm')[0].reset();
+        $('#contractorForm').removeClass('was-validated');
+        $('#modalTitle').text('Add New Contractor');
+        $('#contractorId').val('');
+        $('#uid').val('');
+        $('#manageCertificatesBtn').hide();
+        $('#certificatesList').html('<p class="text-muted mb-0">Certificates can be managed after saving the contractor.</p>');
+        
+        // Clear Select2
+        $('#assigned_districts').val(null).trigger('change');
+        $('#assignedDistrictsList').empty();
+        
+        loadDistricts();
+        $('#contractorModal').modal('show');
+    });
+
+    // Form Submission
+    $('#contractorForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        var formData = {
+            contractor_name: $('#contractor_name').val(),
+            contact_person: $('#contact_person').val(),
+            address: $('#address').val(),
+            contact_number: $('#contact_number').val(),
+            interested_services: $('#interested_services').val(),
+            target: $('#target').val(),
+            district_id: $('#district_id').val(),
+            assigned_districts: $('#assigned_districts').val() || [],
+            uid: $('#uid').val() || null
+        };
+        
+        var contractorId = $('#contractorId').val();
+        var url = contractorId ? "{% url 'update_contractor' 0 %}".replace('0', contractorId) : "{% url 'create_contractor' %}";
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#saveBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#contractorModal').modal('hide');
+                    contractorsTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#saveBtn').prop('disabled', false).html('Save Contractor');
+            }
+        });
+    });
+
+    // Edit Contractor
+    $(document).on('click', '.edit-contractor', function() {
+        var contractorId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'contractor_detail_api' 0 %}".replace('0', contractorId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var contractor = response.data;
+                    
+                    // Load districts first
+                    loadDistricts(contractor.district_id);
+                    
+                    // Populate form fields
+                    $('#contractorId').val(contractor.id);
+                    $('#uid').val(contractor.uid);
+                    $('#contractor_name').val(contractor.contractor_name);
+                    $('#contact_person').val(contractor.contact_person);
+                    $('#address').val(contractor.address);
+                    $('#contact_number').val(contractor.contact_number);
+                    $('#interested_services').val(contractor.interested_services);
+                    $('#target').val(contractor.target);
+                    
+                    $('#modalTitle').text('Edit Contractor');
+                    $('#manageCertificatesBtn').show();
+                    $('#manageCertificatesBtn').data('id', contractor.id);
+                    
+                    // Load assigned districts
+                    setTimeout(function() {
+                        var assignedDistrictIds = contractor.assigned_districts.map(d => d.district_id);
+                        $('#assigned_districts').val(assignedDistrictIds).trigger('change');
+                        
+                        // Display assigned districts
+                        var html = '<strong>Assigned Districts:</strong><ul>';
+                        contractor.assigned_districts.forEach(function(d) {
+                            html += `<li>${d.district_name} (Assigned: ${d.assigned_date})</li>`;
+                        });
+                        html += '</ul>';
+                        $('#assignedDistrictsList').html(html);
+                    }, 500);
+                    
+                    // Load certificates
+                    if (contractor.certificates && contractor.certificates.length > 0) {
+                        var certHtml = '<div class="table-responsive"><table class="table table-sm">';
+                        certHtml += '<thead><tr><th>Work Type</th><th>Valid Period</th><th>Status</th><th>Verification</th></tr></thead><tbody>';
+                        
+                        contractor.certificates.slice(0, 3).forEach(function(cert) {
+                            var statusBadge = 'bg-warning';
+                            if (cert.status === 'Verified') statusBadge = 'bg-success';
+                            else if (cert.status === 'Expired') statusBadge = 'bg-danger';
+                            else if (cert.status === 'Revoked') statusBadge = 'bg-dark';
+                            
+                            certHtml += `<tr>
+                                <td>${cert.work_type}</td>
+                                <td>${cert.start_date} to ${cert.end_date}</td>
+                                <td><span class="badge ${statusBadge}">${cert.status}</span></td>
+                                <td>${cert.is_verified ? 'Verified' : 'Pending'}</td>
+                            </tr>`;
+                        });
+                        
+                        if (contractor.certificates.length > 3) {
+                            certHtml += `<tr><td colspan="4" class="text-center">
+                                <small class="text-muted">+${contractor.certificates.length - 3} more certificates</small>
+                            </td></tr>`;
+                        }
+                        
+                        certHtml += '</tbody></table></div>';
+                        $('#certificatesList').html(certHtml);
+                    } else {
+                        $('#certificatesList').html('<p class="text-muted mb-0">No certificates found.</p>');
+                    }
+                    
+                    $('#contractorModal').modal('show');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to load contractor details', 'error');
+            }
+        });
+    });
+
+    // View Contractor
+    $(document).on('click', '.view-contractor, .view-contractor-link', function(e) {
+        if (e) e.preventDefault();
+        var contractorId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'contractor_detail_api' 0 %}".replace('0', contractorId),
+            type: 'GET',
+            beforeSend: function() {
+                $('#contractorDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading contractor details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var contractor = response.data;
+                    
+                    var html = `
+                        <div class="contractor-details">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Business Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Contractor Name:</th>
+                                            <td><strong>${contractor.contractor_name || ''}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Contact Person:</th>
+                                            <td>${contractor.contact_person || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Contact Number:</th>
+                                            <td>${contractor.contact_number || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Address:</th>
+                                            <td>${contractor.address || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Primary District:</th>
+                                            <td>${contractor.district_name || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Services & Target</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Services Offered:</th>
+                                            <td>${contractor.interested_services || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Target Scale:</th>
+                                            <td>${contractor.target || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Certificate Count:</th>
+                                            <td><span class="badge bg-info">${contractor.certificate_count || 0}</span></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">Assigned Districts</h5>
+                                    ${contractor.assigned_districts && contractor.assigned_districts.length > 0 ? `
+                                        <table class="table table-sm table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>District</th>
+                                                    <th>Project</th>
+                                                    <th>Assigned Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${contractor.assigned_districts.map(d => `
+                                                    <tr>
+                                                        <td>${d.district_name}</td>
+                                                        <td>${d.project_name || 'N/A'}</td>
+                                                        <td>${d.assigned_date}</td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    ` : '<p class="text-muted">No additional districts assigned.</p>'}
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">Certificates</h5>
+                                    ${contractor.certificates && contractor.certificates.length > 0 ? `
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Work Type</th>
+                                                        <th>Valid Period</th>
+                                                        <th>Status</th>
+                                                        <th>Verification</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${contractor.certificates.map(cert => {
+                                                        var statusBadge = 'bg-warning';
+                                                        if (cert.status === 'Verified') statusBadge = 'bg-success';
+                                                        else if (cert.status === 'Expired') statusBadge = 'bg-danger';
+                                                        else if (cert.status === 'Revoked') statusBadge = 'bg-dark';
+                                                        
+                                                        return `
+                                                            <tr>
+                                                                <td>${cert.work_type}</td>
+                                                                <td>${cert.start_date} to ${cert.end_date}</td>
+                                                                <td><span class="badge ${statusBadge}">${cert.status}</span></td>
+                                                                <td>
+                                                                    ${cert.is_verified ? 
+                                                                        `<span class="text-success">Verified by ${cert.verified_by} on ${cert.verification_date}</span>` : 
+                                                                        '<span class="text-warning">Pending</span>'}
+                                                                </td>
+                                                            </tr>
+                                                        `;
+                                                    }).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ` : '<p class="text-muted">No certificates found.</p>'}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">System Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="20%">Created Date:</th>
+                                            <td>${contractor.created_date || 'N/A'}</td>
+                                            <th width="20%">UID:</th>
+                                            <td><small>${contractor.uid || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $('#contractorDetails').html(html);
+                    
+                    // Store contractor ID for edit button
+                    $('#editFromViewBtn').data('id', contractor.id);
+                    $('#viewCertificatesBtn').data('id', contractor.id);
+                    $('#viewModal').modal('show');
+                } else {
+                    $('#contractorDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load contractor details: ${response.message}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#contractorDetails').html(`
+                    <div class="alert alert-danger">
+                        Failed to load contractor details
+                    </div>
+                `);
+            }
+        });
+    });
+
+    // Edit from view modal
+    $('#editFromViewBtn').click(function() {
+        var contractorId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        
+        // Trigger edit button
+        $(`.edit-contractor[data-id="${contractorId}"]`).click();
+    });
+
+    // View certificates from view modal
+    $('#viewCertificatesBtn').click(function() {
+        var contractorId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        
+        // Trigger manage certificates button
+        $(`.manage-certificates[data-id="${contractorId}"]`).click();
+    });
+
+    // Manage Certificates
+    $(document).on('click', '.manage-certificates', function() {
+        var contractorId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'contractor_detail_api' 0 %}".replace('0', contractorId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var contractor = response.data;
+                    
+                    $('#certContractorId').val(contractor.id);
+                    $('#certContractorName').text(contractor.contractor_name);
+                    
+                    // Load certificates
+                    loadCertificates(contractor.certificates);
+                    
+                    $('#certificateModal').modal('show');
+                }
+            }
+        });
+    });
+
+    // Load certificates into table
+    function loadCertificates(certificates) {
+        var tbody = $('#certificatesTableBody');
+        tbody.empty();
+        
+        if (certificates && certificates.length > 0) {
+            certificates.forEach(function(cert) {
+                var statusBadge = 'bg-warning';
+                if (cert.status === 'Verified') statusBadge = 'bg-success';
+                else if (cert.status === 'Expired') statusBadge = 'bg-danger';
+                else if (cert.status === 'Revoked') statusBadge = 'bg-dark';
+                
+                var row = `<tr>
+                    <td>${cert.work_type}</td>
+                    <td>${cert.start_date}</td>
+                    <td>${cert.end_date}</td>
+                    <td><span class="badge ${statusBadge}">${cert.status}</span></td>
+                    <td>
+                        ${cert.is_verified ? 
+                            `<span class="text-success">Verified</span><br><small>${cert.verification_date}</small>` : 
+                            '<span class="text-warning">Pending</span>'}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-danger delete-certificate" data-id="${cert.id}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+                tbody.append(row);
+            });
+        } else {
+            tbody.append('<tr><td colspan="6" class="text-center">No certificates found</td></tr>');
+        }
+    }
+
+    // Certificate Form Submission
+    $('#certificateForm').submit(function(e) {
+        e.preventDefault();
+        
+        var contractorId = $('#certContractorId').val();
+        
+        var formData = {
+            work_type: $('#cert_work_type').val(),
+            status: $('#cert_status').val(),
+            start_date: $('#cert_start_date').val(),
+            end_date: $('#cert_end_date').val(),
+            remarks: $('#cert_remarks').val()
+        };
+        
+        // TODO: Add API endpoint for creating certificates
+        Swal.fire('Info', 'Certificate creation API to be implemented', 'info');
+        
+        // Clear form
+        $('#certificateForm')[0].reset();
+    });
+
+    // Delete Contractor
+    var deleteContractorId = null;
+    $(document).on('click', '.delete-contractor', function() {
+        deleteContractorId = $(this).data('id');
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+
+    $('#confirmDeleteBtn').click(function() {
+        var reason = $('#deleteReason').val();
+        if (!reason.trim()) {
+            Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: "{% url 'delete_contractor' 0 %}".replace('0', deleteContractorId),
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ reason: reason }),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deleteModal').modal('hide');
+                    contractorsTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmDeleteBtn').prop('disabled', false).html('Delete');
+            }
+        });
+    });
+
+    // Print Contractor Details
+    $('#printContractorBtn').click(function() {
+        var printContent = $('#contractorDetails').html();
+        var originalContent = $('body').html();
+        
+        $('body').html(`
+            <div class="container mt-5">
+                <h2 class="text-center mb-4">Contractor Details Report</h2>
+                <div class="text-center mb-4">
+                    <h5>Contractor Information</h5>
+                </div>
+                ${printContent}
+                <div class="mt-5 text-center">
+                    <small>Printed on: ${new Date().toLocaleString()}</small>
+                </div>
+            </div>
+        `);
+        
+        window.print();
+        $('body').html(originalContent);
+        
+        // Re-initialize DataTable after print
+        location.reload();
+    });
+
+    // CSRF Token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Manage Certificates button in edit modal
+    $('#manageCertificatesBtn').click(function() {
+        var contractorId = $(this).data('id');
+        $('#contractorModal').modal('hide');
+        
+        setTimeout(function() {
+            $(`.manage-certificates[data-id="${contractorId}"]`).click();
+        }, 500);
+    });
+
+    // Initial load
+    loadStats();
+    loadDistricts();
+});
+</script>
+
+<style>
+.card-h-30 {
+    min-height: 120px;
+}
+
+.contractor-details h5 {
+    color: #495057;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.contractor-details table {
+    margin-bottom: 0;
+}
+
+.contractor-details th {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.contractor-details td {
+    font-size: 0.95rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.view-contractor-link {
+    color: #0d6efd;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.view-contractor-link:hover {
+    text-decoration: underline;
+}
+
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-selection {
+    min-height: 38px;
+    border: 1px solid #ced4da !important;
+}
+
+.select2-selection__rendered {
+    line-height: 38px !important;
+}
+
+.select2-selection__arrow {
+    height: 38px !important;
+}
+
+@media print {
+    .modal-header, .modal-footer, .btn, .btn-group {
+        display: none !important;
+    }
+    
+    .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .modal-body {
+        padding: 0 !important;
+    }
+    
+    .contractor-details {
+        font-size: 12pt;
+    }
+}
+</style>
+{% endblock %}

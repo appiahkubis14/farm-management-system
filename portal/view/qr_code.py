@@ -211,6 +211,7 @@ def get_qr_codes(request):
             'message': f'Error fetching QR codes: {str(e)}'
         }, status=500)
 
+
 @login_required
 @require_http_methods(["DELETE"])
 def delete_qr_code(request, qr_id):
@@ -276,9 +277,6 @@ def bulk_delete_qr_codes(request):
             for qr in qr_codes:
                 qr.delete()
                 deleted_count += 1
-            
-            # OR Method 2: Use hard_delete if you want to bypass soft delete
-            # deleted_count = qr_codes.hard_delete()
         
         return JsonResponse({
             'success': True,
@@ -300,7 +298,7 @@ def bulk_delete_qr_codes(request):
         }, status=500)
     
 
-    
+
 @login_required
 @require_http_methods(["GET"])
 def download_qr_code(request, qr_id):

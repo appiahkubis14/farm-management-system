@@ -30,11 +30,34 @@ class Sidebar:
                 },
             }
         },
-        "QR Code Generator":{
-            "icon": "fas fa-qrcode",
-            'url': "/qr-code-generator/",
-            'groups': ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Project Coordinator"]
+
+        "Monitoring Overview": {
+            "icon": "fas fa-leaf",
+            "url": "/growth-monitoring/", 
+            "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Project Coordinator"],
+            "sub_items": {
+                "Monitoring Dashboard": {
+                    "icon": "fas fa-tachometer-alt", 
+                    "url": "/growth-monitoring-dashboard/", 
+                    "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Project Coordinator"]
+                },
+                "Growth Monitoring": {
+                    "icon": "fas fa-leaf", 
+                    "url": "/growth-monitoring/", 
+                    "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Project Coordinator"]
+                },
+                "QR Code Generator":{
+                    "icon": "fas fa-qrcode",
+                    'url': "/qr-code-generator/",
+                    'groups': ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Project Coordinator"]
+                },
+                
+            }
+            
+            
         },
+
+        
 
         "Sensors & IoT System": {
             "icon": "fas fa-microchip",
@@ -50,11 +73,11 @@ class Sidebar:
                     "url": "/sensors/devices/management/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
                 },
-                "Data Logs": {
-                    "icon": "fas fa-file-alt", 
-                    "url": "/sensors/data-logs/", 
-                    "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
-                },
+                # "Data Logs": {
+                #     "icon": "fas fa-file-alt", 
+                #     "url": "/sensors/data-logs/", 
+                #     "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
+                # },
             }
         },
         
@@ -64,29 +87,29 @@ class Sidebar:
             "sub_items": {
                 "Activities Overview": {
                     "icon": "fas fa-tasks", 
-                    "url": "/activities/activities/", 
+                    "url": "/activities/", 
                     "groups": ["Admin", "Monitoring and Evaluation"]
                 },
-                "Daily Reports": {
+                "Daily Reporting": {
                     "icon": "fas fa-calendar-day", 
-                    "url": "/activities/po-daily-reports/", 
+                    "url": "/po-daily-reports/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
                 },
                 "Activity Reporting": {
                     "icon": "fas fa-file-upload", 
-                    "url": "/activities/activity-reporting/", 
+                    "url": "/activity-reporting/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
                 },
                 "Weekly Monitoring": {
                     "icon": "fas fa-calendar-week", 
-                    "url": "/activities/weekly-monitoring/", 
+                    "url": "/weekly-monitoring/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "Regional Manager"]
                 },
-                "Activity Rates": {
-                    "icon": "fas fa-money-bill-wave", 
-                    "url": "/activities/rates/", 
-                    "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
-                },
+                # "Activity Rates": {
+                #     "icon": "fas fa-money-bill-wave", 
+                #     "url": "/activities/rates/", 
+                #     "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
+                # },
             }
         },
         
@@ -99,19 +122,19 @@ class Sidebar:
                     "url": "/personnel/staff/", 
                     "groups": ["Admin", "Project Coordinator", "Regional Manager"]
                 },
-                "Rehab Assistants": {
-                    "icon": "fas fa-user-friends", 
-                    "url": "/personnel/rehab-assistants/", 
-                    "groups": ["Admin", "Project Officer", "Project Coordinator"]
-                },
-                "Contractors": {
+                # "Rehab Assistants": {
+                #     "icon": "fas fa-user-friends", 
+                #     "url": "/personnel/rehab-assistants/", 
+                #     "groups": ["Admin", "Project Officer", "Project Coordinator"]
+                # },
+                "Contractors Overview": {
                     "icon": "fas fa-handshake", 
-                    "url": "/personnel/contractors/", 
+                    "url": "/contractors/", 
                     "groups": ["Admin", "Project Officer", "Project Coordinator"]
                 },
                 "Staff Assignments": {
                     "icon": "fas fa-user-tag", 
-                    "url": "/personnel/assignments/",
+                    "url": "/assignments/",
                     "groups": ["Admin", "Project Coordinator"]
                 },
             }

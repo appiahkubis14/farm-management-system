@@ -332,8 +332,10 @@ class PersonnelModel(timeStamp):
     other_names = models.CharField(max_length=250, blank=True, null=True)
     gender = models.CharField(max_length=10, choices=[('Male', 'Male'), ('Female', 'Female')])
     date_of_birth = models.DateField()
+    staff_id = models.CharField(max_length=250, unique=True, blank=True, null=True)
     primary_phone_number = models.CharField(max_length=15)
     secondary_phone_number = models.CharField(max_length=15, blank=True, null=True)
+    email = models.EmailField(max_length=250, blank=True, null=True)  # Add this field
     momo_number = models.CharField(max_length=15, blank=True, null=True)
     momo_name = models.CharField(max_length=250, blank=True, null=True)
     belongs_to_ra = models.CharField(max_length=250, blank=True, null=True)
@@ -366,7 +368,32 @@ class PersonnelModel(timeStamp):
     
     def __str__(self):
         return f"{self.first_name} {self.surname}"
+    
+    def save(self, *args, **kwargs):
+        """Generate staff_id based on personnel_type"""
+        # Check if this is a new instance
+        is_new = self.pk is None
+        
+        if is_new:
+            # First save without staff_id to get an ID
+            super(PersonnelModel, self).save(*args, **kwargs)
+            
+            # Generate staff_id based on personnel_type using the now-available ID
+            if self.personnel_type == "Rehab Assistant":
+                self.staff_id = f"RA-{self.id:06d}"
+            elif self.personnel_type == "Rehab Technician":
+                self.staff_id = f"RT-{self.id:06d}"
+            else:
+                self.staff_id = f"ST-{self.id:06d}"
+            
+            # Save again with the staff_id
+            super(PersonnelModel, self).save(*args, **kwargs)
+        else:
+            # For existing records, just save normally
+            super(PersonnelModel, self).save(*args, **kwargs)
 
+
+            
 class PersonnelAssignmentModel(timeStamp):
     """Model for Assign Rehab Assistant (RA) module"""
     uid = models.CharField(max_length=2500, blank=True, null=True)
