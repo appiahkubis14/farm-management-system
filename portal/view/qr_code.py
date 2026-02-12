@@ -1,8 +1,11 @@
+import traceback
 import uuid
 import qrcode
 import io
 import base64
 import os
+import random
+import string
 from datetime import datetime
 from django.shortcuts import render
 from django.http import JsonResponse, FileResponse, HttpResponse
@@ -25,6 +28,48 @@ def qr_code_generator(request):
     }
     return render(request, 'portal/qr_code/qr_code_generator.html', context)
 
+def generate_plantation_uid():
+    """Generate UID in format: ACL-PLANTATION-YEAR-TIME-00001"""
+    
+    # Fixed prefix and plantation indicator
+    prefix = "ACL"
+    plantation = "PLT"
+    
+    # Current year
+    year = timezone.now().strftime('%Y')
+    
+    # Current time (HHMM)
+    time_part = timezone.now().strftime('%H%M')
+    
+    # Get the last QR code for today to generate sequential number
+    last_qr = QR_CodeModel.objects.filter(
+        uid__startswith=f"{prefix}-{plantation}-{year}-{time_part}"
+    ).order_by('-id').first()
+    
+    if last_qr and last_qr.uid:
+        try:
+            # Extract the sequential number
+            last_num = int(last_qr.uid.split('-')[-1])
+            new_num = last_num + 1
+        except (ValueError, IndexError):
+            new_num = 1
+    else:
+        new_num = 1
+    
+    # Format with leading zeros (5 digits)
+    sequential = f"{new_num:05d}"
+    
+    uid = f"{prefix}-{plantation}-{year}-{time_part}-{sequential}"
+    
+    return {
+        'uid': uid,
+        'prefix': prefix,
+        'plantation': plantation,
+        'year': year,
+        'time': time_part,
+        'sequential': sequential
+    }
+
 @login_required
 @require_http_methods(["POST"])
 def generate_qr_codes(request):
@@ -44,8 +89,9 @@ def generate_qr_codes(request):
         
         with transaction.atomic():
             for i in range(quantity):
-                # Generate unique ID: ACL-{UUID4}
-                unique_id = f"ACL-{uuid.uuid4()}"
+                # Generate unique ID using the plantation format
+                uid_data = generate_plantation_uid()
+                unique_id = uid_data['uid']
                 timestamp = timezone.now()
                 
                 # Create QR code
@@ -57,7 +103,7 @@ def generate_qr_codes(request):
                 )
                 
                 # Data to encode in QR code
-                qr_data = f"{unique_id}\nGenerated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+                qr_data = f"{unique_id}\nGenerated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}\nPlantation ID"
                 qr.add_data(qr_data)
                 qr.make(fit=True)
                 
@@ -76,46 +122,12 @@ def generate_qr_codes(request):
                 # Create filename
                 filename = f"{unique_id}_{timestamp.strftime('%Y%m%d_%H%M%S')}.png"
                 
-                # METHOD 1: Using InMemoryUploadedFile (most reliable)
-                try:
-                    from PIL import Image
-                    pil_image = Image.open(buffer)
-                    
-                    uploaded_file = InMemoryUploadedFile(
-                        buffer,  # file
-                        None,    # field_name
-                        filename, # file name
-                        'image/png', # content_type
-                        len(image_data), # size
-                        None     # charset
-                    )
-                    
-                    qr_model = QR_CodeModel.objects.create(
-                        uid=unique_id,
-                        qr_code=uploaded_file
-                    )
-                except Exception as e1:
-                    print(f"Method 1 failed: {e1}")
-                    
-                    # METHOD 2: Using SimpleUploadedFile
-                    try:
-                        buffer.seek(0)
-                        uploaded_file = SimpleUploadedFile(
-                            filename,
-                            buffer.getvalue(),
-                            content_type='image/png'
-                        )
-                        
-                        qr_model = QR_CodeModel.objects.create(
-                            uid=unique_id,
-                            qr_code=uploaded_file
-                        )
-                    except Exception as e2:
-                        print(f"Method 2 failed: {e2}")
-                        
-                        # METHOD 3: Create then save
-                        qr_model = QR_CodeModel(uid=unique_id)
-                        qr_model.qr_code.save(filename, ContentFile(image_data), save=True)
+                # Create QR code model
+                qr_model = QR_CodeModel(uid=unique_id)
+                
+                # Save the image file
+                qr_model.qr_code.save(filename, ContentFile(image_data), save=False)
+                qr_model.save()
                 
                 # Refresh from DB to get the URL
                 qr_model.refresh_from_db()
@@ -127,6 +139,11 @@ def generate_qr_codes(request):
                     'qr_code_base64': f"data:image/png;base64,{qr_base64}",
                     'created_date': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                     'created_date_formatted': timestamp.strftime('%b %d, %Y %H:%M'),
+                    'prefix': uid_data['prefix'],
+                    'plantation': uid_data['plantation'],
+                    'year': uid_data['year'],
+                    'time': uid_data['time'],
+                    'sequential': uid_data['sequential']
                 })
         
         return JsonResponse({
@@ -162,12 +179,20 @@ def get_qr_codes(request):
         
         data = []
         for qr in qr_page:
+            # Parse UID components for display
+            uid_parts = qr.uid.split('-') if qr.uid else []
+            
             data.append({
                 'id': qr.id,
                 'uid': qr.uid,
                 'qr_code_url': qr.qr_code.url if qr.qr_code else '',
                 'created_date': qr.created_date.strftime('%Y-%m-%d %H:%M:%S'),
                 'created_date_formatted': qr.created_date.strftime('%b %d, %Y %H:%M'),
+                'prefix': uid_parts[0] if len(uid_parts) > 0 else '',
+                'plantation': uid_parts[1] if len(uid_parts) > 1 else '',
+                'year': uid_parts[2] if len(uid_parts) > 2 else '',
+                'time': uid_parts[3] if len(uid_parts) > 3 else '',
+                'sequential': uid_parts[4] if len(uid_parts) > 4 else '',
             })
         
         return JsonResponse({
@@ -221,8 +246,10 @@ def bulk_delete_qr_codes(request):
     """Delete multiple QR codes"""
     try:
         import json
+        import traceback
         data = json.loads(request.body)
         ids = data.get('ids', [])
+        print(f"Deleting QR codes: {ids}")
         
         if not ids:
             return JsonResponse({
@@ -230,27 +257,50 @@ def bulk_delete_qr_codes(request):
                 'message': 'No QR codes selected'
             }, status=400)
         
+        deleted_count = 0
+        
         with transaction.atomic():
-            qr_codes = QR_CodeModel.objects.filter(id__in=ids)
+            # Get all QR codes to delete
+            qr_codes = QR_CodeModel.default_objects.filter(id__in=ids)
             
-            # Delete image files
+            # Delete image files first
             for qr in qr_codes:
                 if qr.qr_code:
-                    qr.qr_code.delete(save=False)
+                    try:
+                        qr.qr_code.delete(save=False)
+                        print(f"Deleted image for QR code {qr.uid}")
+                    except Exception as e:
+                        print(f"Error deleting image for {qr.uid}: {e}")
             
-            deleted_count = qr_codes.delete()[0]
+            # Method 1: Delete each object individually (works with custom delete method)
+            for qr in qr_codes:
+                qr.delete()
+                deleted_count += 1
+            
+            # OR Method 2: Use hard_delete if you want to bypass soft delete
+            # deleted_count = qr_codes.hard_delete()
         
         return JsonResponse({
             'success': True,
             'message': f'Successfully deleted {deleted_count} QR code(s)'
         })
         
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
     except Exception as e:
+        print(f"Error in bulk delete: {e}")
+        print(traceback.format_exc())
         return JsonResponse({
             'success': False,
             'message': f'Error deleting QR codes: {str(e)}'
         }, status=500)
+    
 
+    
 @login_required
 @require_http_methods(["GET"])
 def download_qr_code(request, qr_id):

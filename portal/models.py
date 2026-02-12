@@ -439,18 +439,60 @@ class ActivityReportingModel(timeStamp):
         return f"{self.agent} - {self.reporting_date}"
     
 # models.py - Update your QR_CodeModel
+import uuid
+import random
+import string
+from django.db import models
+from django.utils import timezone
+
 class QR_CodeModel(timeStamp):
     """Model for QR Code module"""
     uid = models.CharField(max_length=2500, blank=True, null=True, db_index=True)
-    qr_code = models.ImageField(upload_to='qr_codes/', blank=True, null=True,help_text='QR code image file')
+    qr_code = models.ImageField(
+        upload_to='qr_codes/', 
+        blank=True, 
+        null=True,
+        help_text='QR code image file'
+    )
     
     def __str__(self):
         return self.uid or f"QR Code {self.id}"
     
+    def generate_uid(self):
+        """Generate UID in format: ACL-YYYY-XXXX-XXXX"""
+        
+        # Fixed prefix
+        prefix = "ACL"
+        
+        # Current year
+        year = timezone.now().strftime('%Y')
+        
+        # Generate 4-character random blocks (uppercase + digits)
+        block1 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        block2 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        
+        # Combine with crop indicator (optional - can be removed)
+        # crop_code = "CROP"
+        
+        uid = f"{prefix}-{year}-{block1}-{block2}"
+        
+        # Check uniqueness
+        attempts = 0
+        while QR_CodeModel.objects.filter(uid=uid).exists() and attempts < 100:
+            block1 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+            block2 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+            uid = f"{prefix}-{year}-{block1}-{block2}"
+            attempts += 1
+        
+        return uid
+    
     def save(self, *args, **kwargs):
         # Ensure uid is set
-        if not self.uid and self.pk:
-            self.uid = f"ACL-{uuid.uuid4()}"
+        if not self.uid:
+            self.uid = self.generate_uid()
+        elif self.uid:
+            # Convert existing UID to uppercase
+            self.uid = self.uid.upper()
         super().save(*args, **kwargs)
     
     def delete(self, *args, **kwargs):
@@ -460,7 +502,6 @@ class QR_CodeModel(timeStamp):
             if storage.exists(self.qr_code.name):
                 storage.delete(self.qr_code.name)
         super().delete(*args, **kwargs)
-
 
         
 class GrowthMonitoringModel(timeStamp):
