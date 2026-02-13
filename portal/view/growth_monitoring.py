@@ -494,7 +494,7 @@ def get_growth_stats(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-def get_qr_codes(request):
+def get_qr_code(request):
     """Get QR codes for dropdown"""
     try:
         qr_codes = QR_CodeModel.objects.filter(delete_field='no').order_by('-created_date')

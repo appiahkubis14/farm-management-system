@@ -502,7 +502,7 @@
     </div>
 
     <!-- Stats Cards - Compact Grid -->
-    <!-- <div class="row mb-3 g-2">
+    <div class="row mb-3 g-2">
         <div class="col-xl-3 col-md-6">
             <div class="stats-card">
                 <div class="stats-icon bg-soft-primary">
@@ -547,7 +547,7 @@
                 </div>
             </div>
         </div>
-    </div> -->
+    </div>
 
     <!-- Bulk Actions Bar -->
     <div class="bulk-actions" id="bulkActions">
@@ -607,7 +607,7 @@
                 <select id="pageSizeSelect" class="form-select form-select-sm" style="width: 80px;">
                     <option value="8">8</option>
                     <option value="12" selected>12</option>
-                    <option value="24">10</option>
+                    <option value="24">24</option>
                     <option value="48">50</option>
                     <option value="96">150</option>
                     <option value="192">300</option>
@@ -716,7 +716,18 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-$(document).ready(function() {
+
+      // ==================== STATE MANAGEMENT ====================
+  $(document).ready(function() {
+    // Prevent ApexCharts from trying to initialize on this page
+    if (typeof ApexCharts !== 'undefined') {
+        const originalRender = ApexCharts.prototype.render;
+        ApexCharts.prototype.render = function() {
+            console.log('ApexCharts render suppressed on QR code page');
+            return this;
+        };
+    }
+    
     // ==================== STATE MANAGEMENT ====================
     let currentView = 'card';
     let currentPage = 1;
@@ -724,6 +735,8 @@ $(document).ready(function() {
     let searchTerm = '';
     let selectedQRIds = new Set();
     let qrData = [];
+    let totalPages = 0;
+    let totalCount = 0;
     
     // DOM Elements
     const $cardView = $('#cardViewContainer');
@@ -737,6 +750,10 @@ $(document).ready(function() {
     const $selectAll = $('#selectAll');
     const $searchInput = $('#searchInput');
     const $displayCount = $('#displayCount');
+    const $totalQRCodes = $('#totalQRCodes');
+    const $todayCount = $('#todayCount');
+    const $last7Days = $('#last7Days');
+    const $totalBatchCount = $('#totalBatchCount');
     
     // ==================== INITIALIZATION ====================
     loadStats();
@@ -808,12 +825,19 @@ $(document).ready(function() {
                         icon: 'success',
                         title: 'Success!',
                         text: response.message,
-                        timer: 2000,
+                        timer: 1500,
                         showConfirmButton: false
                     });
+                    
+                    // Reset to first page and reload QR codes
+                    currentPage = 1;
                     loadQRCodes();
                     loadStats();
                     $('#qrQuantity').val(1);
+                    
+                    // Clear any existing search
+                    $searchInput.val('');
+                    searchTerm = '';
                 }
             },
             error: function(xhr) {
@@ -847,24 +871,45 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     qrData = response.data || [];
-                    $displayCount.text(response.total_count || 0);
+                    totalPages = response.total_pages || 0;
+                    totalCount = response.total_count || 0;
+                    
+                    $displayCount.text(totalCount);
                     
                     if (currentView === 'card') {
                         renderCardView(response);
                     } else {
                         renderTableView(response);
                     }
+                    
                     renderPagination(response);
                     clearSelections();
+                    
+                    console.log(`Loaded page ${currentPage}/${totalPages}, total records: ${totalCount}`);
+                } else {
+                    console.error('Failed to load QR codes:', response.message);
+                    $cardsContainer.html(`
+                        <div class="col-12">
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                                <h6 class="fs-6 mt-3">Error Loading QR Codes</h6>
+                                <p class="text-muted small mb-0">${response.message || 'Please try again'}</p>
+                            </div>
+                        </div>
+                    `);
                 }
             },
-            error: function() {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to load QR codes',
-                    confirmButtonColor: '#1d5c37'
-                });
+            error: function(xhr) {
+                console.error('Error loading QR codes:', xhr);
+                $cardsContainer.html(`
+                    <div class="col-12">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                            <h6 class="fs-6 mt-3">Failed to Load QR Codes</h6>
+                            <p class="text-muted small mb-0">Please check your connection and try again</p>
+                        </div>
+                    </div>
+                `);
             },
             complete: function() {
                 $loadingSpinner.hide();
@@ -1322,79 +1367,134 @@ $(document).ready(function() {
     }
     
     // ==================== PAGINATION ====================
-    function renderPagination(response) {
-        let html = '';
-        if (response.total_pages > 1) {
-            html += `<li class="page-item ${!response.has_previous ? 'disabled' : ''}">
-                        <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
-                     </li>`;
-            
-            for (let i = 1; i <= response.total_pages; i++) {
-                if (i === 1 || i === response.total_pages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
-                                <a class="page-link" href="#" data-page="${i}">${i}</a>
-                            </li>`;
-                } else if (i === currentPage - 3 || i === currentPage + 3) {
-                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-                }
-            }
-            
-            html += `<li class="page-item ${!response.has_next ? 'disabled' : ''}">
-                        <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                     </li>`;
-        }
-        $pagination.html(html);
+    // ==================== PAGINATION ====================
+function renderPagination(response) {
+    const currentPage = response.page || 1;
+    const totalPages = response.total_pages || 0;
+    
+    if (totalPages <= 1) {
+        $pagination.html('');
+        return;
     }
     
-    $(document).on('click', '.page-link', function(e) {
-        e.preventDefault();
-        const page = $(this).data('page');
-        if (page && page !== currentPage && !$(this).parent().hasClass('disabled')) {
-            currentPage = page;
-            loadQRCodes();
+    let html = '';
+    
+    // Previous button
+    html += `<li class="page-item ${!response.has_previous ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>`;
+    
+    // First page
+    if (currentPage > 3) {
+        html += `<li class="page-item">
+                    <a class="page-link" href="#" data-page="1">1</a>
+                </li>`;
+        if (currentPage > 4) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    // Pages around current page
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>`;
+    }
+    
+    // Last page
+    if (currentPage < totalPages - 2) {
+        if (currentPage < totalPages - 3) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `<li class="page-item">
+                    <a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a>
+                </li>`;
+    }
+    
+    // Next button
+    html += `<li class="page-item ${!response.has_next ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>`;
+    
+    $pagination.html(html);
+}
+
+$(document).on('click', '.page-link', function(e) {
+    e.preventDefault();
+    const page = $(this).data('page');
+    if (page && page !== currentPage && !$(this).parent().hasClass('disabled')) {
+        currentPage = page;
+        loadQRCodes();
+        
+        // Scroll to top of QR codes section
+        $('html, body').animate({
+            scrollTop: $('#cardViewContainer').offset().top - 100
+        }, 300);
+    }
+});
+    // ==================== STATISTICS ====================
+    // ==================== STATISTICS ====================
+// ==================== STATISTICS ====================
+function loadStats() {
+    $.ajax({
+        url: '/api/qr-codes/',
+        type: 'GET',
+        data: { page: 1, page_size: 1000 },
+        success: function(response) {
+            if (response.success) {
+                console.log('Stats loaded successfully', response);
+                
+                // Update total count from the response total_count
+                const totalCount = response.total_count || 0;
+                $('#totalQRCodes').text(totalCount);
+                $('#totalBatchCount').text(Math.ceil(totalCount / 10) || 0);
+                
+                // Calculate today and last 7 days
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                oneWeekAgo.setHours(0, 0, 0, 0);
+                
+                let todayCount = 0;
+                let weekCount = 0;
+                
+                (response.data || []).forEach(qr => {
+                    try {
+                        const dateStr = qr.created_date;
+                        if (dateStr) {
+                            const date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                const dateOnly = new Date(date);
+                                dateOnly.setHours(0, 0, 0, 0);
+                                
+                                if (dateOnly.getTime() === today.getTime()) {
+                                    todayCount++;
+                                }
+                                if (dateOnly >= oneWeekAgo) {
+                                    weekCount++;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing date:', e);
+                    }
+                });
+                
+                $('#todayCount').text(todayCount);
+                $('#last7Days').text(weekCount);
+            }
+        },
+        error: function(xhr) {
+            console.error('Failed to load stats:', xhr);
         }
     });
-    
-    // ==================== STATISTICS ====================
-    function loadStats() {
-        $.ajax({
-            url: '/api/qr-codes/',
-            type: 'GET',
-            data: { page: 1, page_size: 1000 },
-            success: function(response) {
-                if (response.success) {
-                    console.log('Stats loaded successfully');
-                    console.log(response);
-                    $('#totalQRCodes').text(response.total_count || 0);
-                    $('#totalBatchCount').text(Math.ceil((response.total_count || 0) / 10) || 0);
-                    
-                    const today = new Date().toDateString();
-                    const oneWeekAgo = new Date();
-                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                    
-                    let todayCount = 0, weekCount = 0;
-                    
-                    (response.data || []).forEach(qr => {
-                        try {
-                            const date = new Date(qr.created_date);
-                            if (!isNaN(date.getTime())) {
-                                if (date.toDateString() === today) todayCount++;
-                                if (date >= oneWeekAgo) weekCount++;
-                            }
-                        } catch (e) {}
-                    });
-                    
-                    $('#todayCount').text(todayCount);
-                    $('#last7Days').text(weekCount);
-                }
-            }
-        });
-    }
-    
+}
     // ==================== UTILITIES ====================
     window.getCookie = function(name) {
         let cookieValue = null;

@@ -260,9 +260,9 @@ class Sidebar:
         #     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Regional Manager"]
         # },
         
-        "Admin": {
-            "icon": "fas fa-user-shield",
-            "url": "/admin/",
-            "groups": ["Admin"]
-        }
+        # "Admin": {
+        #     "icon": "fas fa-user-shield",
+        #     "url": "/admin/",
+        #     "groups": ["Admin"]
+        # }
     }

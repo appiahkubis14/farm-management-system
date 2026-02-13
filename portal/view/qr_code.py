@@ -29,7 +29,7 @@ def qr_code_generator(request):
     return render(request, 'portal/qr_code/qr_code_generator.html', context)
 
 def generate_plantation_uid():
-    """Generate UID in format: ACL-PLANTATION-YEAR-TIME-00001"""
+    """Generate UID in format: ACL-PLT-YYYY-HHMM-00001"""
     
     # Fixed prefix and plantation indicator
     prefix = "ACL"
@@ -41,16 +41,25 @@ def generate_plantation_uid():
     # Current time (HHMM)
     time_part = timezone.now().strftime('%H%M')
     
-    # Get the last QR code for today to generate sequential number
-    last_qr = QR_CodeModel.objects.filter(
-        uid__startswith=f"{prefix}-{plantation}-{year}-{time_part}"
-    ).order_by('-id').first()
+    # Get the last QR code with similar pattern
+    try:
+        last_qr = QR_CodeModel.default_objects.filter(
+            uid__startswith=f"{prefix}-{plantation}-{year}-{time_part}"
+        ).order_by('-id').first()
+    except AttributeError:
+        last_qr = QR_CodeModel.objects.filter(
+            uid__startswith=f"{prefix}-{plantation}-{year}-{time_part}"
+        ).order_by('-id').first()
     
     if last_qr and last_qr.uid:
         try:
             # Extract the sequential number
-            last_num = int(last_qr.uid.split('-')[-1])
-            new_num = last_num + 1
+            parts = last_qr.uid.split('-')
+            if len(parts) >= 5:
+                last_num = int(parts[4])
+                new_num = last_num + 1
+            else:
+                new_num = 1
         except (ValueError, IndexError):
             new_num = 1
     else:
@@ -69,6 +78,9 @@ def generate_plantation_uid():
         'time': time_part,
         'sequential': sequential
     }
+
+
+
 
 @login_required
 @require_http_methods(["POST"])
@@ -94,6 +106,8 @@ def generate_qr_codes(request):
                 unique_id = uid_data['uid']
                 timestamp = timezone.now()
                 
+                print(f"Generating QR code {i+1}/{quantity}: {unique_id}")
+                
                 # Create QR code
                 qr = qrcode.QRCode(
                     version=1,
@@ -113,29 +127,37 @@ def generate_qr_codes(request):
                 # Save to BytesIO
                 buffer = io.BytesIO()
                 qr_image.save(buffer, format='PNG')
-                image_data = buffer.getvalue()
                 buffer.seek(0)
                 
                 # Create base64 for preview
-                qr_base64 = base64.b64encode(image_data).decode()
+                qr_base64 = base64.b64encode(buffer.getvalue()).decode()
                 
                 # Create filename
                 filename = f"{unique_id}_{timestamp.strftime('%Y%m%d_%H%M%S')}.png"
                 
-                # Create QR code model
-                qr_model = QR_CodeModel(uid=unique_id)
+                # Create SimpleUploadedFile from buffer
+                image_file = SimpleUploadedFile(
+                    filename,
+                    buffer.getvalue(),
+                    content_type='image/png'
+                )
                 
-                # Save the image file
-                qr_model.qr_code.save(filename, ContentFile(image_data), save=False)
+                # Create QR code model and assign the image
+                qr_model = QR_CodeModel(
+                    uid=unique_id,
+                    qr_code=image_file
+                )
                 qr_model.save()
                 
-                # Refresh from DB to get the URL
+                # Get the URL
                 qr_model.refresh_from_db()
+                qr_code_url = qr_model.qr_code.url if qr_model.qr_code else ''
+                print(f"Saved QR code with URL: {qr_code_url}")
                 
                 generated_codes.append({
                     'id': qr_model.id,
                     'uid': unique_id,
-                    'qr_code_url': qr_model.qr_code.url if qr_model.qr_code else '',
+                    'qr_code_url': qr_code_url,
                     'qr_code_base64': f"data:image/png;base64,{qr_base64}",
                     'created_date': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                     'created_date_formatted': timestamp.strftime('%b %d, %Y %H:%M'),
@@ -160,32 +182,81 @@ def generate_qr_codes(request):
             'message': f'Error generating QR codes: {str(e)}'
         }, status=500)
 
+
 @login_required
 @require_http_methods(["GET"])
 def get_qr_codes(request):
     """Get paginated list of QR codes"""
     try:
         page = int(request.GET.get('page', 1))
-        page_size = int(request.GET.get('page_size', 12))
+        page_size = int(request.GET.get('page_size', 12))  # Default to 12, not 100
         search = request.GET.get('search', '')
         
+        print(f"=== get_qr_codes called ===")
+        print(f"Page: {page}, Page Size: {page_size}, Search: '{search}'")
+        
+        # Use objects.all() which uses timeStampManager and filters delete_field="no"
         qr_codes = QR_CodeModel.objects.all().order_by('-created_date')
+        
+        # Debug: print the SQL query
+        print(f"SQL Query: {qr_codes.query}")
         
         if search:
             qr_codes = qr_codes.filter(uid__icontains=search)
+            print(f"After search filter: {qr_codes.count()} records")
         
+        # Get total count BEFORE pagination
+        total_count = qr_codes.count()
+        print(f"Total active QR codes: {total_count}")
+        
+        # If no records found, return empty data
+        if total_count == 0:
+            print("No active QR codes found")
+            return JsonResponse({
+                'success': True,
+                'data': [],
+                'page': page,
+                'total_pages': 0,
+                'total_count': 0,
+                'has_next': False,
+                'has_previous': False,
+            })
+        
+        # Create paginator
         paginator = Paginator(qr_codes, page_size)
-        qr_page = paginator.get_page(page)
+        
+        # Get the page
+        try:
+            qr_page = paginator.get_page(page)
+        except Exception as e:
+            print(f"Error getting page {page}: {e}")
+            qr_page = paginator.get_page(1)
+            page = 1
+        
+        print(f"Paginator: total={paginator.count}, pages={paginator.num_pages}")
+        print(f"Current page: {qr_page.number}, has_next={qr_page.has_next()}, has_previous={qr_page.has_previous()}")
+        print(f"Records on this page: {len(qr_page.object_list)}")
         
         data = []
         for qr in qr_page:
+            # Build absolute URL for the QR code
+            qr_code_url = ''
+            if qr.qr_code and qr.qr_code.name:
+                try:
+                    qr_code_url = qr.qr_code.url
+                    if qr_code_url.startswith('/'):
+                        qr_code_url = request.build_absolute_uri(qr_code_url)
+                except Exception as e:
+                    print(f"Error getting URL for QR {qr.id}: {e}")
+                    qr_code_url = ''
+            
             # Parse UID components for display
             uid_parts = qr.uid.split('-') if qr.uid else []
             
             data.append({
                 'id': qr.id,
                 'uid': qr.uid,
-                'qr_code_url': qr.qr_code.url if qr.qr_code else '',
+                'qr_code_url': qr_code_url,
                 'created_date': qr.created_date.strftime('%Y-%m-%d %H:%M:%S'),
                 'created_date_formatted': qr.created_date.strftime('%b %d, %Y %H:%M'),
                 'prefix': uid_parts[0] if len(uid_parts) > 0 else '',
@@ -195,23 +266,32 @@ def get_qr_codes(request):
                 'sequential': uid_parts[4] if len(uid_parts) > 4 else '',
             })
         
-        return JsonResponse({
+        response_data = {
             'success': True,
             'data': data,
-            'page': page,
+            'page': qr_page.number,
             'total_pages': paginator.num_pages,
             'total_count': paginator.count,
             'has_next': qr_page.has_next(),
             'has_previous': qr_page.has_previous(),
-        })
+        }
+        
+        print(f"Response: page={response_data['page']}, total_pages={response_data['total_pages']}, total_count={response_data['total_count']}")
+        print(f"Returning {len(data)} records")
+        
+        return JsonResponse(response_data)
         
     except Exception as e:
+        print(f"Error fetching QR codes: {e}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'message': f'Error fetching QR codes: {str(e)}'
         }, status=500)
+    
 
-
+    
 @login_required
 @require_http_methods(["DELETE"])
 def delete_qr_code(request, qr_id):

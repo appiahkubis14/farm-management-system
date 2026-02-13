@@ -471,6 +471,7 @@ import random
 import string
 from django.db import models
 from django.utils import timezone
+import os
 
 class QR_CodeModel(timeStamp):
     """Model for QR Code module"""
@@ -482,53 +483,62 @@ class QR_CodeModel(timeStamp):
         help_text='QR code image file'
     )
     
+    # Add default_objects manager to bypass soft delete
+    default_objects = models.Manager()
+    
     def __str__(self):
         return self.uid or f"QR Code {self.id}"
     
     def generate_uid(self):
-        """Generate UID in format: ACL-YYYY-XXXX-XXXX"""
-        
-        # Fixed prefix
+        """Generate UID in format: ACL-PLT-YEAR-TIME-00001"""
+        # This matches the plantation format
         prefix = "ACL"
-        
-        # Current year
+        plantation = "PLT"
         year = timezone.now().strftime('%Y')
+        time_part = timezone.now().strftime('%H%M')
         
-        # Generate 4-character random blocks (uppercase + digits)
-        block1 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-        block2 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        # Get the last QR code with similar pattern
+        try:
+            last_qr = QR_CodeModel.default_objects.filter(
+                uid__startswith=f"{prefix}-{plantation}-{year}-{time_part}"
+            ).order_by('-id').first()
+        except:
+            last_qr = QR_CodeModel.objects.filter(
+                uid__startswith=f"{prefix}-{plantation}-{year}-{time_part}"
+            ).order_by('-id').first()
         
-        # Combine with crop indicator (optional - can be removed)
-        # crop_code = "CROP"
+        if last_qr and last_qr.uid:
+            try:
+                parts = last_qr.uid.split('-')
+                if len(parts) >= 5:
+                    last_num = int(parts[4])
+                    new_num = last_num + 1
+                else:
+                    new_num = 1
+            except (ValueError, IndexError):
+                new_num = 1
+        else:
+            new_num = 1
         
-        uid = f"{prefix}-{year}-{block1}-{block2}"
-        
-        # Check uniqueness
-        attempts = 0
-        while QR_CodeModel.objects.filter(uid=uid).exists() and attempts < 100:
-            block1 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-            block2 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-            uid = f"{prefix}-{year}-{block1}-{block2}"
-            attempts += 1
-        
+        sequential = f"{new_num:05d}"
+        uid = f"{prefix}-{plantation}-{year}-{time_part}-{sequential}"
         return uid
     
     def save(self, *args, **kwargs):
-        # Ensure uid is set
+        # ONLY generate UID if it's not set - never overwrite
         if not self.uid:
             self.uid = self.generate_uid()
-        elif self.uid:
-            # Convert existing UID to uppercase
-            self.uid = self.uid.upper()
+        # Don't convert to uppercase automatically
         super().save(*args, **kwargs)
     
     def delete(self, *args, **kwargs):
         # Delete the image file when model is deleted
         if self.qr_code:
-            storage = self.qr_code.storage
-            if storage.exists(self.qr_code.name):
-                storage.delete(self.qr_code.name)
+            # Check if file exists before deleting
+            if hasattr(self.qr_code, 'path') and os.path.isfile(self.qr_code.path):
+                os.remove(self.qr_code.path)
         super().delete(*args, **kwargs)
+
 
         
 class GrowthMonitoringModel(timeStamp):

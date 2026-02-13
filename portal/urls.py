@@ -69,12 +69,13 @@ urlpatterns = [
     path('qr-code-generator/', qr_code_generator, name='qr_code_generator'),
     
     # API endpoints
-    path('api/qr-codes/generate/', generate_qr_codes, name='generate_qr_codes'),
-    path('api/qr-codes/', get_qr_codes, name='get_qr_codes'),
-    path('api/qr-codes/<int:qr_id>/delete/', delete_qr_code, name='delete_qr_code'),
-    path('api/qr-codes/bulk-delete/', bulk_delete_qr_codes, name='bulk_delete_qr_codes'),
-    path('api/qr-codes/<int:qr_id>/download/', download_qr_code, name='download_qr_code'),
-    path('api/qr-codes/bulk-download/', download_bulk_qr_codes, name='download_bulk_qr_codes'),
+    path('qr-code-generator/',qr_code_generator, name='qr_code_generator'),
+    path('api/qr-codes/generate/',generate_qr_codes, name='generate_qr_codes'),
+    path('api/qr-codes/',get_qr_codes, name='get_qr_codes'),
+    path('api/qr-codes/<int:qr_id>/delete/',delete_qr_code, name='delete_qr_code'),
+    path('api/qr-codes/bulk-delete/',bulk_delete_qr_codes, name='bulk_delete_qr_codes'),
+    path('api/qr-codes/<int:qr_id>/download/',download_qr_code, name='download_qr_code'),
+    path('api/qr-codes/bulk-download/',download_bulk_qr_codes, name='download_bulk_qr_codes'),
 
 
 
@@ -151,7 +152,7 @@ urlpatterns = [
     
     # Stats and dropdowns
     path('api/growth-monitoring/stats/', get_growth_stats, name='growth_monitoring_stats'),
-    path('api/growth-monitoring/qr-codes/', get_qr_codes, name='growth_monitoring_qr_codes'),
+    path('api/growth-monitoring/qr-codes/', get_qr_code, name='growth_monitoring_qr_codes'),
     path('api/growth-monitoring/plant-uids/', get_plant_uids, name='growth_monitoring_plant_uids'),
 
 
