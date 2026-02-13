@@ -1,0 +1,1348 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<br>
+<!-- Page Header -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">Equipment Overview Management</h4>
+            <div class="page-title-right">
+                <button class="btn btn-primary" id="addEquipmentBtn">
+                    <i class="fas fa-plus me-1"></i> Add New Equipment
+                </button>
+                <button class="btn btn-info" id="exportEquipmentBtn">
+                    <i class="fas fa-download me-1"></i> Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Filter Cards -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="fas fa-filter me-2"></i>Filter Equipment</h5>
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <label for="filterStatus" class="form-label">Status</label>
+                        <select class="form-select" id="filterStatus">
+                            <option value="">All Status</option>
+                            {% for status in status_choices %}
+                                <option value="{{ status }}">{{ status }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="filterDistrict" class="form-label">District</label>
+                        <select class="form-select" id="filterDistrict">
+                            <option value="">All Districts</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="filterProject" class="form-label">Project</label>
+                        <select class="form-select" id="filterProject">
+                            <option value="">All Projects</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="filterAssigned" class="form-label">Assignment Status</label>
+                        <select class="form-select" id="filterAssigned">
+                            <option value="">All</option>
+                            <option value="yes">Assigned</option>
+                            <option value="no">Unassigned</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <button class="btn btn-primary btn-sm" id="applyFilters">
+                            <i class="fas fa-search me-1"></i> Apply Filters
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="clearFilters">
+                            <i class="fas fa-undo me-1"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Stats Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Equipment</span>
+                        <h4 class="mb-3" id="totalEquipment">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-tools text-primary h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Assigned</span>
+                        <h4 class="mb-3" id="assignedCount">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-check text-success h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Unassigned</span>
+                        <h4 class="mb-3" id="unassignedCount">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-slash text-warning h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Under Repair</span>
+                        <h4 class="mb-3" id="repairCount">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-wrench text-danger h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Main Equipment Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="equipmentTable" class="table table-striped datatable" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Equipment</th>
+                                <th>Serial Number</th>
+                                <th>Manufacturer</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>District</th>
+                                <th>Project</th>
+                                <th>Date Added</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Equipment Modal -->
+<div class="modal fade" id="equipmentModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="equipmentModalTitle">Add New Equipment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="equipmentForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="equipmentId" name="equipment_id">
+                    <input type="hidden" id="uid" name="uid">
+                    
+                    <!-- Basic Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="equipment" class="form-label">Equipment Name *</label>
+                                    <input type="text" class="form-control" id="equipment" name="equipment" required>
+                                    <div class="invalid-feedback">Please enter equipment name</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="equipment_code_display" class="form-label">Equipment Code</label>
+                                    <input type="text" class="form-control" id="equipment_code_display" readonly disabled>
+                                    <small class="text-muted">Auto-generated on save</small>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="serial_number" class="form-label">Serial Number *</label>
+                                    <input type="text" class="form-control" id="serial_number" name="serial_number" required>
+                                    <div class="invalid-feedback">Please enter serial number</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="manufacturer" class="form-label">Manufacturer *</label>
+                                    <input type="text" class="form-control" id="manufacturer" name="manufacturer" required>
+                                    <div class="invalid-feedback">Please enter manufacturer</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        {% for status in status_choices %}
+                                            <option value="{{ status }}">{{ status }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Assignment Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>Assignment Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="staff_id" class="form-label">Assign To Staff</label>
+                                    <select class="form-select" id="staff_id" name="staff_id">
+                                        <option value="">Unassigned</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="district_id" class="form-label">District</label>
+                                    <select class="form-select" id="district_id" name="district_id">
+                                        <option value="">Select District</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="project_id" class="form-label">Project</label>
+                                    <select class="form-select" id="project_id" name="project_id">
+                                        <option value="">Select Project</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info mt-2">
+                                <i class="fas fa-info-circle"></i> 
+                                To assign equipment with condition tracking, use the Assign button in the actions column after saving.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveEquipmentBtn">Save Equipment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Equipment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Assign Equipment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="assignEquipmentId">
+                <div class="mb-3">
+                    <label for="assignStaff" class="form-label">Assign To *</label>
+                    <select class="form-select" id="assignStaff" required>
+                        <option value="">Select Staff</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="assignCondition" class="form-label">Condition at Assignment *</label>
+                    <select class="form-select" id="assignCondition" required>
+                        <option value="">Select Condition</option>
+                        {% for condition in condition_choices %}
+                            <option value="{{ condition }}">{{ condition }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="assignNotes" class="form-label">Notes</label>
+                    <textarea class="form-control" id="assignNotes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmAssignBtn">Assign Equipment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Return Equipment Modal -->
+<div class="modal fade" id="returnModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">Return Equipment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="returnEquipmentId">
+                <div class="mb-3">
+                    <label for="returnNotes" class="form-label">Return Notes</label>
+                    <textarea class="form-control" id="returnNotes" rows="3" placeholder="Enter any notes about the return..."></textarea>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> This will mark the equipment as returned and available for reassignment.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmReturnBtn">Confirm Return</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this equipment? This action cannot be undone.</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Equipment Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Equipment Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="equipmentDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="assignFromViewBtn">
+                    <i class="fas fa-user-plus me-1"></i> Assign
+                </button>
+                <button type="button" class="btn btn-warning" id="returnFromViewBtn">
+                    <i class="fas fa-undo me-1"></i> Return
+                </button>
+                <button type="button" class="btn btn-primary" id="printEquipmentBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                <button type="button" class="btn btn-warning" id="editFromViewBtn">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title">Assignment History</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="historyDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    
+    // Initialize DataTable
+    var equipmentTable = $('#equipmentTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'equipment_list_api' %}",
+            type: "GET",
+            data: function(d) {
+                d.status = $('#filterStatus').val();
+                d.district_id = $('#filterDistrict').val();
+                d.project_id = $('#filterProject').val();
+                d.assigned = $('#filterAssigned').val();
+            }
+        },
+        columns: [
+            { 
+                data: 'equipment_code',
+                render: function(data, type, row) {
+                    return `<a href="#" class="view-equipment-link" data-id="${row.id}">${data || 'N/A'}</a>`;
+                }
+            },
+            { data: 'equipment' },
+            { data: 'serial_number' },
+            { data: 'manufacturer' },
+            { 
+                data: 'status',
+                render: function(data) {
+                    var badgeClass = 'bg-secondary';
+                    if (data === 'Good') badgeClass = 'bg-success';
+                    else if (data === 'Fair') badgeClass = 'bg-info';
+                    else if (data === 'Bad') badgeClass = 'bg-danger';
+                    else if (data === 'Under Repair') badgeClass = 'bg-warning';
+                    
+                    return '<span class="badge ' + badgeClass + '">' + (data || 'N/A') + '</span>';
+                }
+            },
+            { 
+                data: 'staff_name',
+                render: function(data) {
+                    return data || '<span class="text-muted">Unassigned</span>';
+                }
+            },
+            { data: 'district_name' },
+            { data: 'project_name' },
+            { 
+                data: 'date_of_capturing',
+                render: function(data) {
+                    if (data) {
+                        var date = new Date(data);
+                        return date.toLocaleDateString();
+                    }
+                    return '<span class="text-muted">N/A</span>';
+                }
+            },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    var assignBtn = '';
+                    var returnBtn = '';
+                    
+                    if (!row.is_assigned) {
+                        assignBtn = `<button class="btn btn-success btn-sm assign-equipment" data-id="${data}" title="Assign">
+                                        <i class="fas fa-user-plus"></i>
+                                     </button>`;
+                    } else {
+                        returnBtn = `<button class="btn btn-warning btn-sm return-equipment" data-id="${data}" title="Return">
+                                        <i class="fas fa-undo"></i>
+                                     </button>`;
+                    }
+                    
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-equipment" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${assignBtn}
+                            ${returnBtn}
+                            <button class="btn btn-primary edit-equipment" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger delete-equipment" data-id="${data}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        responsive: true,
+        order: [[0, 'desc']],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: "copy",
+                text: '<i class="fas fa-copy"></i> Copy',
+                className: "btn btn-sm btn-outline-secondary",
+            },
+            {
+                extend: "csv",
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                className: "btn btn-sm btn-outline-success",
+            },
+            {
+                extend: "excel",
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                className: "btn btn-sm btn-outline-primary",
+            },
+            {
+                extend: "pdf",
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                className: "btn btn-sm btn-outline-danger",
+            },
+            {
+                extend: "print",
+                text: '<i class="fas fa-print"></i> Print',
+                className: "btn btn-sm btn-outline-info",
+            }
+        ],
+        language: {
+            emptyTable: "No equipment found",
+            zeroRecords: "No matching equipment found"
+        }
+    });
+
+    // Load stats
+    function loadStats() {
+        var filters = {
+            district_id: $('#filterDistrict').val(),
+            project_id: $('#filterProject').val()
+        };
+        
+        $.ajax({
+            url: "{% url 'equipment_stats' %}",
+            type: "GET",
+            data: filters,
+            success: function(response) {
+                if (response.success) {
+                    var data = response.data;
+                    $('#totalEquipment').text(data.total_equipment || 0);
+                    $('#assignedCount').text(data.assigned_count || 0);
+                    $('#unassignedCount').text(data.unassigned_count || 0);
+                    
+                    // Find repair count from status_counts
+                    var repairCount = 0;
+                    if (data.status_counts) {
+                        var repair = data.status_counts.find(s => s.status === 'Under Repair');
+                        if (repair) repairCount = repair.count;
+                    }
+                    $('#repairCount').text(repairCount);
+                }
+            }
+        });
+    }
+
+    // Load districts
+    function loadDistricts(selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_districts_api' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $districtSelects = $('#filterDistrict, #district_id');
+                    $districtSelects.each(function() {
+                        var $select = $(this);
+                        var currentVal = $select.val();
+                        $select.empty().append('<option value="">Select District</option>');
+                        
+                        response.data.forEach(function(district) {
+                            var selected = (selectedId && district.id == selectedId) || 
+                                          (currentVal && district.id == currentVal) ? 'selected' : '';
+                            $select.append(`<option value="${district.id}" ${selected}>${district.name}</option>`);
+                        });
+                    });
+                }
+            }
+        });
+    }
+
+    // Load projects
+    function loadProjects(districtId, selectedId = null) {
+        var url = "{% url 'get_projects_api' %}";
+        if (districtId) {
+            url += '?district_id=' + districtId;
+        }
+        
+        $.ajax({
+            url: url,
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $projectSelects = $('#filterProject, #project_id');
+                    $projectSelects.each(function() {
+                        var $select = $(this);
+                        var currentVal = $select.val();
+                        $select.empty().append('<option value="">Select Project</option>');
+                        
+                        response.data.forEach(function(project) {
+                            var selected = (selectedId && project.id == selectedId) || 
+                                          (currentVal && project.id == currentVal) ? 'selected' : '';
+                            $select.append(`<option value="${project.id}" ${selected}>${project.name}</option>`);
+                        });
+                    });
+                }
+            }
+        });
+    }
+
+    // Load staff for assignment
+    function loadStaff(selectedId = null, districtId = null) {
+        var url = "{% url 'get_staff' %}";
+        var params = [];
+        if (districtId) params.push('district_id=' + districtId);
+        if (params.length) url += '?' + params.join('&');
+        
+        $.ajax({
+            url: url,
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $staffSelects = $('#staff_id, #assignStaff');
+                    $staffSelects.each(function() {
+                        var $select = $(this);
+                        var currentVal = $select.val();
+                        $select.empty().append('<option value="">Select Staff</option>');
+                        
+                        response.data.forEach(function(staff) {
+                            var selected = (selectedId && staff.id == selectedId) || 
+                                          (currentVal && staff.id == currentVal) ? 'selected' : '';
+                            $select.append(`<option value="${staff.id}" ${selected}>${staff.name} (${staff.staff_id})</option>`);
+                        });
+                    });
+                }
+            }
+        });
+    }
+
+    // District change event
+    $('#district_id').on('change', function() {
+        var districtId = $(this).val();
+        loadProjects(districtId);
+        loadStaff(null, districtId);
+    });
+
+    // Apply filters
+    $('#applyFilters').click(function() {
+        equipmentTable.ajax.reload();
+        loadStats();
+    });
+
+    // Clear filters
+    $('#clearFilters').click(function() {
+        $('#filterStatus').val('');
+        $('#filterDistrict').val('');
+        $('#filterProject').val('');
+        $('#filterAssigned').val('');
+        equipmentTable.ajax.reload();
+        loadStats();
+    });
+
+    // Add Equipment Button
+    $('#addEquipmentBtn').click(function() {
+        $('#equipmentForm')[0].reset();
+        $('#equipmentForm').removeClass('was-validated');
+        $('#equipmentModalTitle').text('Add New Equipment');
+        $('#equipmentId').val('');
+        $('#uid').val('');
+        $('#equipment_code_display').val('');
+        loadDistricts();
+        loadProjects(null);
+        loadStaff();
+        $('#equipmentModal').modal('show');
+    });
+
+    // Form Submission
+    $('#equipmentForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        var formData = {
+            equipment: $('#equipment').val(),
+            serial_number: $('#serial_number').val(),
+            manufacturer: $('#manufacturer').val(),
+            status: $('#status').val(),
+            staff_id: $('#staff_id').val() || null,
+            district_id: $('#district_id').val() || null,
+            project_id: $('#project_id').val() || null,
+            uid: $('#uid').val() || null
+        };
+        
+        var equipmentId = $('#equipmentId').val();
+        var url = equipmentId ? 
+            "{% url 'equipment_update' 0 %}".replace('0', equipmentId) : 
+            "{% url 'equipment_create' %}";
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#saveEquipmentBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#equipmentModal').modal('hide');
+                    equipmentTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#saveEquipmentBtn').prop('disabled', false).html('Save Equipment');
+            }
+        });
+    });
+
+    // Edit Equipment
+    $(document).on('click', '.edit-equipment', function() {
+        var equipmentId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'equipment_detail_api' 0 %}".replace('0', equipmentId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var eq = response.data;
+                    
+                    // Load dependent data
+                    loadDistricts(eq.district_id);
+                    
+                    if (eq.district_id) {
+                        loadProjects(eq.district_id, eq.project_id);
+                        loadStaff(eq.staff_id, eq.district_id);
+                    } else {
+                        loadProjects(null, eq.project_id);
+                        loadStaff(eq.staff_id);
+                    }
+                    
+                    // Populate form fields
+                    setTimeout(function() {
+                        $('#equipmentId').val(eq.id);
+                        $('#uid').val(eq.uid);
+                        $('#equipment').val(eq.equipment);
+                        $('#equipment_code_display').val(eq.equipment_code);
+                        $('#serial_number').val(eq.serial_number);
+                        $('#manufacturer').val(eq.manufacturer);
+                        $('#status').val(eq.status);
+                    }, 500);
+                    
+                    $('#equipmentModalTitle').text('Edit Equipment');
+                    $('#equipmentModal').modal('show');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to load equipment details', 'error');
+            }
+        });
+    });
+
+    // View Equipment
+    $(document).on('click', '.view-equipment, .view-equipment-link', function(e) {
+        if (e) e.preventDefault();
+        var equipmentId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'equipment_detail_api' 0 %}".replace('0', equipmentId),
+            type: 'GET',
+            beforeSend: function() {
+                $('#equipmentDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading equipment details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var eq = response.data;
+                    
+                    var statusBadge = 'bg-secondary';
+                    if (eq.status === 'Good') statusBadge = 'bg-success';
+                    else if (eq.status === 'Fair') statusBadge = 'bg-info';
+                    else if (eq.status === 'Bad') statusBadge = 'bg-danger';
+                    else if (eq.status === 'Under Repair') statusBadge = 'bg-warning';
+                    
+                    // Build assignment history HTML
+                    var historyHtml = '';
+                    if (eq.assignment_history && eq.assignment_history.length > 0) {
+                        historyHtml = '<h5 class="border-bottom pb-2 mt-3">Assignment History</h5>';
+                        historyHtml += '<div class="table-responsive"><table class="table table-sm table-bordered">';
+                        historyHtml += '<thead><tr><th>Date</th><th>Assigned To</th><th>Assigned By</th><th>Condition</th><th>Status</th><th>Notes</th></tr></thead><tbody>';
+                        
+                        eq.assignment_history.forEach(function(a) {
+                            var statusBadge = a.status === 'Assigned' ? 'bg-success' : 'bg-secondary';
+                            historyHtml += `<tr>
+                                <td>${a.assignment_date}</td>
+                                <td>${a.assigned_to || 'N/A'}</td>
+                                <td>${a.assigned_by || 'N/A'}</td>
+                                <td><span class="badge bg-info">${a.condition_at_assignment || 'N/A'}</span></td>
+                                <td><span class="badge ${statusBadge}">${a.status}</span></td>
+                                <td>${a.notes || '-'}</td>
+                            </tr>`;
+                        });
+                        
+                        historyHtml += '</tbody></table></div>';
+                    } else {
+                        historyHtml = '<p class="text-muted mt-3">No assignment history found</p>';
+                    }
+                    
+                    var html = `
+                        <div class="equipment-details">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Equipment Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Equipment Code:</th>
+                                            <td><span class="badge bg-dark">${eq.equipment_code || 'N/A'}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Equipment Name:</th>
+                                            <td><strong>${eq.equipment || 'N/A'}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Serial Number:</th>
+                                            <td>${eq.serial_number || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Manufacturer:</th>
+                                            <td>${eq.manufacturer || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Status:</th>
+                                            <td><span class="badge ${statusBadge}">${eq.status || 'N/A'}</span></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Assignment Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Currently Assigned To:</th>
+                                            <td><strong>${eq.staff_name || '<span class="text-muted">Unassigned</span>'}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>District:</th>
+                                            <td>${eq.district_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Project:</th>
+                                            <td>${eq.project_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Date Added:</th>
+                                            <td>${eq.date_of_capturing || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            ${historyHtml}
+                            
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">System Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="20%">Created Date:</th>
+                                            <td>${eq.created_date || 'N/A'}</td>
+                                            <th width="20%">UID:</th>
+                                            <td><small class="text-muted">${eq.uid || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $('#equipmentDetails').html(html);
+                    
+                    // Store equipment ID for buttons
+                    $('#assignFromViewBtn').data('id', eq.id);
+                    $('#returnFromViewBtn').data('id', eq.id);
+                    $('#editFromViewBtn').data('id', eq.id);
+                    
+                    // Show/hide assign/return buttons based on current assignment
+                    if (eq.staff_name) {
+                        $('#assignFromViewBtn').hide();
+                        $('#returnFromViewBtn').show();
+                    } else {
+                        $('#assignFromViewBtn').show();
+                        $('#returnFromViewBtn').hide();
+                    }
+                    
+                    $('#viewModal').modal('show');
+                } else {
+                    $('#equipmentDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load equipment details: ${response.message}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#equipmentDetails').html(`
+                    <div class="alert alert-danger">
+                        Failed to load equipment details
+                    </div>
+                `);
+            }
+        });
+    });
+
+    // Assign Equipment
+    $(document).on('click', '.assign-equipment', function() {
+        var equipmentId = $(this).data('id');
+        $('#assignEquipmentId').val(equipmentId);
+        $('#assignStaff').val('');
+        $('#assignCondition').val('');
+        $('#assignNotes').val('');
+        
+        // Load staff based on equipment's district
+        $.ajax({
+            url: "{% url 'equipment_detail_api' 0 %}".replace('0', equipmentId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var eq = response.data;
+                    loadStaff(null, eq.district_id);
+                }
+            }
+        });
+        
+        $('#assignModal').modal('show');
+    });
+
+    // Assign from view modal
+    $('#assignFromViewBtn').click(function() {
+        var equipmentId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        
+        $('#assignEquipmentId').val(equipmentId);
+        $('#assignStaff').val('');
+        $('#assignCondition').val('');
+        $('#assignNotes').val('');
+        
+        // Load staff based on equipment's district
+        $.ajax({
+            url: "{% url 'equipment_detail_api' 0 %}".replace('0', equipmentId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var eq = response.data;
+                    loadStaff(null, eq.district_id);
+                }
+            }
+        });
+        
+        $('#assignModal').modal('show');
+    });
+
+    // Confirm Assign
+    $('#confirmAssignBtn').click(function() {
+        var equipmentId = $('#assignEquipmentId').val();
+        var staffId = $('#assignStaff').val();
+        var condition = $('#assignCondition').val();
+        var notes = $('#assignNotes').val();
+        
+        if (!staffId) {
+            Swal.fire('Error', 'Please select a staff member', 'error');
+            return;
+        }
+        
+        if (!condition) {
+            Swal.fire('Error', 'Please select condition at assignment', 'error');
+            return;
+        }
+        
+        var formData = {
+            assigned_to_id: staffId,
+            condition_at_assignment: condition,
+            notes: notes
+        };
+        
+        $.ajax({
+            url: "{% url 'equipment_assign' 0 %}".replace('0', equipmentId),
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmAssignBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Assigning...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#assignModal').modal('hide');
+                    equipmentTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmAssignBtn').prop('disabled', false).html('Assign Equipment');
+            }
+        });
+    });
+
+    // Return Equipment
+    $(document).on('click', '.return-equipment', function() {
+        var equipmentId = $(this).data('id');
+        $('#returnEquipmentId').val(equipmentId);
+        $('#returnNotes').val('');
+        $('#returnModal').modal('show');
+    });
+
+    // Return from view modal
+    $('#returnFromViewBtn').click(function() {
+        var equipmentId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        $('#returnEquipmentId').val(equipmentId);
+        $('#returnNotes').val('');
+        $('#returnModal').modal('show');
+    });
+
+    // Confirm Return
+    $('#confirmReturnBtn').click(function() {
+        var equipmentId = $('#returnEquipmentId').val();
+        var notes = $('#returnNotes').val();
+        
+        var formData = {
+            notes: notes
+        };
+        
+        $.ajax({
+            url: "{% url 'equipment_return' 0 %}".replace('0', equipmentId),
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmReturnBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#returnModal').modal('hide');
+                    equipmentTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmReturnBtn').prop('disabled', false).html('Confirm Return');
+            }
+        });
+    });
+
+    // Edit from view modal
+    $('#editFromViewBtn').click(function() {
+        var equipmentId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        
+        // Trigger edit button
+        $(`.edit-equipment[data-id="${equipmentId}"]`).click();
+    });
+
+    // Delete Equipment
+    var deleteEquipmentId = null;
+    $(document).on('click', '.delete-equipment', function() {
+        deleteEquipmentId = $(this).data('id');
+        
+        // Check if equipment is assigned
+        var row = equipmentTable.row($(this).closest('tr')).data();
+        if (row && row.is_assigned) {
+            Swal.fire({
+                title: 'Cannot Delete',
+                text: 'This equipment is currently assigned. Please return it before deleting.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+
+    $('#confirmDeleteBtn').click(function() {
+        var reason = $('#deleteReason').val();
+        if (!reason.trim()) {
+            Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: "{% url 'equipment_delete' 0 %}".replace('0', deleteEquipmentId),
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ reason: reason }),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deleteModal').modal('hide');
+                    equipmentTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmDeleteBtn').prop('disabled', false).html('Delete');
+            }
+        });
+    });
+
+    // Export Equipment
+    $('#exportEquipmentBtn').click(function() {
+        var params = new URLSearchParams({
+            status: $('#filterStatus').val() || '',
+            district_id: $('#filterDistrict').val() || '',
+            assigned: $('#filterAssigned').val() || ''
+        });
+        
+        window.location.href = "{% url 'export_equipment' %}?" + params.toString();
+    });
+
+    // Print Equipment Details
+    $('#printEquipmentBtn').click(function() {
+        var printContent = $('#equipmentDetails').html();
+        var originalContent = $('body').html();
+        
+        $('body').html(`
+            <div class="container mt-5">
+                <h2 class="text-center mb-4">Equipment Details Report</h2>
+                <div class="text-center mb-4">
+                    <h5>Equipment Information</h5>
+                </div>
+                ${printContent}
+                <div class="mt-5 text-center">
+                    <small>Printed on: ${new Date().toLocaleString()}</small>
+                </div>
+            </div>
+        `);
+        
+        window.print();
+        $('body').html(originalContent);
+        
+        // Re-initialize DataTable after print
+        location.reload();
+    });
+
+    // CSRF Token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initial load
+    loadStats();
+    loadDistricts();
+    loadProjects(null);
+    loadStaff();
+});
+</script>
+
+<style>
+.card-h-30 {
+    min-height: 120px;
+}
+
+.equipment-details h5 {
+    color: #495057;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.equipment-details table {
+    margin-bottom: 0;
+}
+
+.equipment-details th {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.equipment-details td {
+    font-size: 0.95rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.view-equipment-link {
+    color: #0d6efd;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.view-equipment-link:hover {
+    text-decoration: underline;
+}
+
+@media print {
+    .modal-header, .modal-footer, .btn, .btn-group {
+        display: none !important;
+    }
+    
+    .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .modal-body {
+        padding: 0 !important;
+    }
+    
+    .equipment-details {
+        font-size: 12pt;
+    }
+}
+</style>
+{% endblock %}

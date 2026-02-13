@@ -14,10 +14,12 @@ from portal.view.staff import *
 from portal.view.contractors import *
 from portal.view.staff_assignment import *
 from portal.view.dashboard import *
-# from portal.view.payment import *
-# from portal.view.irrigation import *
+from portal.view.certification import *
+from portal.view.equipment import *
+from portal.view.payments import *
+from portal.view.irrigation import *
 # from portal.view.equipment import *
-# from portal.view.outbreak import *
+from portal.view.outbreakfarms import *
 # from portal.view.verification import *
 # from portal.view.contractor import *
 
@@ -213,4 +215,100 @@ urlpatterns = [
     path('assignments/by-po/<int:po_id>/', get_assignments_by_po, name='assignments_by_po'),
     path('assignments/by-ra/<int:ra_id>/', get_assignments_by_ra, name='assignments_by_ra'),
     path('assignments/by-district/<int:district_id>/', get_assignments_by_district, name='assignments_by_district'),
+
+      # Work Certificates URLs
+    path('certification/ched-certificates/', work_certificates_page, name='work_certificates_page'),
+    path('api/work-certificates/', work_certificate_list, name='work_certificate_list_api'),
+    path('api/work-certificates/create/', work_certificate_create, name='work_certificate_create'),
+    path('api/work-certificates/<int:pk>/', work_certificate_detail, name='work_certificate_detail_api'),
+    path('api/work-certificates/<int:pk>/update/', work_certificate_update, name='work_certificate_update'),
+    path('api/work-certificates/<int:pk>/delete/', work_certificate_delete, name='work_certificate_delete'),
+    path('api/work-certificates/<int:pk>/verify/', work_certificate_verify, name='work_certificate_verify'),
+    
+    # Helper URLs for dropdowns
+    path('api/get-contractors/', get_contractors, name='get_contractors'),
+    path('api/get-projects/', get_projects, name='get_projects_api'),
+    path('api/get-districts/', get_districts, name='get_districts_api'),
+
+
+    # Payment Reports URLs
+    path('payment/payment-reports/', payment_reports_page, name='payment_reports_page'),
+    path('api/payment-reports/', payment_report_list, name='payment_report_list_api'),
+    path('api/payment-reports/summary/', payment_report_summary, name='payment_report_summary'),
+    path('api/payment-reports/create/', payment_report_create, name='payment_report_create'),
+    path('api/payment-reports/<int:pk>/', payment_report_detail, name='payment_report_detail_api'),
+    path('api/payment-reports/<int:pk>/update/', payment_report_update, name='payment_report_update'),
+    path('api/payment-reports/<int:pk>/delete/', payment_report_delete, name='payment_report_delete'),
+    path('api/payment-reports/detailed/', detailed_payment_report_list, name='detailed_payment_report_list'),
+    path('api/payment-reports/detailed/create/', detailed_payment_report_create, name='detailed_payment_report_create'),
+    path('api/payment-reports/generate/', generate_payment_report, name='generate_payment_report'),
+    path('api/payment-reports/export/', export_payment_report, name='export_payment_report'),
+    
+    # Helper URLs
+    path('api/get-ras/', get_rehab_assistants, name='get_ras'),
+    path('api/get-pos/', get_pos, name='get_pos'),
+    path('api/get-farms/', get_farms, name='get_farms'),
+    path('api/get-activities/', get_activities, name='get_activities'),
+
+
+    # Equipment Overview URLs
+    path('equipment/equipment/', equipment_overview_page, name='equipment_overview_page'),
+    path('api/equipment/', equipment_list, name='equipment_list_api'),
+    path('api/equipment/create/', equipment_create, name='equipment_create'),
+    path('api/equipment/<int:pk>/', equipment_detail, name='equipment_detail_api'),
+    path('api/equipment/<int:pk>/update/', equipment_update, name='equipment_update'),
+    path('api/equipment/<int:pk>/delete/', equipment_delete, name='equipment_delete'),
+    path('api/equipment/<int:pk>/assign/', equipment_assign, name='equipment_assign'),
+    path('api/equipment/<int:pk>/return/', equipment_return, name='equipment_return'),
+    path('api/equipment/assignments/', equipment_assignment_list, name='equipment_assignment_list'),
+    path('api/equipment/assignments/<int:pk>/', equipment_assignment_detail, name='equipment_assignment_detail'),
+    path('api/equipment/stats/', equipment_stats, name='equipment_stats'),
+    path('api/equipment/export/', export_equipment, name='export_equipment'),
+    
+    # Helper URLs
+    path('api/get-staff/', get_staff, name='get_staff'),
+
+
+     # ===== OutbreakFarm (Enhanced) API endpoints =====
+    path('outbreakfarms/', outbreakfarms_overview, name='outbreakfarm_list'),
+
+    path('api/outbreakfarms/list/', outbreakfarm_list_api, name='outbreakfarm_list_api'),
+    path('api/outbreakfarms/<int:pk>/', outbreakfarm_detail_api, name='outbreakfarm_detail_api'),
+    path('api/outbreakfarms/create/', outbreakfarm_create, name='outbreakfarm_create'),
+    path('api/outbreakfarms/<int:pk>/update/', outbreakfarm_update, name='outbreakfarm_update'),
+    path('api/outbreakfarms/<int:pk>/delete/', outbreakfarm_delete, name='outbreakfarm_delete'),
+    path('api/outbreakfarms/stats/', outbreakfarm_stats_api, name='outbreakfarm_stats_api'),
+    
+    # ===== OutbreakFarmModel API endpoints =====
+    path('api/outbreakfarms/model/list/', outbreakfarmmodel_list_api, name='outbreakfarmmodel_list_api'),
+    path('api/outbreakfarms/model/<int:pk>/', outbreakfarmmodel_detail_api, name='outbreakfarmmodel_detail_api'),
+    path('api/outbreakfarms/model/create/', outbreakfarmmodel_create, name='outbreakfarmmodel_create'),
+    path('api/outbreakfarms/model/<int:pk>/update/', outbreakfarmmodel_update, name='outbreakfarmmodel_update'),
+    path('api/outbreakfarms/model/<int:pk>/delete/', outbreakfarmmodel_delete, name='outbreakfarmmodel_delete'),
+    path('api/outbreakfarms/model/stats/', outbreakfarmmodel_stats_api, name='outbreakfarmmodel_stats_api'),
+
+    path('api/get-districts/', get_districts, name='get_districts'),
+    path('api/get-regions/', get_regions, name='get_regions'),
+    path('api/get-communities/', get_communities, name='get_communities'),
+    path('api/get-projects/', get_projects, name='get_projects'),
+    path('api/staff/list/', get_staff, name='staff_list_api'),
+    path('api/farms/list/', farm_list_api, name='farm_list_api'),
+
+
+     # Main Irrigation Overview page
+    path('irrigation/', irrigation_overview, name='irrigation_overview'),
+    
+    # Irrigation API endpoints
+    path('api/irrigation/list/', irrigation_list_api, name='irrigation_list_api'),
+    path('api/irrigation/<int:pk>/', irrigation_detail_api, name='irrigation_detail_api'),
+    path('api/irrigation/create/', irrigation_create, name='irrigation_create'),
+    path('api/irrigation/<int:pk>/update/', irrigation_update, name='irrigation_update'),
+    path('api/irrigation/<int:pk>/delete/', irrigation_delete, name='irrigation_delete'),
+    path('api/irrigation/stats/', irrigation_stats_api, name='irrigation_stats_api'),
+    path('api/irrigation/chart-data/', irrigation_chart_api, name='irrigation_chart_api'),
+    
+    # Dropdown API endpoints
+    path('api/farms/list/', farm_list_api, name='farm_list_api'),
+    path('api/staff/dropdown/', staff_list_dropdown_api, name='staff_list_dropdown_api'),
+
 ]

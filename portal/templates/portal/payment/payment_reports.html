@@ -1,0 +1,1889 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<br>
+<!-- Page Header -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">Payment Reports Management</h4>
+            <div class="page-title-right">
+                <button class="btn btn-primary" id="generateReportBtn">
+                    <i class="fas fa-chart-line me-1"></i> Generate Report
+                </button>
+                <button class="btn btn-success" id="addPaymentBtn">
+                    <i class="fas fa-plus me-1"></i> Add Payment Record
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Filter Cards -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="fas fa-filter me-2"></i>Filter Reports</h5>
+                <div class="row">
+                    <div class="col-md-2 mb-2">
+                        <label for="filterYear" class="form-label">Year</label>
+                        <select class="form-select" id="filterYear">
+                            <option value="">All Years</option>
+                            {% for year in years %}
+                                <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label for="filterMonth" class="form-label">Month</label>
+                        <select class="form-select" id="filterMonth">
+                            <option value="">All Months</option>
+                            {% for month in months %}
+                                <option value="{{ month.value }}">{{ month.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label for="filterWeek" class="form-label">Week</label>
+                        <select class="form-select" id="filterWeek">
+                            <option value="">All Weeks</option>
+                            {% for week in weeks %}
+                                <option value="{{ week }}">{{ week }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label for="filterDistrict" class="form-label">District</label>
+                        <select class="form-select" id="filterDistrict">
+                            <option value="">All Districts</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label for="filterProject" class="form-label">Project</label>
+                        <select class="form-select" id="filterProject">
+                            <option value="">All Projects</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label for="filterPaymentOption" class="form-label">Payment Option</label>
+                        <select class="form-select" id="filterPaymentOption">
+                            <option value="">All Options</option>
+                            {% for option in payment_options %}
+                                <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <button class="btn btn-primary btn-sm" id="applyFilters">
+                            <i class="fas fa-search me-1"></i> Apply Filters
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="clearFilters">
+                            <i class="fas fa-undo me-1"></i> Clear
+                        </button>
+                        <button class="btn btn-info btn-sm float-end" id="exportReportBtn">
+                            <i class="fas fa-download me-1"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Stats Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Payments</span>
+                        <h4 class="mb-3" id="totalReports">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-file-invoice text-primary h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Amount</span>
+                        <h4 class="mb-3" id="totalAmount">GHS 0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-money-bill-wave text-success h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Average Amount</span>
+                        <h4 class="mb-3" id="avgAmount">GHS 0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-chart-line text-info h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Beneficiaries</span>
+                        <h4 class="mb-3" id="totalBeneficiaries">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-users text-warning h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Tabs for Summary/Detailed -->
+<ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab" aria-controls="summary" aria-selected="true">
+            <i class="fas fa-chart-pie me-1"></i> Summary Reports
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="detailed-tab" data-bs-toggle="tab" data-bs-target="#detailed" type="button" role="tab" aria-controls="detailed" aria-selected="false">
+            <i class="fas fa-list me-1"></i> Detailed Payments
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="reportTabsContent">
+    <!-- Summary Reports Tab -->
+    <div class="tab-pane fade show active" id="summary" role="tabpanel" aria-labelledby="summary-tab">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="summaryTable" class="table table-striped datatable" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>RA Name</th>
+                                        <th>District</th>
+                                        <th>Month/Year</th>
+                                        <th>Week</th>
+                                        <th>Salary (GHS)</th>
+                                        <th>Payment Option</th>
+                                        <th>PO Number</th>
+                                        <th>Bank</th>
+                                        <th>Created Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Payments Tab -->
+    <div class="tab-pane fade" id="detailed" role="tabpanel" aria-labelledby="detailed-tab">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="detailedTable" class="table table-striped datatable" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Group Code</th>
+                                        <th>RA Name</th>
+                                        <th>PO Name</th>
+                                        <th>Farm Reference</th>
+                                        <th>Activity</th>
+                                        <th>Achievement (ha)</th>
+                                        <th>Amount (GHS)</th>
+                                        <th>Month/Year</th>
+                                        <th>Week</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="paymentModalTitle">Add Payment Record</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="paymentForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="paymentId" name="payment_id">
+                    <input type="hidden" id="uid" name="uid">
+                    
+                    <!-- Basic Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="ra_id" class="form-label">Rehab Assistant *</label>
+                                    <select class="form-select" id="ra_id" name="ra_id" required>
+                                        <option value="">Select RA</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select RA</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="payment_option" class="form-label">Payment Option</label>
+                                    <select class="form-select" id="payment_option" name="payment_option">
+                                        <option value="">Select Payment Option</option>
+                                        {% for option in payment_options %}
+                                            <option value="{{ option }}">{{ option }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="month" class="form-label">Month *</label>
+                                    <select class="form-select" id="month" name="month" required>
+                                        <option value="">Select Month</option>
+                                        {% for month in months %}
+                                            <option value="{{ month.value }}">{{ month.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select month</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="year" class="form-label">Year *</label>
+                                    <select class="form-select" id="year" name="year" required>
+                                        <option value="">Select Year</option>
+                                        {% for year in years %}
+                                            <option value="{{ year }}">{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select year</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="week" class="form-label">Week</label>
+                                    <select class="form-select" id="week" name="week">
+                                        <option value="">Select Week</option>
+                                        {% for week in weeks %}
+                                            <option value="{{ week }}">{{ week }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="district_id" class="form-label">District</label>
+                                    <select class="form-select" id="district_id" name="district_id">
+                                        <option value="">Select District</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="project_id" class="form-label">Project</label>
+                                    <select class="form-select" id="project_id" name="project_id">
+                                        <option value="">Select Project</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="po_number" class="form-label">PO Number</label>
+                                    <input type="text" class="form-control" id="po_number" name="po_number">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="salary" class="form-label">Salary Amount (GHS) *</label>
+                                    <input type="number" step="0.01" class="form-control" id="salary" name="salary" required>
+                                    <div class="invalid-feedback">Please enter salary amount</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bank Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-university me-2"></i>Bank Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="bank_name" class="form-label">Bank Name</label>
+                                    <input type="text" class="form-control" id="bank_name" name="bank_name">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="bank_branch" class="form-label">Bank Branch</label>
+                                    <input type="text" class="form-control" id="bank_branch" name="bank_branch">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="snnit_no" class="form-label">SSNIT Number</label>
+                                    <input type="text" class="form-control" id="snnit_no" name="snnit_no">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="momo_acc" class="form-label">Mobile Money Account</label>
+                                    <input type="text" class="form-control" id="momo_acc" name="momo_acc">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Payments Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-list me-2"></i>Detailed Payment Records</h6>
+                            <button type="button" class="btn btn-sm btn-primary" id="addDetailRow">
+                                <i class="fas fa-plus"></i> Add Detail
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm" id="detailsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Group Code</th>
+                                            <th>Farm Reference</th>
+                                            <th>Activity</th>
+                                            <th>Achievement (ha)</th>
+                                            <th>Amount (GHS)</th>
+                                            <th>Number in Group</th>
+                                            <th>Issue</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="detailsBody">
+                                        <!-- Dynamic rows will be added here -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th colspan="4" class="text-end">Total:</th>
+                                            <th id="totalDetailsAmount">0.00</th>
+                                            <th colspan="3"></th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="savePaymentBtn">Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Report Modal -->
+<div class="modal fade" id="generateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Generate Payment Report</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="generateForm">
+                    <div class="mb-3">
+                        <label for="genMonth" class="form-label">Month *</label>
+                        <select class="form-select" id="genMonth" required>
+                            <option value="">Select Month</option>
+                            {% for month in months %}
+                                <option value="{{ month.value }}">{{ month.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="genYear" class="form-label">Year *</label>
+                        <select class="form-select" id="genYear" required>
+                            <option value="">Select Year</option>
+                            {% for year in years %}
+                                <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="genWeek" class="form-label">Week (Optional)</label>
+                        <select class="form-select" id="genWeek">
+                            <option value="">All Weeks</option>
+                            {% for week in weeks %}
+                                <option value="{{ week }}">{{ week }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="genDistrict" class="form-label">District (Optional)</label>
+                        <select class="form-select" id="genDistrict">
+                            <option value="">All Districts</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="genProject" class="form-label">Project (Optional)</label>
+                        <select class="form-select" id="genProject">
+                            <option value="">All Projects</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmGenerateBtn">Generate Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this payment record? This action cannot be undone.</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Payment Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Payment Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="paymentDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="printPaymentBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                <button type="button" class="btn btn-warning" id="editFromViewBtn">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    
+    // Initialize DataTables
+    var summaryTable = $('#summaryTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'payment_report_list_api' %}",
+            type: "GET",
+            data: function(d) {
+                // Add filter parameters
+                d.year = $('#filterYear').val();
+                d.month = $('#filterMonth').val();
+                d.week = $('#filterWeek').val();
+                d.district_id = $('#filterDistrict').val();
+                d.project_id = $('#filterProject').val();
+                d.payment_option = $('#filterPaymentOption').val();
+            }
+        },
+        columns: [
+            { 
+                data: 'id',
+                render: function(data, type, row) {
+                    return `<a href="#" class="view-payment-link" data-id="${row.id}">#${data}</a>`;
+                }
+            },
+            { data: 'ra_name' },
+            { data: 'district_name' },
+            { 
+                data: null,
+                render: function(data) {
+                    return `${data.month || ''} ${data.year || ''}`;
+                }
+            },
+            { data: 'week' },
+            { 
+                data: 'salary',
+                render: function(data) {
+                    return `GHS ${parseFloat(data).toFixed(2)}`;
+                }
+            },
+            { data: 'payment_option' },
+            { data: 'po_number' },
+            { data: 'bank_name' },
+            { 
+                data: 'created_date',
+                render: function(data) {
+                    if (data) {
+                        var date = new Date(data);
+                        return date.toLocaleDateString();
+                    }
+                    return '<span class="text-muted">N/A</span>';
+                }
+            },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-payment" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary edit-payment" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger delete-payment" data-id="${data}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        responsive: true,
+        order: [[0, 'desc']],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: "copy",
+                text: '<i class="fas fa-copy"></i> Copy',
+                className: "btn btn-sm btn-outline-secondary",
+            },
+            {
+                extend: "csv",
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                className: "btn btn-sm btn-outline-success",
+            },
+            {
+                extend: "excel",
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                className: "btn btn-sm btn-outline-primary",
+            },
+            {
+                extend: "pdf",
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                className: "btn btn-sm btn-outline-danger",
+            },
+            {
+                extend: "print",
+                text: '<i class="fas fa-print"></i> Print',
+                className: "btn btn-sm btn-outline-info",
+            }
+        ],
+        language: {
+            emptyTable: "No payment reports found",
+            zeroRecords: "No matching reports found"
+        }
+    });
+    
+    var detailedTable = $('#detailedTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'detailed_payment_report_list' %}",
+            type: "GET",
+            data: function(d) {
+                d.year = $('#filterYear').val();
+                d.month = $('#filterMonth').val();
+                d.week = $('#filterWeek').val();
+                d.district_id = $('#filterDistrict').val();
+            }
+        },
+        columns: [
+            { 
+                data: 'id',
+                render: function(data, type, row) {
+                    return `<a href="#" class="view-detailed-link" data-id="${row.id}">#${data}</a>`;
+                }
+            },
+            { data: 'group_code' },
+            { data: 'ra_name' },
+            { data: 'po_name' },
+            { data: 'farm_reference' },
+            { data: 'activity_name' },
+            { 
+                data: 'achievement',
+                render: function(data) {
+                    return data ? parseFloat(data).toFixed(2) : '0.00';
+                }
+            },
+            { 
+                data: 'amount',
+                render: function(data) {
+                    return `GHS ${parseFloat(data).toFixed(2)}`;
+                }
+            },
+            { 
+                data: null,
+                render: function(data) {
+                    return `${data.month || ''} ${data.year || ''}`;
+                }
+            },
+            { data: 'week' },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-detailed" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-danger delete-detailed" data-id="${data}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        responsive: true,
+        order: [[0, 'desc']]
+    });
+
+    // Load stats
+    function loadStats() {
+        var filters = {
+            year: $('#filterYear').val(),
+            month: $('#filterMonth').val(),
+            district_id: $('#filterDistrict').val()
+        };
+        
+        $.ajax({
+            url: "{% url 'payment_report_summary' %}",
+            type: "GET",
+            data: filters,
+            success: function(response) {
+                if (response.success) {
+                    var data = response.data;
+                    $('#totalReports').text(data.total_reports || 0);
+                    $('#totalAmount').text(`GHS ${(data.total_salary || 0).toFixed(2)}`);
+                    $('#avgAmount').text(`GHS ${(data.avg_salary || 0).toFixed(2)}`);
+                    
+                    // Count unique beneficiaries
+                    var beneficiaries = data.recent_reports ? data.recent_reports.length : 0;
+                    $('#totalBeneficiaries').text(beneficiaries);
+                }
+            }
+        });
+    }
+
+    // Load districts
+    function loadDistricts(selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_districts_api' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $districtSelects = $('#filterDistrict, #district_id, #genDistrict');
+                    $districtSelects.each(function() {
+                        var $select = $(this);
+                        var currentVal = $select.val();
+                        $select.empty().append('<option value="">Select District</option>');
+                        
+                        response.data.forEach(function(district) {
+                            var selected = (selectedId && district.id == selectedId) || 
+                                          (currentVal && district.id == currentVal) ? 'selected' : '';
+                            $select.append(`<option value="${district.id}" ${selected}>${district.name}</option>`);
+                        });
+                    });
+                }
+            }
+        });
+    }
+
+    // Load projects
+    function loadProjects(districtId, selectedId = null) {
+        var url = "{% url 'get_projects_api' %}";
+        if (districtId) {
+            url += '?district_id=' + districtId;
+        }
+        
+        $.ajax({
+            url: url,
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $projectSelects = $('#filterProject, #project_id, #genProject');
+                    $projectSelects.each(function() {
+                        var $select = $(this);
+                        var currentVal = $select.val();
+                        $select.empty().append('<option value="">Select Project</option>');
+                        
+                        response.data.forEach(function(project) {
+                            var selected = (selectedId && project.id == selectedId) || 
+                                          (currentVal && project.id == currentVal) ? 'selected' : '';
+                            $select.append(`<option value="${project.id}" ${selected}>${project.name}</option>`);
+                        });
+                    });
+                }
+            }
+        });
+    }
+
+    // Load Rehab Assistants
+    function loadRAs(selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_ras' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $raSelect = $('#ra_id');
+                    $raSelect.empty().append('<option value="">Select RA</option>');
+                    
+                    response.data.forEach(function(ra) {
+                        var selected = (selectedId && ra.id == selectedId) ? 'selected' : '';
+                        $raSelect.append(`<option value="${ra.id}" ${selected}>${ra.name} (${ra.staff_id})</option>`);
+                    });
+                }
+            }
+        });
+    }
+
+    // Load farms for detailed rows
+    function loadFarms(searchTerm, callback) {
+        $.ajax({
+            url: "{% url 'get_farms' %}",
+            type: "GET",
+            data: { search: searchTerm },
+            success: function(response) {
+                if (response.success) {
+                    callback(response.data);
+                }
+            }
+        });
+    }
+
+    // Load activities for detailed rows
+    function loadActivities(searchTerm, callback) {
+        $.ajax({
+            url: "{% url 'get_activities' %}",
+            type: "GET",
+            data: { search: searchTerm },
+            success: function(response) {
+                if (response.success) {
+                    callback(response.data);
+                }
+            }
+        });
+    }
+
+    // District change events
+    $('#district_id, #filterDistrict, #genDistrict').on('change', function() {
+        var districtId = $(this).val();
+        var targetSelect = $(this).attr('id') === 'district_id' ? '#project_id' : 
+                          ($(this).attr('id') === 'filterDistrict' ? '#filterProject' : '#genProject');
+        
+        if (districtId) {
+            loadProjects(districtId, $(targetSelect).val());
+        } else {
+            loadProjects(null);
+        }
+    });
+
+    // Apply filters
+    $('#applyFilters').click(function() {
+        summaryTable.ajax.reload();
+        detailedTable.ajax.reload();
+        loadStats();
+    });
+
+    // Clear filters
+    $('#clearFilters').click(function() {
+        $('#filterYear').val('');
+        $('#filterMonth').val('');
+        $('#filterWeek').val('');
+        $('#filterDistrict').val('');
+        $('#filterProject').val('');
+        $('#filterPaymentOption').val('');
+        summaryTable.ajax.reload();
+        detailedTable.ajax.reload();
+        loadStats();
+    });
+
+    // Add Payment Button
+    $('#addPaymentBtn').click(function() {
+        $('#paymentForm')[0].reset();
+        $('#paymentForm').removeClass('was-validated');
+        $('#paymentModalTitle').text('Add Payment Record');
+        $('#paymentId').val('');
+        $('#uid').val('');
+        $('#detailsBody').empty();
+        $('#totalDetailsAmount').text('0.00');
+        
+        // Set default values
+        var currentYear = new Date().getFullYear();
+        $('#year').val(currentYear);
+        
+        loadRAs();
+        loadDistricts();
+        loadProjects(null);
+        
+        $('#paymentModal').modal('show');
+    });
+
+    // Add detail row
+    $('#addDetailRow').click(function() {
+        addDetailRow();
+    });
+
+    function addDetailRow(data = null) {
+        var rowId = 'detail_' + new Date().getTime();
+        var html = `
+            <tr id="${rowId}">
+                <td>
+                    <input type="text" class="form-control form-control-sm group-code" placeholder="Group Code" value="${data?.group_code || ''}">
+                </td>
+                <td>
+                    <select class="form-select form-select-sm farm-select">
+                        <option value="">Select Farm</option>
+                    </select>
+                    <input type="hidden" class="farm-reference" value="${data?.farm_reference || ''}">
+                </td>
+                <td>
+                    <select class="form-select form-select-sm activity-select">
+                        <option value="">Select Activity</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" step="0.01" class="form-control form-control-sm achievement" value="${data?.achievement || ''}">
+                </td>
+                <td>
+                    <input type="number" step="0.01" class="form-control form-control-sm detail-amount" value="${data?.amount || ''}">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm group-size" value="${data?.number_in_a_group || ''}">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm issue" value="${data?.issue || ''}">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-detail">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        $('#detailsBody').append(html);
+        
+        // Load farms for this row
+        var $farmSelect = $(`#${rowId} .farm-select`);
+        loadFarms('', function(farms) {
+            farms.forEach(function(farm) {
+                var selected = (data?.farm_id && farm.id == data.farm_id) ? 'selected' : '';
+                $farmSelect.append(`<option value="${farm.id}" ${selected}>${farm.farm_reference} - ${farm.farmername}</option>`);
+            });
+            
+            if (data?.farm_reference) {
+                $(`#${rowId} .farm-reference`).val(data.farm_reference);
+            }
+        });
+        
+        // Load activities for this row
+        var $activitySelect = $(`#${rowId} .activity-select`);
+        loadActivities('', function(activities) {
+            activities.forEach(function(activity) {
+                var selected = (data?.activity_id && activity.id == data.activity_id) ? 'selected' : '';
+                $activitySelect.append(`<option value="${activity.id}" ${selected}>${activity.name}</option>`);
+            });
+        });
+        
+        // Farm select change
+        $farmSelect.on('change', function() {
+            var selectedOption = $(this).find('option:selected');
+            $(this).closest('tr').find('.farm-reference').val(selectedOption.text().split(' - ')[0]);
+        });
+        
+        // Amount change
+        $(`#${rowId} .detail-amount`).on('input', updateTotalAmount);
+    }
+
+    function updateTotalAmount() {
+        var total = 0;
+        $('.detail-amount').each(function() {
+            var val = parseFloat($(this).val()) || 0;
+            total += val;
+        });
+        $('#totalDetailsAmount').text(total.toFixed(2));
+    }
+
+    // Remove detail row
+    $(document).on('click', '.remove-detail', function() {
+        $(this).closest('tr').remove();
+        updateTotalAmount();
+    });
+
+    // Form Submission
+    $('#paymentForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        // Collect detailed payments
+        var detailedPayments = [];
+        $('#detailsBody tr').each(function() {
+            var $row = $(this);
+            var detail = {
+                group_code: $row.find('.group-code').val(),
+                farm_id: $row.find('.farm-select').val(),
+                farm_reference: $row.find('.farm-reference').val(),
+                activity_id: $row.find('.activity-select').val(),
+                achievement: $row.find('.achievement').val(),
+                amount: $row.find('.detail-amount').val(),
+                number_in_a_group: $row.find('.group-size').val(),
+                issue: $row.find('.issue').val()
+            };
+            
+            // Only add if there's an amount
+            if (detail.amount) {
+                detailedPayments.push(detail);
+            }
+        });
+        
+        var formData = {
+            ra_id: $('#ra_id').val(),
+            bank_name: $('#bank_name').val(),
+            bank_branch: $('#bank_branch').val(),
+            snnit_no: $('#snnit_no').val(),
+            salary: $('#salary').val(),
+            year: $('#year').val(),
+            month: $('#month').val(),
+            week: $('#week').val(),
+            po_number: $('#po_number').val(),
+            payment_option: $('#payment_option').val(),
+            momo_acc: $('#momo_acc').val(),
+            district_id: $('#district_id').val() || null,
+            project_id: $('#project_id').val() || null,
+            uid: $('#uid').val() || null,
+            detailed_payments: detailedPayments
+        };
+        
+        var paymentId = $('#paymentId').val();
+        var url = paymentId ? 
+            "{% url 'payment_report_update' 0 %}".replace('0', paymentId) : 
+            "{% url 'payment_report_create' %}";
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#savePaymentBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#paymentModal').modal('hide');
+                    summaryTable.ajax.reload();
+                    detailedTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#savePaymentBtn').prop('disabled', false).html('Save Payment');
+            }
+        });
+    });
+
+    // Generate Report Button
+    $('#generateReportBtn').click(function() {
+        $('#genMonth').val('');
+        $('#genYear').val(new Date().getFullYear());
+        $('#genWeek').val('');
+        loadDistricts();
+        loadProjects(null);
+        $('#generateModal').modal('show');
+    });
+
+    $('#confirmGenerateBtn').click(function() {
+        if (!$('#genMonth').val() || !$('#genYear').val()) {
+            Swal.fire('Error', 'Please select month and year', 'error');
+            return;
+        }
+        
+        var formData = {
+            month: $('#genMonth').val(),
+            year: $('#genYear').val(),
+            week: $('#genWeek').val(),
+            district_id: $('#genDistrict').val() || null,
+            project_id: $('#genProject').val() || null
+        };
+        
+        $.ajax({
+            url: "{% url 'generate_payment_report' %}",
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmGenerateBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#generateModal').modal('hide');
+                    summaryTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmGenerateBtn').prop('disabled', false).html('Generate Report');
+            }
+        });
+    });
+
+    // Export Report
+    $('#exportReportBtn').click(function() {
+        var params = new URLSearchParams({
+            year: $('#filterYear').val() || '',
+            month: $('#filterMonth').val() || '',
+            week: $('#filterWeek').val() || '',
+            district_id: $('#filterDistrict').val() || '',
+            format: $('input[name="exportFormat"]:checked').val() || 'summary'
+        });
+        
+        window.location.href = "{% url 'export_payment_report' %}?" + params.toString();
+    });
+
+    // View Payment
+    $(document).on('click', '.view-payment, .view-payment-link', function(e) {
+        if (e) e.preventDefault();
+        var paymentId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'payment_report_detail_api' 0 %}".replace('0', paymentId),
+            type: 'GET',
+            beforeSend: function() {
+                $('#paymentDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading payment details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var p = response.data;
+                    
+                    var html = `
+                        <div class="payment-details">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Payment Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">RA Name:</th>
+                                            <td><strong>${p.ra_name || 'N/A'}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Period:</th>
+                                            <td>${p.month || ''} ${p.year || ''} ${p.week ? '(' + p.week + ')' : ''}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Salary Amount:</th>
+                                            <td><strong class="text-success">GHS ${(p.salary || 0).toFixed(2)}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Payment Option:</th>
+                                            <td>${p.payment_option || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>PO Number:</th>
+                                            <td>${p.po_number || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Bank Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Bank Name:</th>
+                                            <td>${p.bank_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Bank Branch:</th>
+                                            <td>${p.bank_branch || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>SSNIT Number:</th>
+                                            <td>${p.snnit_no || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Momo Account:</th>
+                                            <td>${p.momo_acc || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Project Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">District:</th>
+                                            <td>${p.district_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Project:</th>
+                                            <td>${p.project_name || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Summary</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Total Detailed Payments:</th>
+                                            <td>${p.total_detailed_count || 0}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Total Detailed Amount:</th>
+                                            <td><strong class="text-primary">GHS ${(p.total_detailed_amount || 0).toFixed(2)}</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <h5 class="border-bottom pb-2">Detailed Payment Records</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Group Code</th>
+                                            <th>Farm Reference</th>
+                                            <th>Activity</th>
+                                            <th>Achievement</th>
+                                            <th>Amount</th>
+                                            <th>Group Size</th>
+                                            <th>Issue</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+                    
+                    if (p.detailed_payments && p.detailed_payments.length > 0) {
+                        p.detailed_payments.forEach(function(d) {
+                            html += `
+                                <tr>
+                                    <td>${d.group_code || '-'}</td>
+                                    <td>${d.farm_reference || '-'}</td>
+                                    <td>${d.activity_name || '-'}</td>
+                                    <td>${(d.achievement || 0).toFixed(2)} ha</td>
+                                    <td><strong>GHS ${(d.amount || 0).toFixed(2)}</strong></td>
+                                    <td>${d.number_in_a_group || '-'}</td>
+                                    <td>${d.issue || '-'}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        html += '<tr><td colspan="7" class="text-center">No detailed payment records found</td></tr>';
+                    }
+                    
+                    html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">System Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="20%">Created Date:</th>
+                                            <td>${p.created_date || 'N/A'}</td>
+                                            <th width="20%">UID:</th>
+                                            <td><small class="text-muted">${p.uid || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $('#paymentDetails').html(html);
+                    $('#editFromViewBtn').data('id', p.id);
+                    $('#viewModal').modal('show');
+                } else {
+                    $('#paymentDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load payment details: ${response.message}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#paymentDetails').html(`
+                    <div class="alert alert-danger">
+                        Failed to load payment details
+                    </div>
+                `);
+            }
+        });
+    });
+
+    // Edit from view modal
+    $('#editFromViewBtn').click(function() {
+        var paymentId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        
+        // Trigger edit button
+        $(`.edit-payment[data-id="${paymentId}"]`).click();
+    });
+
+    // Edit Payment (Summary)
+$(document).on('click', '.edit-payment', function() {
+    var paymentId = $(this).data('id');
+    
+    $.ajax({
+        url: "{% url 'payment_report_detail_api' 0 %}".replace('0', paymentId),
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                var p = response.data;
+                
+                // Clear existing details
+                $('#detailsBody').empty();
+                
+                // Load dependent data first
+                loadRAs(p.ra_id);
+                loadDistricts(p.district_id);
+                
+                if (p.district_id) {
+                    loadProjects(p.district_id, p.project_id);
+                } else {
+                    loadProjects(null, p.project_id);
+                }
+                
+                // Populate form fields with a slight delay to ensure dropdowns are loaded
+                setTimeout(function() {
+                    $('#paymentId').val(p.id);
+                    $('#uid').val(p.uid);
+                    $('#ra_id').val(p.ra_id);
+                    $('#bank_name').val(p.bank_name || '');
+                    $('#bank_branch').val(p.bank_branch || '');
+                    $('#snnit_no').val(p.snnit_no || '');
+                    $('#salary').val(p.salary || '');
+                    $('#year').val(p.year || new Date().getFullYear());
+                    $('#month').val(p.month || '');
+                    $('#week').val(p.week || '');
+                    $('#po_number').val(p.po_number || '');
+                    $('#payment_option').val(p.payment_option || '');
+                    $('#momo_acc').val(p.momo_acc || '');
+                    
+                    // Load detailed payments
+                    if (p.detailed_payments && p.detailed_payments.length > 0) {
+                        p.detailed_payments.forEach(function(detail) {
+                            addDetailRowForEdit(detail);
+                        });
+                    } else {
+                        // Add at least one empty row
+                        addDetailRow();
+                    }
+                    
+                    // Update total amount
+                    updateTotalAmount();
+                }, 500); // Small delay to ensure dropdowns are populated
+                
+                $('#paymentModalTitle').text('Edit Payment Record');
+                $('#paymentModal').modal('show');
+            } else {
+                Swal.fire('Error', response.message, 'error');
+            }
+        },
+        error: function() {
+            Swal.fire('Error', 'Failed to load payment details', 'error');
+        }
+    });
+});
+
+// Function to add detail row for edit with pre-selected values
+function addDetailRowForEdit(data) {
+    var rowId = 'detail_' + new Date().getTime() + '_' + Math.random().toString(36).substr(2, 9);
+    var html = `
+        <tr id="${rowId}">
+            <td>
+                <input type="text" class="form-control form-control-sm group-code" placeholder="Group Code" value="${data?.group_code || ''}">
+            </td>
+            <td>
+                <select class="form-select form-select-sm farm-select" data-selected="${data?.farm_id || ''}">
+                    <option value="">Select Farm</option>
+                </select>
+                <input type="hidden" class="farm-reference" value="${data?.farm_reference || ''}">
+            </td>
+            <td>
+                <select class="form-select form-select-sm activity-select" data-selected="${data?.activity_id || ''}">
+                    <option value="">Select Activity</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm achievement" value="${data?.achievement || ''}">
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm detail-amount" value="${data?.amount || ''}">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm group-size" value="${data?.number_in_a_group || ''}">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm issue" value="${data?.issue || ''}">
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm remove-detail">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+    
+    $('#detailsBody').append(html);
+    
+    // Load farms for this row with pre-selected value
+    var $farmSelect = $(`#${rowId} .farm-select`);
+    var selectedFarmId = $farmSelect.data('selected');
+    
+    $.ajax({
+        url: "{% url 'get_farms' %}",
+        type: "GET",
+        data: { search: '' },
+        success: function(response) {
+            if (response.success) {
+                $farmSelect.empty().append('<option value="">Select Farm</option>');
+                
+                response.data.forEach(function(farm) {
+                    var selected = (selectedFarmId && farm.id == selectedFarmId) ? 'selected' : '';
+                    $farmSelect.append(`<option value="${farm.id}" ${selected}>${farm.farm_reference} - ${farm.farmername}</option>`);
+                });
+                
+                // Set farm reference if farm is selected
+                if (selectedFarmId) {
+                    var selectedOption = $farmSelect.find('option:selected');
+                    $(`#${rowId} .farm-reference`).val(selectedOption.text().split(' - ')[0]);
+                }
+            }
+        }
+    });
+    
+    // Load activities for this row with pre-selected value
+    var $activitySelect = $(`#${rowId} .activity-select`);
+    var selectedActivityId = $activitySelect.data('selected');
+    
+    $.ajax({
+        url: "{% url 'get_activities' %}",
+        type: "GET",
+        data: { search: '' },
+        success: function(response) {
+            if (response.success) {
+                $activitySelect.empty().append('<option value="">Select Activity</option>');
+                
+                response.data.forEach(function(activity) {
+                    var selected = (selectedActivityId && activity.id == selectedActivityId) ? 'selected' : '';
+                    $activitySelect.append(`<option value="${activity.id}" ${selected}>${activity.name}</option>`);
+                });
+            }
+        }
+    });
+    
+    // Farm select change
+    $farmSelect.on('change', function() {
+        var selectedOption = $(this).find('option:selected');
+        $(this).closest('tr').find('.farm-reference').val(selectedOption.text().split(' - ')[0]);
+    });
+    
+    // Amount change
+    $(`#${rowId} .detail-amount`).on('input', updateTotalAmount);
+}
+
+// Also update the addDetailRow function to use the same pattern
+function addDetailRow() {
+    var rowId = 'detail_' + new Date().getTime() + '_' + Math.random().toString(36).substr(2, 9);
+    var html = `
+        <tr id="${rowId}">
+            <td>
+                <input type="text" class="form-control form-control-sm group-code" placeholder="Group Code">
+            </td>
+            <td>
+                <select class="form-select form-select-sm farm-select">
+                    <option value="">Select Farm</option>
+                </select>
+                <input type="hidden" class="farm-reference">
+            </td>
+            <td>
+                <select class="form-select form-select-sm activity-select">
+                    <option value="">Select Activity</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm achievement">
+            </td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm detail-amount">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm group-size">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm issue">
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm remove-detail">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+    
+    $('#detailsBody').append(html);
+    
+    // Load farms for this row
+    var $farmSelect = $(`#${rowId} .farm-select`);
+    $.ajax({
+        url: "{% url 'get_farms' %}",
+        type: "GET",
+        data: { search: '' },
+        success: function(response) {
+            if (response.success) {
+                $farmSelect.empty().append('<option value="">Select Farm</option>');
+                
+                response.data.forEach(function(farm) {
+                    $farmSelect.append(`<option value="${farm.id}">${farm.farm_reference} - ${farm.farmername}</option>`);
+                });
+            }
+        }
+    });
+    
+    // Load activities for this row
+    var $activitySelect = $(`#${rowId} .activity-select`);
+    $.ajax({
+        url: "{% url 'get_activities' %}",
+        type: "GET",
+        data: { search: '' },
+        success: function(response) {
+            if (response.success) {
+                $activitySelect.empty().append('<option value="">Select Activity</option>');
+                
+                response.data.forEach(function(activity) {
+                    $activitySelect.append(`<option value="${activity.id}">${activity.name}</option>`);
+                });
+            }
+        }
+    });
+    
+    // Farm select change
+    $farmSelect.on('change', function() {
+        var selectedOption = $(this).find('option:selected');
+        $(this).closest('tr').find('.farm-reference').val(selectedOption.text().split(' - ')[0]);
+    });
+    
+    // Amount change
+    $(`#${rowId} .detail-amount`).on('input', updateTotalAmount);
+}
+
+// Also update the loadRAs function to properly set the selected value
+function loadRAs(selectedId = null) {
+    $.ajax({
+        url: "{% url 'get_ras' %}",
+        type: "GET",
+        success: function(response) {
+            if (response.success) {
+                var $raSelect = $('#ra_id');
+                $raSelect.empty().append('<option value="">Select RA</option>');
+                
+                response.data.forEach(function(ra) {
+                    var selected = (selectedId && ra.id == selectedId) ? 'selected' : '';
+                    $raSelect.append(`<option value="${ra.id}" ${selected}>${ra.name} (${ra.staff_id})</option>`);
+                });
+            }
+        }
+    });
+}
+
+// Update the loadDistricts function
+function loadDistricts(selectedId = null) {
+    $.ajax({
+        url: "{% url 'get_districts_api' %}",
+        type: "GET",
+        success: function(response) {
+            if (response.success) {
+                var $districtSelects = $('#filterDistrict, #district_id, #genDistrict');
+                $districtSelects.each(function() {
+                    var $select = $(this);
+                    $select.empty().append('<option value="">Select District</option>');
+                    
+                    response.data.forEach(function(district) {
+                        var selected = (selectedId && district.id == selectedId) ? 'selected' : '';
+                        $select.append(`<option value="${district.id}" ${selected}>${district.name}</option>`);
+                    });
+                });
+            }
+        }
+    });
+}
+
+// Update the loadProjects function
+function loadProjects(districtId, selectedId = null) {
+    var url = "{% url 'get_projects_api' %}";
+    if (districtId) {
+        url += '?district_id=' + districtId;
+    }
+    
+    $.ajax({
+        url: url,
+        type: "GET",
+        success: function(response) {
+            if (response.success) {
+                var $projectSelects = $('#filterProject, #project_id, #genProject');
+                $projectSelects.each(function() {
+                    var $select = $(this);
+                    $select.empty().append('<option value="">Select Project</option>');
+                    
+                    response.data.forEach(function(project) {
+                        var selected = (selectedId && project.id == selectedId) ? 'selected' : '';
+                        $select.append(`<option value="${project.id}" ${selected}>${project.name}</option>`);
+                    });
+                });
+            }
+        }
+    });
+}
+
+    // Delete Payment
+    var deletePaymentId = null;
+    var deleteType = 'summary';
+    
+    $(document).on('click', '.delete-payment', function() {
+        deletePaymentId = $(this).data('id');
+        deleteType = 'summary';
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+    
+    $(document).on('click', '.delete-detailed', function() {
+        deletePaymentId = $(this).data('id');
+        deleteType = 'detailed';
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+
+    $('#confirmDeleteBtn').click(function() {
+        var reason = $('#deleteReason').val();
+        if (!reason.trim()) {
+            Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+            return;
+        }
+        
+        var url = deleteType === 'summary' ? 
+            "{% url 'payment_report_delete' 0 %}".replace('0', deletePaymentId) : 
+            "/api/payment-reports/detailed/" + deletePaymentId + "/delete/"; // You may need to add this URL
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ reason: reason }),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deleteModal').modal('hide');
+                    summaryTable.ajax.reload();
+                    detailedTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmDeleteBtn').prop('disabled', false).html('Delete');
+            }
+        });
+    });
+
+    // Print Payment Details
+    $('#printPaymentBtn').click(function() {
+        var printContent = $('#paymentDetails').html();
+        var originalContent = $('body').html();
+        
+        $('body').html(`
+            <div class="container mt-5">
+                <h2 class="text-center mb-4">Payment Report</h2>
+                <div class="text-center mb-4">
+                    <h5>Payment Details</h5>
+                </div>
+                ${printContent}
+                <div class="mt-5 text-center">
+                    <small>Printed on: ${new Date().toLocaleString()}</small>
+                </div>
+            </div>
+        `);
+        
+        window.print();
+        $('body').html(originalContent);
+        
+        // Re-initialize DataTable after print
+        location.reload();
+    });
+
+    // CSRF Token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initial load
+    loadStats();
+    loadDistricts();
+    loadProjects(null);
+    loadRAs();
+    
+    // Add export format radio buttons to filter card
+    $('.card-body .row').first().after(`
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="btn-group" role="group" aria-label="Export Format">
+                    <input type="radio" class="btn-check" name="exportFormat" id="exportSummary" value="summary" checked>
+                    <label class="btn btn-outline-primary btn-sm" for="exportSummary">Summary Format</label>
+                    
+                    <input type="radio" class="btn-check" name="exportFormat" id="exportDetailed" value="detailed">
+                    <label class="btn btn-outline-primary btn-sm" for="exportDetailed">Detailed Format</label>
+                </div>
+            </div>
+        </div>
+    `);
+});
+</script>
+
+<style>
+.card-h-30 {
+    min-height: 120px;
+}
+
+.payment-details h5 {
+    color: #495057;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.payment-details table {
+    margin-bottom: 0;
+}
+
+.payment-details th {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.payment-details td {
+    font-size: 0.95rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.view-payment-link {
+    color: #0d6efd;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.view-payment-link:hover {
+    text-decoration: underline;
+}
+
+#detailsTable input, #detailsTable select {
+    min-width: 120px;
+}
+
+#detailsTable .btn-sm {
+    padding: 0.25rem 0.5rem;
+}
+
+.nav-tabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+@media print {
+    .modal-header, .modal-footer, .btn, .btn-group, .nav-tabs {
+        display: none !important;
+    }
+    
+    .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .modal-body {
+        padding: 0 !important;
+    }
+    
+    .payment-details {
+        font-size: 12pt;
+    }
+}
+</style>
+{% endblock %}

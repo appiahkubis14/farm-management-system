@@ -1,0 +1,1198 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<br>
+<!-- Page Header -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">Work Certificates Management</h4>
+            <div class="page-title-right">
+                <button class="btn btn-primary" id="addCertificateBtn">
+                    <i class="fas fa-plus me-1"></i> Add New Certificate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Stats Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Certificates</span>
+                        <h4 class="mb-3" id="totalCertificates">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-certificate text-primary h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Pending</span>
+                        <h4 class="mb-3" id="totalPending">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-clock text-warning h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Approved</span>
+                        <h4 class="mb-3" id="totalApproved">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-success h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-h-30">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted mb-3 lh-1 d-block text-truncate">Rejected</span>
+                        <h4 class="mb-3" id="totalRejected">0</h4>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-times-circle text-danger h2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Main Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="certificateTable" class="table table-striped datatable" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Contractor</th>
+                                <th>Work Type</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Project</th>
+                                <th>District</th>
+                                <th>Status</th>
+                                <th>Verified</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Certificate Modal -->
+<div class="modal fade" id="certificateModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTitle">Add New Work Certificate</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="certificateForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="certificateId" name="certificate_id">
+                    <input type="hidden" id="uid" name="uid">
+                    
+                    <!-- Contractor Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-building me-2"></i>Contractor Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="contractor_id" class="form-label">Select Contractor *</label>
+                                    <select class="form-select" id="contractor_id" name="contractor_id" required>
+                                        <option value="">Select Contractor</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select a contractor</div>
+                                </div>
+                            </div>
+                            <div class="row" id="contractorDetails" style="display: none;">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Contact Person:</strong> <span id="contact_person"></span></p>
+                                    <p class="mb-1"><strong>Contact Number:</strong> <span id="contact_number"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Address:</strong> <span id="address"></span></p>
+                                    <p class="mb-1"><strong>Services:</strong> <span id="services"></span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Certificate Details -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-file-signature me-2"></i>Certificate Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="work_type" class="form-label">Work Type *</label>
+                                    <select class="form-select" id="work_type" name="work_type" required>
+                                        <option value="">Select Work Type</option>
+                                        {% for type in work_types %}
+                                            <option value="{{ type }}">{{ type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select work type</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        {% for status in status_choices %}
+                                            <option value="{{ status }}">{{ status }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="start_date" class="form-label">Start Date *</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                    <div class="invalid-feedback">Please enter start date</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="end_date" class="form-label">End Date *</label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                    <div class="invalid-feedback">Please enter end date</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label for="remarks" class="form-label">Remarks</label>
+                                    <textarea class="form-control" id="remarks" name="remarks" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Project Assignment -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Project Assignment</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="district_id" class="form-label">District</label>
+                                    <select class="form-select" id="district_id" name="district_id">
+                                        <option value="">Select District</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="project_id" class="form-label">Project</label>
+                                    <select class="form-select" id="project_id" name="project_id">
+                                        <option value="">Select Project</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Verification (Optional for creation) -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>Verification (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="is_verified" name="is_verified">
+                                        <label class="form-check-label" for="is_verified">
+                                            Verify this certificate immediately
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3" id="verification_comments_container" style="display: none;">
+                                    <label for="verification_comments" class="form-label">Verification Comments</label>
+                                    <input type="text" class="form-control" id="verification_comments" name="verification_comments">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Certificate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this work certificate? This action cannot be undone.</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Verify Certificate Modal -->
+<div class="modal fade" id="verifyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Verify Certificate</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="verifyCertificateId">
+                <div class="mb-3">
+                    <label class="form-label">Verification Decision</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="verificationDecision" id="verifyApprove" value="approve" checked>
+                        <label class="form-check-label" for="verifyApprove">
+                            <span class="badge bg-success">Approve</span> - Certificate meets all requirements
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="verificationDecision" id="verifyReject" value="reject">
+                        <label class="form-check-label" for="verifyReject">
+                            <span class="badge bg-danger">Reject</span> - Certificate does not meet requirements
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="verificationComments" class="form-label">Comments</label>
+                    <textarea class="form-control" id="verificationComments" rows="4" placeholder="Enter verification comments..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="verificationDate" class="form-label">Verification Date</label>
+                    <input type="date" class="form-control" id="verificationDate" value="{{ today|date:'Y-m-d' }}">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmVerifyBtn">Submit Verification</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Certificate Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Certificate Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="certificateDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="verifyFromViewBtn">
+                    <i class="fas fa-check-circle me-1"></i> Verify
+                </button>
+                <button type="button" class="btn btn-primary" id="printCertificateBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                <button type="button" class="btn btn-warning" id="editFromViewBtn">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    
+    // Initialize DataTable
+    var certificateTable = $('#certificateTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'work_certificate_list_api' %}",
+            type: "GET"
+        },
+        columns: [
+            { 
+                data: 'id',
+                render: function(data, type, row) {
+                    return `<a href="#" class="view-certificate-link" data-id="${row.id}">#${data}</a>`;
+                }
+            },
+            { 
+                data: 'contractor_name',
+                render: function(data, type, row) {
+                    return `<strong>${data}</strong>`;
+                }
+            },
+            { data: 'work_type' },
+            { 
+                data: 'start_date',
+                render: function(data) {
+                    if (data) {
+                        var date = new Date(data);
+                        return date.toLocaleDateString();
+                    }
+                    return '<span class="text-muted">N/A</span>';
+                }
+            },
+            { 
+                data: 'end_date',
+                render: function(data) {
+                    if (data) {
+                        var date = new Date(data);
+                        return date.toLocaleDateString();
+                    }
+                    return '<span class="text-muted">N/A</span>';
+                }
+            },
+            { data: 'project_name' },
+            { data: 'district_name' },
+            { 
+                data: 'status',
+                render: function(data) {
+                    var badgeClass = 'bg-secondary';
+                    if (data === 'Approved') badgeClass = 'bg-success';
+                    else if (data === 'Pending') badgeClass = 'bg-warning';
+                    else if (data === 'Rejected') badgeClass = 'bg-danger';
+                    else if (data === 'In Review') badgeClass = 'bg-info';
+                    else if (data === 'Completed') badgeClass = 'bg-primary';
+                    
+                    return '<span class="badge ' + badgeClass + '">' + (data || 'Pending') + '</span>';
+                }
+            },
+            { 
+                data: 'is_verified',
+                render: function(data) {
+                    if (data) {
+                        return '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified</span>';
+                    } else {
+                        return '<span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pending</span>';
+                    }
+                }
+            },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    var verifyBtn = '';
+                    if (!row.is_verified) {
+                        verifyBtn = `<button class="btn btn-success btn-sm verify-certificate" data-id="${data}" title="Verify">
+                                        <i class="fas fa-check-circle"></i>
+                                    </button>`;
+                    }
+                    
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-certificate" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${verifyBtn}
+                            <button class="btn btn-primary edit-certificate" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger delete-certificate" data-id="${data}" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        responsive: true,
+        order: [[0, 'desc']],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: "copy",
+                text: '<i class="fas fa-copy"></i> Copy',
+                className: "btn btn-sm btn-outline-secondary",
+            },
+            {
+                extend: "csv",
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                className: "btn btn-sm btn-outline-success",
+            },
+            {
+                extend: "excel",
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                className: "btn btn-sm btn-outline-primary",
+            },
+            {
+                extend: "pdf",
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                className: "btn btn-sm btn-outline-danger",
+            },
+            {
+                extend: "print",
+                text: '<i class="fas fa-print"></i> Print',
+                className: "btn btn-sm btn-outline-info",
+            }
+        ],
+        language: {
+            emptyTable: "No work certificates found",
+            zeroRecords: "No matching certificates found"
+        }
+    });
+
+    // Load stats
+    function loadStats() {
+        $.ajax({
+            url: "{% url 'work_certificate_list_api' %}",
+            type: "GET",
+            data: { draw: 1, start: 0, length: 1000 },
+            success: function(response) {
+                var data = response.data || [];
+                var total = data.length;
+                var pending = data.filter(c => c.status === 'Pending').length;
+                var approved = data.filter(c => c.status === 'Approved').length;
+                var rejected = data.filter(c => c.status === 'Rejected').length;
+                
+                $('#totalCertificates').text(total);
+                $('#totalPending').text(pending);
+                $('#totalApproved').text(approved);
+                $('#totalRejected').text(rejected);
+            },
+            error: function() {
+                $('#totalCertificates').text('0');
+                $('#totalPending').text('0');
+                $('#totalApproved').text('0');
+                $('#totalRejected').text('0');
+            }
+        });
+    }
+
+    // Load contractors
+    function loadContractors(selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_contractors' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $contractorSelect = $('#contractor_id');
+                    $contractorSelect.empty().append('<option value="">Select Contractor</option>');
+                    
+                    response.data.forEach(function(contractor) {
+                        var selected = (selectedId && contractor.id == selectedId) ? 'selected' : '';
+                        $contractorSelect.append(`<option value="${contractor.id}" ${selected}>${contractor.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+
+    // Load districts
+    function loadDistricts(selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_districts_api' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $districtSelect = $('#district_id');
+                    $districtSelect.empty().append('<option value="">Select District</option>');
+                    
+                    response.data.forEach(function(district) {
+                        var selected = (selectedId && district.id == selectedId) ? 'selected' : '';
+                        $districtSelect.append(`<option value="${district.id}" ${selected}>${district.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+
+    // Load projects by district
+    function loadProjects(districtId, selectedId = null) {
+        var url = "{% url 'get_projects_api' %}";
+        if (districtId) {
+            url += '?district_id=' + districtId;
+        }
+        
+        $.ajax({
+            url: url,
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $projectSelect = $('#project_id');
+                    $projectSelect.empty().append('<option value="">Select Project</option>');
+                    
+                    response.data.forEach(function(project) {
+                        var selected = (selectedId && project.id == selectedId) ? 'selected' : '';
+                        $projectSelect.append(`<option value="${project.id}" ${selected}>${project.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+
+    // Show contractor details when selected
+    $('#contractor_id').on('change', function() {
+        var contractorId = $(this).val();
+        if (contractorId) {
+            $.ajax({
+                url: "{% url 'get_contractors' %}",
+                type: "GET",
+                data: { id: contractorId },
+                success: function(response) {
+                    if (response.success) {
+                        var contractor = response.data.find(c => c.id == contractorId);
+                        if (contractor) {
+                            $('#contact_person').text(contractor.contact_person || 'N/A');
+                            $('#contact_number').text(contractor.contact_number || 'N/A');
+                            $('#address').text(contractor.address || 'N/A');
+                            $('#services').text(contractor.interested_services || 'N/A');
+                            $('#contractorDetails').show();
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#contractorDetails').hide();
+        }
+    });
+
+    // District change event
+    $('#district_id').on('change', function() {
+        var districtId = $(this).val();
+        loadProjects(districtId);
+    });
+
+    // Toggle verification comments
+    $('#is_verified').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#verification_comments_container').show();
+        } else {
+            $('#verification_comments_container').hide();
+        }
+    });
+
+    // Add Certificate Button
+    $('#addCertificateBtn').click(function() {
+        $('#certificateForm')[0].reset();
+        $('#certificateForm').removeClass('was-validated');
+        $('#modalTitle').text('Add New Work Certificate');
+        $('#certificateId').val('');
+        $('#uid').val('');
+        $('#contractorDetails').hide();
+        $('#verification_comments_container').hide();
+        $('#is_verified').prop('checked', false);
+        
+        // Set default dates
+        var today = new Date().toISOString().split('T')[0];
+        $('#start_date').val(today);
+        
+        var nextMonth = new Date();
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        $('#end_date').val(nextMonth.toISOString().split('T')[0]);
+        
+        loadContractors();
+        loadDistricts();
+        loadProjects(null);
+        
+        $('#certificateModal').modal('show');
+    });
+
+    // Form Submission
+    $('#certificateForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        var formData = {
+            contractor_id: $('#contractor_id').val(),
+            work_type: $('#work_type').val(),
+            start_date: $('#start_date').val(),
+            end_date: $('#end_date').val(),
+            status: $('#status').val(),
+            remarks: $('#remarks').val(),
+            project_id: $('#project_id').val() || null,
+            district_id: $('#district_id').val() || null,
+            is_verified: $('#is_verified').is(':checked'),
+            verification_comments: $('#verification_comments').val(),
+            uid: $('#uid').val() || null
+        };
+        
+        var certificateId = $('#certificateId').val();
+        var url = certificateId ? 
+            "{% url 'work_certificate_update' 0 %}".replace('0', certificateId) : 
+            "{% url 'work_certificate_create' %}";
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#saveBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#certificateModal').modal('hide');
+                    certificateTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#saveBtn').prop('disabled', false).html('Save Certificate');
+            }
+        });
+    });
+
+    // Edit Certificate
+    $(document).on('click', '.edit-certificate', function() {
+        var certificateId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'work_certificate_detail_api' 0 %}".replace('0', certificateId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var cert = response.data;
+                    
+                    // Load dependent data first
+                    loadContractors(cert.contractor_id);
+                    loadDistricts(cert.district_id);
+                    
+                    if (cert.district_id) {
+                        loadProjects(cert.district_id, cert.project_id);
+                    } else {
+                        loadProjects(null, cert.project_id);
+                    }
+                    
+                    // Populate form fields
+                    $('#certificateId').val(cert.id);
+                    $('#uid').val(cert.uid);
+                    $('#work_type').val(cert.work_type);
+                    $('#start_date').val(cert.start_date);
+                    $('#end_date').val(cert.end_date);
+                    $('#status').val(cert.status);
+                    $('#remarks').val(cert.remarks);
+                    
+                    // Show contractor details if selected
+                    if (cert.contractor_id) {
+                        $('#contractor_id').trigger('change');
+                    }
+                    
+                    $('#modalTitle').text('Edit Work Certificate');
+                    $('#certificateModal').modal('show');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to load certificate details', 'error');
+            }
+        });
+    });
+
+    // View Certificate
+    $(document).on('click', '.view-certificate, .view-certificate-link', function(e) {
+        if (e) e.preventDefault();
+        var certificateId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'work_certificate_detail_api' 0 %}".replace('0', certificateId),
+            type: 'GET',
+            beforeSend: function() {
+                $('#certificateDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading certificate details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var cert = response.data;
+                    
+                    var statusBadge = 'bg-secondary';
+                    if (cert.status === 'Approved') statusBadge = 'bg-success';
+                    else if (cert.status === 'Pending') statusBadge = 'bg-warning';
+                    else if (cert.status === 'Rejected') statusBadge = 'bg-danger';
+                    else if (cert.status === 'In Review') statusBadge = 'bg-info';
+                    else if (cert.status === 'Completed') statusBadge = 'bg-primary';
+                    
+                    // Build verification history HTML
+                    var verificationHtml = '';
+                    if (cert.verification_history && cert.verification_history.length > 0) {
+                        verificationHtml = '<h5 class="border-bottom pb-2 mt-3">Verification History</h5>';
+                        verificationHtml += '<div class="table-responsive"><table class="table table-sm table-bordered">';
+                        verificationHtml += '<thead><tr><th>Date</th><th>Verified By</th><th>Status</th><th>Comments</th></tr></thead><tbody>';
+                        
+                        cert.verification_history.forEach(function(v) {
+                            var verifyBadge = v.is_verified ? 
+                                '<span class="badge bg-success">Approved</span>' : 
+                                '<span class="badge bg-danger">Rejected</span>';
+                            
+                            verificationHtml += `<tr>
+                                <td>${v.verification_date}</td>
+                                <td>${v.verified_by || 'N/A'}</td>
+                                <td>${verifyBadge}</td>
+                                <td>${v.comments || '-'}</td>
+                            </tr>`;
+                        });
+                        
+                        verificationHtml += '</tbody></table></div>';
+                    }
+                    
+                    var html = `
+                        <div class="certificate-details">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Certificate Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Certificate ID:</th>
+                                            <td><span class="badge bg-dark">#${cert.id}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Work Type:</th>
+                                            <td><span class="badge bg-info">${cert.work_type || 'N/A'}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Status:</th>
+                                            <td><span class="badge ${statusBadge}">${cert.status || 'N/A'}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Start Date:</th>
+                                            <td>${cert.start_date || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>End Date:</th>
+                                            <td>${cert.end_date || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Created Date:</th>
+                                            <td>${cert.created_date || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Contractor Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Contractor Name:</th>
+                                            <td><strong>${cert.contractor_name || 'N/A'}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Contact Person:</th>
+                                            <td>${cert.contractor_contact || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Contact Number:</th>
+                                            <td>${cert.contractor_contact || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Address:</th>
+                                            <td>${cert.contractor_address || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Project Assignment</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Project:</th>
+                                            <td>${cert.project_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>District:</th>
+                                            <td>${cert.district_name || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Remarks</h5>
+                                    <div class="p-2 bg-light rounded">
+                                        ${cert.remarks || '<em class="text-muted">No remarks provided</em>'}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${verificationHtml}
+                            
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">System Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="20%">UID:</th>
+                                            <td><small class="text-muted">${cert.uid || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $('#certificateDetails').html(html);
+                    
+                    // Store certificate ID for buttons
+                    $('#verifyFromViewBtn').data('id', cert.id);
+                    $('#editFromViewBtn').data('id', cert.id);
+                    $('#viewModal').modal('show');
+                } else {
+                    $('#certificateDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load certificate details: ${response.message}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#certificateDetails').html(`
+                    <div class="alert alert-danger">
+                        Failed to load certificate details
+                    </div>
+                `);
+            }
+        });
+    });
+
+    // Verify Certificate
+    $(document).on('click', '.verify-certificate', function() {
+        var certificateId = $(this).data('id');
+        $('#verifyCertificateId').val(certificateId);
+        $('#verificationComments').val('');
+        $('#verificationDate').val(new Date().toISOString().split('T')[0]);
+        $('#verifyApprove').prop('checked', true);
+        $('#verifyModal').modal('show');
+    });
+
+    // Verify from view modal
+    $('#verifyFromViewBtn').click(function() {
+        var certificateId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        
+        $('#verifyCertificateId').val(certificateId);
+        $('#verificationComments').val('');
+        $('#verificationDate').val(new Date().toISOString().split('T')[0]);
+        $('#verifyApprove').prop('checked', true);
+        $('#verifyModal').modal('show');
+    });
+
+    // Confirm verification
+    $('#confirmVerifyBtn').click(function() {
+        var certificateId = $('#verifyCertificateId').val();
+        var isVerified = $('#verifyApprove').is(':checked');
+        var comments = $('#verificationComments').val();
+        var verificationDate = $('#verificationDate').val();
+        
+        var formData = {
+            is_verified: isVerified,
+            comments: comments,
+            verification_date: verificationDate
+        };
+        
+        $.ajax({
+            url: "{% url 'work_certificate_verify' 0 %}".replace('0', certificateId),
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmVerifyBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#verifyModal').modal('hide');
+                    certificateTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmVerifyBtn').prop('disabled', false).html('Submit Verification');
+            }
+        });
+    });
+
+    // Edit from view modal
+    $('#editFromViewBtn').click(function() {
+        var certificateId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        
+        // Trigger edit button
+        $(`.edit-certificate[data-id="${certificateId}"]`).click();
+    });
+
+    // Delete Certificate
+    var deleteCertificateId = null;
+    $(document).on('click', '.delete-certificate', function() {
+        deleteCertificateId = $(this).data('id');
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+
+    $('#confirmDeleteBtn').click(function() {
+        var reason = $('#deleteReason').val();
+        if (!reason.trim()) {
+            Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: "{% url 'work_certificate_delete' 0 %}".replace('0', deleteCertificateId),
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ reason: reason }),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deleteModal').modal('hide');
+                    certificateTable.ajax.reload();
+                    loadStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmDeleteBtn').prop('disabled', false).html('Delete');
+            }
+        });
+    });
+
+    // Print Certificate Details
+    $('#printCertificateBtn').click(function() {
+        var printContent = $('#certificateDetails').html();
+        var originalContent = $('body').html();
+        
+        $('body').html(`
+            <div class="container mt-5">
+                <h2 class="text-center mb-4">Work Certificate Report</h2>
+                <div class="text-center mb-4">
+                    <h5>Certificate Details</h5>
+                </div>
+                ${printContent}
+                <div class="mt-5 text-center">
+                    <small>Printed on: ${new Date().toLocaleString()}</small>
+                </div>
+            </div>
+        `);
+        
+        window.print();
+        $('body').html(originalContent);
+        
+        // Re-initialize DataTable after print
+        location.reload();
+    });
+
+    // CSRF Token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initial load
+    loadStats();
+    loadContractors();
+    loadDistricts();
+    loadProjects(null);
+});
+</script>
+
+<style>
+.card-h-30 {
+    min-height: 120px;
+}
+
+.certificate-details h5 {
+    color: #495057;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.certificate-details table {
+    margin-bottom: 0;
+}
+
+.certificate-details th {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.certificate-details td {
+    font-size: 0.95rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.view-certificate-link {
+    color: #0d6efd;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.view-certificate-link:hover {
+    text-decoration: underline;
+}
+
+@media print {
+    .modal-header, .modal-footer, .btn, .btn-group {
+        display: none !important;
+    }
+    
+    .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .modal-body {
+        padding: 0 !important;
+    }
+    
+    .certificate-details {
+        font-size: 12pt;
+    }
+}
+</style>
+{% endblock %}

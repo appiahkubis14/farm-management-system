@@ -695,7 +695,7 @@ $(document).ready(function() {
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: `/sensors/sensors/api/devices/${deviceId}/generate-key/`,
+                            url: `/sensors/api/devices/${deviceId}/generate-key/`,
                             type: 'POST',
                             headers: {
                                 'X-CSRFToken': getCookie('csrftoken')

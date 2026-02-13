@@ -1,0 +1,2048 @@
+{% extends 'web_base.html' %}
+{% load static %}
+
+{% block content %}
+<br>
+<!-- Page Header -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">Outbreak Farms Overview</h4>
+            <div class="page-title-right">
+                <div class="btn-group" role="group">
+                    <button class="btn btn-primary" id="addOutbreakBtn">
+                        <i class="fas fa-plus me-1"></i> Report New Outbreak
+                    </button>
+                    <button class="btn btn-outline-secondary" id="refreshDataBtn">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br>
+
+<!-- Tab Navigation -->
+<div class="row mb-3">
+    <div class="col-12">
+        <ul class="nav nav-tabs" id="outbreakTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="enhanced-tab" data-bs-toggle="tab" data-bs-target="#enhanced" type="button" role="tab" aria-controls="enhanced" aria-selected="true">
+                    <i class="fas fa-clipboard-list me-1"></i> Enhanced Outbreak Farms
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab" aria-controls="basic" aria-selected="false">
+                    <i class="fas fa-leaf me-1"></i> Basic Outbreak Farms
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Tab Content -->
+<div class="tab-content" id="outbreakTabsContent">
+    <!-- Enhanced Outbreak Farms Tab -->
+    <div class="tab-pane fade show active" id="enhanced" role="tabpanel" aria-labelledby="enhanced-tab">
+        <!-- Stats Cards for Enhanced -->
+        <div class="row">
+            <div class="col-xl-3 col-md-6">
+                <div class="card card-h-30">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Outbreaks</span>
+                                <h4 class="mb-3" id="enhancedTotalOutbreaks">0</h4>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-virus text-danger h2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card card-h-30">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="text-muted mb-3 lh-1 d-block text-truncate">Critical</span>
+                                <h4 class="mb-3" id="enhancedCritical">0</h4>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-dark h2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card card-h-30">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="text-muted mb-3 lh-1 d-block text-truncate">This Month</span>
+                                <h4 class="mb-3" id="enhancedMonth">0</h4>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-calendar-alt text-primary h2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card card-h-30">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="text-muted mb-3 lh-1 d-block text-truncate">Area Affected (ha)</span>
+                                <h4 class="mb-3" id="enhancedArea">0</h4>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-map-marked-alt text-success h2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters for Enhanced -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-2">
+                                <select class="form-select" id="enhancedDistrictFilter">
+                                    <option value="">All Districts</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="enhancedRegionFilter">
+                                    <option value="">All Regions</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="enhancedSeverityFilter">
+                                    <option value="">All Severities</option>
+                                    {% for severity in severity_choices %}
+                                    <option value="{{ severity }}">{{ severity }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="enhancedStatusFilter">
+                                    <option value="">All Statuses</option>
+                                    <option value="0">Pending</option>
+                                    <option value="1">Submitted</option>
+                                    <option value="2">Treated</option>
+                                    <option value="3">Resolved</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="enhancedDiseaseFilter">
+                                    <option value="">All Diseases</option>
+                                    {% for disease in disease_types %}
+                                    <option value="{{ disease }}">{{ disease }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" id="applyEnhancedFilters">
+                                    <i class="fas fa-filter me-1"></i> Apply Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="enhancedOutbreakTable" class="table table-striped datatable" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Outbreak ID</th>
+                                        <th>Farmer Name</th>
+                                        <th>Location</th>
+                                        <th>Disease Type</th>
+                                        <th>Severity</th>
+                                        <th>Status</th>
+                                        <th>Inspection Date</th>
+                                        <th>District</th>
+                                        <th>Region</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Basic Outbreak Farms Tab -->
+    <div class="tab-pane fade" id="basic" role="tabpanel" aria-labelledby="basic-tab">
+        <!-- Stats Cards for Basic -->
+        <div class="row">
+            <div class="col-xl-3 col-md-6">
+                <div class="card card-h-30">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="text-muted mb-3 lh-1 d-block text-truncate">Total Reports</span>
+                                <h4 class="mb-3" id="basicTotalOutbreaks">0</h4>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-file-alt text-primary h2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card card-h-30">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="text-muted mb-3 lh-1 d-block text-truncate">Pending</span>
+                                <h4 class="mb-3" id="basicPending">0</h4>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-hourglass-half text-warning h2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card card-h-30">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="text-muted mb-3 lh-1 d-block text-truncate">Submitted</span>
+                                <h4 class="mb-3" id="basicSubmitted">0</h4>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-check-circle text-success h2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card card-h-30">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="text-muted mb-3 lh-1 d-block text-truncate">Recent (30 days)</span>
+                                <h4 class="mb-3" id="basicRecent">0</h4>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-clock text-info h2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters for Basic -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <select class="form-select" id="basicDistrictFilter">
+                                    <option value="">All Districts</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="basicRegionFilter">
+                                    <option value="">All Regions</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="basicDiseaseFilter">
+                                    <option value="">All Diseases</option>
+                                    {% for disease in disease_types_model %}
+                                    <option value="{{ disease }}">{{ disease }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-primary w-100" id="applyBasicFilters">
+                                    <i class="fas fa-filter me-1"></i> Apply Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Basic Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="basicOutbreakTable" class="table table-striped datatable" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>UID</th>
+                                        <th>Farmer Name</th>
+                                        <th>Location</th>
+                                        <th>Farm Size (ha)</th>
+                                        <th>Disease Type</th>
+                                        <th>Status</th>
+                                        <th>Date Reported</th>
+                                        <th>District</th>
+                                        <th>Region</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Outbreak Modal (Enhanced) -->
+<div class="modal fade" id="outbreakModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalTitle">Report New Outbreak</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="outbreakForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="outbreakId" name="outbreak_id">
+                    <input type="hidden" id="uid" name="uid">
+                    
+                    <!-- Farm Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-farm me-2"></i>Farm Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="farmer_name" class="form-label">Farmer Name *</label>
+                                    <input type="text" class="form-control" id="farmer_name" name="farmer_name" required>
+                                    <div class="invalid-feedback">Please enter farmer name</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="farmer_age" class="form-label">Farmer Age</label>
+                                    <input type="number" class="form-control" id="farmer_age" name="farmer_age" min="0" max="120">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="farmer_contact" class="form-label">Farmer Contact</label>
+                                    <input type="tel" class="form-control" id="farmer_contact" name="farmer_contact">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="farm_location" class="form-label">Farm Location *</label>
+                                    <input type="text" class="form-control" id="farm_location" name="farm_location" required>
+                                    <div class="invalid-feedback">Please enter farm location</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="farm_area" class="form-label">Farm Area (ha) *</label>
+                                    <input type="number" step="0.01" class="form-control" id="farm_area" name="farm_area" required>
+                                    <div class="invalid-feedback">Please enter farm area</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="community_id" class="form-label">Community</label>
+                                    <select class="form-select" id="community_id" name="community_id">
+                                        <option value="">Select Community</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="district_id" class="form-label">District *</label>
+                                    <select class="form-select" id="district_id" name="district_id" required>
+                                        <option value="">Select District</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select district</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="region_id" class="form-label">Region *</label>
+                                    <select class="form-select" id="region_id" name="region_id" required>
+                                        <option value="">Select Region</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select region</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="cocoa_type" class="form-label">Cocoa Type</label>
+                                    <select class="form-select" id="cocoa_type" name="cocoa_type">
+                                        <option value="">Select Cocoa Type</option>
+                                        <option value="Hybrid">Hybrid</option>
+                                        <option value="Amazonia">Amazonia</option>
+                                        <option value="Amelonado">Amelonado</option>
+                                        <option value="Trinitario">Trinitario</option>
+                                        <option value="Forastero">Forastero</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="age_class" class="form-label">Age Class</label>
+                                    <select class="form-select" id="age_class" name="age_class">
+                                        <option value="">Select Age Class</option>
+                                        <option value="Young (0-5 years)">Young (0-5 years)</option>
+                                        <option value="Mature (6-15 years)">Mature (6-15 years)</option>
+                                        <option value="Old (16+ years)">Old (16+ years)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="temp_code" class="form-label">Temporary Code</label>
+                                    <input type="text" class="form-control" id="temp_code" name="temp_code">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Outbreak Details -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Outbreak Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="disease_type" class="form-label">Disease Type *</label>
+                                    <select class="form-select" id="disease_type" name="disease_type" required>
+                                        <option value="">Select Disease Type</option>
+                                        <option value="Black Pod">Black Pod</option>
+                                        <option value="Swollen Shoot">Swollen Shoot</option>
+                                        <option value="Mirids">Mirids</option>
+                                        <option value="Frosty Pod Rot">Frosty Pod Rot</option>
+                                        <option value="Witches Broom">Witches Broom</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select disease type</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="severity" class="form-label">Severity *</label>
+                                    <select class="form-select" id="severity" name="severity" required>
+                                        <option value="">Select Severity</option>
+                                        <option value="Low">Low</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="High">High</option>
+                                        <option value="Critical">Critical</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select severity</div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="status" class="form-label">Status *</label>
+                                    <select class="form-select" id="status" name="status" required>
+                                        <option value="0">Pending</option>
+                                        <option value="1">Submitted</option>
+                                        <option value="2">Treated</option>
+                                        <option value="3">Resolved</option>
+                                    </select>
+                                    <div class="invalid-feedback">Please select status</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="date_reported" class="form-label">Date Reported *</label>
+                                    <input type="date" class="form-control" id="date_reported" name="date_reported" required>
+                                    <div class="invalid-feedback">Please enter date reported</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="inspection_date" class="form-label">Inspection Date</label>
+                                    <input type="date" class="form-control" id="inspection_date" name="inspection_date">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="reported_by_id" class="form-label">Reported By</label>
+                                    <select class="form-select" id="reported_by_id" name="reported_by_id">
+                                        <option value="">Select Staff</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="project_id" class="form-label">Project</label>
+                                    <select class="form-select" id="project_id" name="project_id">
+                                        <option value="">Select Project</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Treatment Information -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-first-aid me-2"></i>Treatment Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="treatment_applied" class="form-label">Treatment Applied</label>
+                                    <textarea class="form-control" id="treatment_applied" name="treatment_applied" rows="3"></textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="treatment_date" class="form-label">Treatment Date</label>
+                                    <input type="date" class="form-control" id="treatment_date" name="treatment_date">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Location Coordinates -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Location Coordinates</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="coordinates" class="form-label">Coordinates (lat,lng)</label>
+                                    <input type="text" class="form-control" id="coordinates" name="coordinates" placeholder="e.g., 5.6789,-0.1234">
+                                    <small class="text-muted">Enter as latitude,longitude</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="farm_id" class="form-label">Linked Farm</label>
+                                    <select class="form-select" id="farm_id" name="farm_id">
+                                        <option value="">Select Farm</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Identification (Optional) -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Farmer Identification (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_type" class="form-label">ID Type</label>
+                                    <select class="form-select" id="id_type" name="id_type">
+                                        <option value="">Select ID Type</option>
+                                        <option value="National ID">National ID</option>
+                                        <option value="Voters ID">Voters ID</option>
+                                        <option value="Drivers License">Drivers License</option>
+                                        <option value="Passport">Passport</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_number" class="form-label">ID Number</label>
+                                    <input type="text" class="form-control" id="id_number" name="id_number">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="communitytbl" class="form-label">Community (Text)</label>
+                                    <input type="text" class="form-control" id="communitytbl" name="communitytbl">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger" id="saveBtn">
+                        <i class="fas fa-save me-1"></i> Save Outbreak
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Basic Outbreak Modal -->
+<div class="modal fade" id="basicOutbreakModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="basicModalTitle">Basic Outbreak Report</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="basicOutbreakForm" method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="basicOutbreakId" name="basic_outbreak_id">
+                    <input type="hidden" id="basicUid" name="basic_uid">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_farmer_name" class="form-label">Farmer Name *</label>
+                            <input type="text" class="form-control" id="basic_farmer_name" name="basic_farmer_name" required>
+                            <div class="invalid-feedback">Please enter farmer name</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_farm_location" class="form-label">Farm Location *</label>
+                            <input type="text" class="form-control" id="basic_farm_location" name="basic_farm_location" required>
+                            <div class="invalid-feedback">Please enter farm location</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_community_id" class="form-label">Community</label>
+                            <select class="form-select" id="basic_community_id" name="basic_community_id">
+                                <option value="">Select Community</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_farm_size" class="form-label">Farm Size (ha) *</label>
+                            <input type="number" step="0.01" class="form-control" id="basic_farm_size" name="basic_farm_size" required>
+                            <div class="invalid-feedback">Please enter farm size</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_disease_type" class="form-label">Disease Type *</label>
+                            <select class="form-select" id="basic_disease_type" name="basic_disease_type" required>
+                                <option value="">Select Disease Type</option>
+                                <option value="Black Pod">Black Pod</option>
+                                <option value="Swollen Shoot">Swollen Shoot</option>
+                                <option value="Mirids">Mirids</option>
+                                <option value="Frosty Pod Rot">Frosty Pod Rot</option>
+                                <option value="Witches Broom">Witches Broom</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <div class="invalid-feedback">Please select disease type</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_date_reported" class="form-label">Date Reported *</label>
+                            <input type="date" class="form-control" id="basic_date_reported" name="basic_date_reported" required>
+                            <div class="invalid-feedback">Please enter date reported</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_reported_by_id" class="form-label">Reported By</label>
+                            <select class="form-select" id="basic_reported_by_id" name="basic_reported_by_id">
+                                <option value="">Select Staff</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_status" class="form-label">Status</label>
+                            <select class="form-select" id="basic_status" name="basic_status">
+                                <option value="0">Pending</option>
+                                <option value="1">Submitted</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_district_id" class="form-label">District *</label>
+                            <select class="form-select" id="basic_district_id" name="basic_district_id" required>
+                                <option value="">Select District</option>
+                            </select>
+                            <div class="invalid-feedback">Please select district</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_region_id" class="form-label">Region *</label>
+                            <select class="form-select" id="basic_region_id" name="basic_region_id" required>
+                                <option value="">Select Region</option>
+                            </select>
+                            <div class="invalid-feedback">Please select region</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="basic_coordinates" class="form-label">Coordinates (lat,lng)</label>
+                            <input type="text" class="form-control" id="basic_coordinates" name="basic_coordinates" placeholder="e.g., 5.6789,-0.1234">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info" id="saveBasicBtn">
+                        <i class="fas fa-save me-1"></i> Save Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Outbreak Modal (Enhanced) -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Outbreak Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="outbreakDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" id="editFromViewBtn">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </button>
+                <button type="button" class="btn btn-info" id="printOutbreakBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Basic Outbreak Modal -->
+<div class="modal fade" id="viewBasicModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Basic Outbreak Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="basicOutbreakDetails">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" id="editBasicFromViewBtn">
+                    <i class="fas fa-edit me-1"></i> Edit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this outbreak record? This action cannot be undone.</p>
+                <div class="form-group">
+                    <label for="deleteReason" class="form-label">Reason for deletion:</label>
+                    <textarea class="form-control" id="deleteReason" rows="3" placeholder="Enter reason for deletion..." required></textarea>
+                </div>
+                <input type="hidden" id="deleteItemId">
+                <input type="hidden" id="deleteItemType"> <!-- 'enhanced' or 'basic' -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    var currentDeleteId = null;
+    var currentDeleteType = null;
+    
+    // ============== INITIALIZE TABLES ==============
+    
+    // Enhanced Outbreak Table
+    var enhancedTable = $('#enhancedOutbreakTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'outbreakfarm_list_api' %}",
+            type: "GET",
+            data: function(d) {
+                // Add filter parameters
+                d.district_id = $('#enhancedDistrictFilter').val();
+                d.region_id = $('#enhancedRegionFilter').val();
+                d.severity = $('#enhancedSeverityFilter').val();
+                d.status = $('#enhancedStatusFilter').val();
+                d.disease_type = $('#enhancedDiseaseFilter').val();
+            }
+        },
+        columns: [
+            { data: 'id', visible: false },
+            { 
+                data: 'outbreak_id',
+                render: function(data, type, row) {
+                    return `<a href="#" class="view-outbreak-link" data-id="${row.id}">${data}</a>`;
+                }
+            },
+            { data: 'farmer_name' },
+            { data: 'farm_location' },
+            { data: 'disease_type' },
+            { 
+                data: 'severity',
+                render: function(data) {
+                    var badgeClass = 'bg-success';
+                    if (data === 'Medium') badgeClass = 'bg-warning';
+                    else if (data === 'High') badgeClass = 'bg-danger';
+                    else if (data === 'Critical') badgeClass = 'bg-dark';
+                    
+                    return `<span class="badge ${badgeClass}">${data}</span>`;
+                }
+            },
+            { 
+                data: 'status_display',
+                render: function(data, type, row) {
+                    var badgeClass = row.status_badge || 'bg-secondary';
+                    return `<span class="badge ${badgeClass}">${data}</span>`;
+                }
+            },
+            { 
+                data: 'inspection_date',
+                render: function(data) {
+                    return data || '<span class="text-muted">N/A</span>';
+                }
+            },
+            { data: 'district' },
+            { data: 'region' },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-outbreak" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary edit-outbreak" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger delete-outbreak" data-id="${data}" data-type="enhanced" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        responsive: true,
+        order: [[1, 'asc']],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: "copy",
+                text: '<i class="fas fa-copy"></i> Copy',
+                className: "btn btn-sm btn-outline-secondary",
+            },
+            {
+                extend: "csv",
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                className: "btn btn-sm btn-outline-success",
+            },
+            {
+                extend: "excel",
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                className: "btn btn-sm btn-outline-primary",
+            },
+            {
+                extend: "pdf",
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                className: "btn btn-sm btn-outline-danger",
+            },
+            {
+                extend: "print",
+                text: '<i class="fas fa-print"></i> Print',
+                className: "btn btn-sm btn-outline-info",
+            }
+        ],
+        language: {
+            emptyTable: "No outbreak records found",
+            zeroRecords: "No matching records found"
+        }
+    });
+    
+    // Basic Outbreak Table
+    var basicTable = $('#basicOutbreakTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{% url 'outbreakfarmmodel_list_api' %}",
+            type: "GET",
+            data: function(d) {
+                d.district_id = $('#basicDistrictFilter').val();
+                d.region_id = $('#basicRegionFilter').val();
+                d.disease_type = $('#basicDiseaseFilter').val();
+            }
+        },
+        columns: [
+            { data: 'id', visible: false },
+            { 
+                data: 'uid',
+                render: function(data, type, row) {
+                    return `<a href="#" class="view-basic-link" data-id="${row.id}">${data}</a>`;
+                }
+            },
+            { data: 'farmer_name' },
+            { data: 'farm_location' },
+            { data: 'farm_size' },
+            { data: 'disease_type' },
+            { 
+                data: 'status_display',
+                render: function(data, type, row) {
+                    var badgeClass = row.status_badge || 'bg-secondary';
+                    return `<span class="badge ${badgeClass}">${data}</span>`;
+                }
+            },
+            { 
+                data: 'date_reported',
+                render: function(data) {
+                    return data || '<span class="text-muted">N/A</span>';
+                }
+            },
+            { data: 'district' },
+            { data: 'region' },
+            {
+                data: 'id',
+                render: function(data, type, row) {
+                    return `
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-info view-basic" data-id="${data}" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary edit-basic" data-id="${data}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger delete-outbreak" data-id="${data}" data-type="basic" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            }
+        ],
+        responsive: true,
+        order: [[1, 'asc']],
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: "copy",
+                text: '<i class="fas fa-copy"></i> Copy',
+                className: "btn btn-sm btn-outline-secondary",
+            },
+            {
+                extend: "csv",
+                text: '<i class="fas fa-file-csv"></i> CSV',
+                className: "btn btn-sm btn-outline-success",
+            },
+            {
+                extend: "excel",
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                className: "btn btn-sm btn-outline-primary",
+            },
+            {
+                extend: "pdf",
+                text: '<i class="fas fa-file-pdf"></i> PDF',
+                className: "btn btn-sm btn-outline-danger",
+            },
+            {
+                extend: "print",
+                text: '<i class="fas fa-print"></i> Print',
+                className: "btn btn-sm btn-outline-info",
+            }
+        ],
+        language: {
+            emptyTable: "No outbreak records found",
+            zeroRecords: "No matching records found"
+        }
+    });
+    
+    // ============== LOAD DROPDOWN DATA ==============
+    
+    // Load Districts
+    function loadDistricts(selectId, selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_districts' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $select = $(selectId);
+                    $select.empty().append('<option value="">All Districts</option>');
+                    
+                    response.data.forEach(function(district) {
+                        var selected = (selectedId && district.id == selectedId) ? 'selected' : '';
+                        $select.append(`<option value="${district.id}" ${selected}>${district.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+    
+    // Load Regions
+    function loadRegions(selectId, selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_regions' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $select = $(selectId);
+                    $select.empty().append('<option value="">All Regions</option>');
+                    
+                    response.data.forEach(function(region) {
+                        var selected = (selectedId && region.id == selectedId) ? 'selected' : '';
+                        $select.append(`<option value="${region.id}" ${selected}>${region.region}</option>`);
+                    });
+                }
+            }
+        });
+    }
+    
+    // Load Communities by District
+    function loadCommunities(districtId, selectId, selectedId = null) {
+        if (!districtId) {
+            $(selectId).empty().append('<option value="">Select Community</option>');
+            return;
+        }
+        
+        $.ajax({
+            url: "{% url 'get_communities' %}",
+            type: "GET",
+            data: { district_id: districtId },
+            success: function(response) {
+                if (response.success) {
+                    var $select = $(selectId);
+                    $select.empty().append('<option value="">Select Community</option>');
+                    
+                    response.data.forEach(function(community) {
+                        var selected = (selectedId && community.id == selectedId) ? 'selected' : '';
+                        $select.append(`<option value="${community.id}" ${selected}>${community.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+    
+    // Load Staff
+    function loadStaff(selectId, selectedId = null) {
+        $.ajax({
+            url: "{% url 'staff_list_api' %}",
+            type: "GET",
+            data: { draw: 1, start: 0, length: 1000 },
+            success: function(response) {
+                if (response.data) {
+                    var $select = $(selectId);
+                    $select.empty().append('<option value="">Select Staff</option>');
+                    
+                    response.data.forEach(function(staff) {
+                        var fullName = staff.full_name || `${staff.first_name} ${staff.surname}`;
+                        var selected = (selectedId && staff.id == selectedId) ? 'selected' : '';
+                        $select.append(`<option value="${staff.id}" ${selected}>${fullName} (${staff.staff_id})</option>`);
+                    });
+                }
+            }
+        });
+    }
+    
+    // Load Projects
+    function loadProjects(selectId, selectedId = null) {
+        $.ajax({
+            url: "{% url 'get_projects' %}",
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    var $select = $(selectId);
+                    $select.empty().append('<option value="">Select Project</option>');
+                    
+                    response.data.forEach(function(project) {
+                        var selected = (selectedId && project.id == selectedId) ? 'selected' : '';
+                        $select.append(`<option value="${project.id}" ${selected}>${project.name}</option>`);
+                    });
+                }
+            }
+        });
+    }
+    
+    // Load Farms for dropdown
+    function loadFarms(selectId, selectedId = null) {
+        $.ajax({
+            url: "{% url 'farm_list_api' %}",
+            type: "GET",
+            data: { draw: 1, start: 0, length: 1000 },
+            success: function(response) {
+                if (response.data) {
+                    var $select = $(selectId);
+                    $select.empty().append('<option value="">Select Farm</option>');
+                    
+                    response.data.forEach(function(farm) {
+                        var selected = (selectedId && farm.id == selectedId) ? 'selected' : '';
+                        $select.append(`<option value="${farm.id}" ${selected}>${farm.farm_reference} - ${farm.farmername}</option>`);
+                    });
+                }
+            }
+        });
+    }
+    
+    // ============== LOAD STATS ==============
+    
+    function loadEnhancedStats() {
+        $.ajax({
+            url: "{% url 'outbreakfarm_stats_api' %}",
+            type: "GET",
+            data: {
+                district_id: $('#enhancedDistrictFilter').val(),
+                region_id: $('#enhancedRegionFilter').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    var stats = response.data;
+                    $('#enhancedTotalOutbreaks').text(stats.total_outbreaks || 0);
+                    $('#enhancedCritical').text(stats.critical_outbreaks || 0);
+                    $('#enhancedMonth').text(stats.month_outbreaks || 0);
+                    $('#enhancedArea').text(stats.total_area_affected || 0);
+                }
+            }
+        });
+    }
+    
+    function loadBasicStats() {
+        $.ajax({
+            url: "{% url 'outbreakfarmmodel_stats_api' %}",
+            type: "GET",
+            data: {
+                district_id: $('#basicDistrictFilter').val(),
+                region_id: $('#basicRegionFilter').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    var stats = response.data;
+                    $('#basicTotalOutbreaks').text(stats.total_outbreaks || 0);
+                    $('#basicPending').text(stats.pending || 0);
+                    $('#basicSubmitted').text(stats.submitted || 0);
+                    $('#basicRecent').text(stats.recent_outbreaks || 0);
+                }
+            }
+        });
+    }
+    
+    // ============== EVENT HANDLERS ==============
+    
+    // District change for community dropdowns
+    $('#district_id').on('change', function() {
+        var districtId = $(this).val();
+        loadCommunities(districtId, '#community_id');
+    });
+    
+    $('#basic_district_id').on('change', function() {
+        var districtId = $(this).val();
+        loadCommunities(districtId, '#basic_community_id');
+    });
+    
+    // Apply filters
+    $('#applyEnhancedFilters').click(function() {
+        enhancedTable.ajax.reload();
+        loadEnhancedStats();
+    });
+    
+    $('#applyBasicFilters').click(function() {
+        basicTable.ajax.reload();
+        loadBasicStats();
+    });
+    
+    // Refresh data
+    $('#refreshDataBtn').click(function() {
+        enhancedTable.ajax.reload();
+        basicTable.ajax.reload();
+        loadEnhancedStats();
+        loadBasicStats();
+        Swal.fire('Refreshed', 'Data has been refreshed', 'success');
+    });
+    
+    // Add Outbreak Button (Enhanced)
+    $('#addOutbreakBtn').click(function() {
+        $('#outbreakForm')[0].reset();
+        $('#outbreakForm').removeClass('was-validated');
+        $('#modalTitle').text('Report New Outbreak');
+        $('#outbreakId').val('');
+        $('#uid').val('');
+        $('#status').val('0'); // Default to Pending
+        $('#severity').val('Medium'); // Default severity
+        
+        var today = new Date().toISOString().split('T')[0];
+        $('#date_reported').val(today);
+        $('#inspection_date').val(today);
+        
+        loadDistricts('#district_id');
+        loadRegions('#region_id');
+        loadStaff('#reported_by_id');
+        loadProjects('#project_id');
+        loadFarms('#farm_id');
+        $('#outbreakModal').modal('show');
+    });
+    
+    // Edit Outbreak (Enhanced)
+    $(document).on('click', '.edit-outbreak', function() {
+        var outbreakId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'outbreakfarm_detail_api' 0 %}".replace('0', outbreakId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var outbreak = response.data;
+                    
+                    // Load dependent data first
+                    loadDistricts('#district_id', outbreak.district_id);
+                    loadRegions('#region_id', outbreak.region_id);
+                    
+                    if (outbreak.district_id) {
+                        loadCommunities(outbreak.district_id, '#community_id', outbreak.community_id);
+                    }
+                    
+                    loadStaff('#reported_by_id', outbreak.reported_by_id);
+                    loadProjects('#project_id', outbreak.project_id);
+                    loadFarms('#farm_id', outbreak.farm_id);
+                    
+                    // Populate form
+                    $('#outbreakId').val(outbreak.id);
+                    $('#uid').val(outbreak.uid);
+                    $('#farmer_name').val(outbreak.farmer_name);
+                    $('#farmer_age').val(outbreak.farmer_age);
+                    $('#farmer_contact').val(outbreak.farmer_contact);
+                    $('#farm_location').val(outbreak.farm_location);
+                    $('#farm_area').val(outbreak.farm_area);
+                    $('#cocoa_type').val(outbreak.cocoa_type);
+                    $('#age_class').val(outbreak.age_class);
+                    $('#temp_code').val(outbreak.temp_code);
+                    $('#disease_type').val(outbreak.disease_type);
+                    $('#severity').val(outbreak.severity);
+                    $('#status').val(outbreak.status);
+                    $('#date_reported').val(outbreak.date_reported);
+                    $('#inspection_date').val(outbreak.inspection_date);
+                    $('#treatment_applied').val(outbreak.treatment_applied);
+                    $('#treatment_date').val(outbreak.treatment_date);
+                    $('#coordinates').val(outbreak.coordinates);
+                    $('#id_type').val(outbreak.id_type);
+                    $('#id_number').val(outbreak.id_number);
+                    $('#communitytbl').val(outbreak.communitytbl);
+                    
+                    $('#modalTitle').text('Edit Outbreak');
+                    $('#outbreakModal').modal('show');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Failed to load outbreak details', 'error');
+            }
+        });
+    });
+    
+    // View Outbreak (Enhanced)
+    $(document).on('click', '.view-outbreak, .view-outbreak-link', function(e) {
+        if (e) e.preventDefault();
+        var outbreakId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'outbreakfarm_detail_api' 0 %}".replace('0', outbreakId),
+            type: 'GET',
+            beforeSend: function() {
+                $('#outbreakDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-danger" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading outbreak details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var o = response.data;
+                    
+                    var severityBadge = 'bg-success';
+                    if (o.severity === 'Medium') severityBadge = 'bg-warning';
+                    else if (o.severity === 'High') severityBadge = 'bg-danger';
+                    else if (o.severity === 'Critical') severityBadge = 'bg-dark';
+                    
+                    var statusBadge = 'bg-secondary';
+                    if (o.status === 1) statusBadge = 'bg-info';
+                    else if (o.status === 2) statusBadge = 'bg-warning';
+                    else if (o.status === 3) statusBadge = 'bg-success';
+                    
+                    var html = `
+                        <div class="outbreak-details">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2 text-danger">Outbreak Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Outbreak ID:</th>
+                                            <td><strong>${o.outbreak_id || 'N/A'}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Disease Type:</th>
+                                            <td>${o.disease_type || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Severity:</th>
+                                            <td><span class="badge ${severityBadge}">${o.severity || 'N/A'}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Status:</th>
+                                            <td><span class="badge ${statusBadge}">${o.status_display || 'N/A'}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Date Reported:</th>
+                                            <td>${o.date_reported || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Inspection Date:</th>
+                                            <td>${o.inspection_date || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2 text-danger">Farmer Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Farmer Name:</th>
+                                            <td>${o.farmer_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Age:</th>
+                                            <td>${o.farmer_age || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Contact:</th>
+                                            <td>${o.farmer_contact || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>ID Type:</th>
+                                            <td>${o.id_type || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>ID Number:</th>
+                                            <td>${o.id_number || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Farm Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Farm Location:</th>
+                                            <td>${o.farm_location || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Farm Area:</th>
+                                            <td>${o.farm_area || '0'} ha</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Cocoa Type:</th>
+                                            <td>${o.cocoa_type || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Age Class:</th>
+                                            <td>${o.age_class || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Temporary Code:</th>
+                                            <td>${o.temp_code || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Location</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">District:</th>
+                                            <td>${o.district_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Region:</th>
+                                            <td>${o.region_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Community:</th>
+                                            <td>${o.community_name || o.communitytbl || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Coordinates:</th>
+                                            <td><small>${o.coordinates || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Treatment</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Treatment Applied:</th>
+                                            <td>${o.treatment_applied || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Treatment Date:</th>
+                                            <td>${o.treatment_date || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Reporting</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Reported By:</th>
+                                            <td>${o.reported_by_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Project:</th>
+                                            <td>${o.project_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Created Date:</th>
+                                            <td><small>${o.created_date || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">Linked Farm</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="20%">Farm Reference:</th>
+                                            <td>${o.farm_reference || 'Not linked'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $('#outbreakDetails').html(html);
+                    
+                    $('#editFromViewBtn').data('id', o.id);
+                    $('#viewModal').modal('show');
+                } else {
+                    $('#outbreakDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load details: ${response.message}
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                $('#outbreakDetails').html(`
+                    <div class="alert alert-danger">
+                        Failed to load outbreak details
+                    </div>
+                `);
+            }
+        });
+    });
+    
+    // Edit from view modal (Enhanced)
+    $('#editFromViewBtn').click(function() {
+        var outbreakId = $(this).data('id');
+        $('#viewModal').modal('hide');
+        $(`.edit-outbreak[data-id="${outbreakId}"]`).click();
+    });
+    
+    // ============== BASIC MODEL HANDLERS ==============
+    
+    // Add Basic Outbreak Button
+    $('#addBasicBtn').click(function() {
+        $('#basicOutbreakForm')[0].reset();
+        $('#basicOutbreakForm').removeClass('was-validated');
+        $('#basicModalTitle').text('New Basic Outbreak');
+        $('#basicOutbreakId').val('');
+        $('#basicUid').val('');
+        $('#basic_status').val('0');
+        
+        var today = new Date().toISOString().split('T')[0];
+        $('#basic_date_reported').val(today);
+        
+        loadDistricts('#basic_district_id');
+        loadRegions('#basic_region_id');
+        loadStaff('#basic_reported_by_id');
+        $('#basicOutbreakModal').modal('show');
+    });
+    
+    // Edit Basic Outbreak
+    $(document).on('click', '.edit-basic', function() {
+        var outbreakId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'outbreakfarmmodel_detail_api' 0 %}".replace('0', outbreakId),
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var o = response.data;
+                    
+                    loadDistricts('#basic_district_id', o.district_id);
+                    loadRegions('#basic_region_id', o.region_id);
+                    
+                    if (o.district_id) {
+                        loadCommunities(o.district_id, '#basic_community_id', o.community_id);
+                    }
+                    
+                    loadStaff('#basic_reported_by_id', o.reported_by_id);
+                    
+                    $('#basicOutbreakId').val(o.id);
+                    $('#basicUid').val(o.uid);
+                    $('#basic_farmer_name').val(o.farmer_name);
+                    $('#basic_farm_location').val(o.farm_location);
+                    $('#basic_farm_size').val(o.farm_size);
+                    $('#basic_disease_type').val(o.disease_type);
+                    $('#basic_date_reported').val(o.date_reported);
+                    $('#basic_status').val(o.status);
+                    $('#basic_coordinates').val(o.coordinates);
+                    
+                    $('#basicModalTitle').text('Edit Basic Outbreak');
+                    $('#basicOutbreakModal').modal('show');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            }
+        });
+    });
+    
+    // View Basic Outbreak
+    $(document).on('click', '.view-basic, .view-basic-link', function(e) {
+        if (e) e.preventDefault();
+        var outbreakId = $(this).data('id');
+        
+        $.ajax({
+            url: "{% url 'outbreakfarmmodel_detail_api' 0 %}".replace('0', outbreakId),
+            type: 'GET',
+            beforeSend: function() {
+                $('#basicOutbreakDetails').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading details...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                if (response.success) {
+                    var o = response.data;
+                    
+                    var statusBadge = o.status == 1 ? 'bg-success' : 'bg-secondary';
+                    
+                    var html = `
+                        <div class="outbreak-details">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Basic Outbreak Information</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">UID:</th>
+                                            <td><strong>${o.uid || 'N/A'}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Farmer Name:</th>
+                                            <td>${o.farmer_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Farm Location:</th>
+                                            <td>${o.farm_location || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Farm Size:</th>
+                                            <td>${o.farm_size || '0'} ha</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Disease Type:</th>
+                                            <td>${o.disease_type || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Status</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Status:</th>
+                                            <td><span class="badge ${statusBadge}">${o.status_display || 'N/A'}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Date Reported:</th>
+                                            <td>${o.date_reported || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Reported By:</th>
+                                            <td>${o.reported_by_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Coordinates:</th>
+                                            <td><small>${o.coordinates || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">Location</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">District:</th>
+                                            <td>${o.district_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Region:</th>
+                                            <td>${o.region_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Community:</th>
+                                            <td>${o.community_name || 'N/A'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="border-bottom pb-2">System Info</h5>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th width="40%">Project:</th>
+                                            <td>${o.project_name || 'N/A'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Created:</th>
+                                            <td><small>${o.created_date || 'N/A'}</small></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $('#basicOutbreakDetails').html(html);
+                    
+                    $('#editBasicFromViewBtn').data('id', o.id);
+                    $('#viewBasicModal').modal('show');
+                } else {
+                    $('#basicOutbreakDetails').html(`
+                        <div class="alert alert-danger">
+                            Failed to load details: ${response.message}
+                        </div>
+                    `);
+                }
+            }
+        });
+    });
+    
+    // Edit from view modal (Basic)
+    $('#editBasicFromViewBtn').click(function() {
+        var outbreakId = $(this).data('id');
+        $('#viewBasicModal').modal('hide');
+        $(`.edit-basic[data-id="${outbreakId}"]`).click();
+    });
+    
+    // ============== FORM SUBMISSIONS ==============
+    
+    // Enhanced Form Submission
+    $('#outbreakForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        var formData = {
+            farmer_name: $('#farmer_name').val(),
+            farmer_age: $('#farmer_age').val(),
+            farmer_contact: $('#farmer_contact').val(),
+            farm_location: $('#farm_location').val(),
+            farm_area: $('#farm_area').val(),
+            community_id: $('#community_id').val() || null,
+            district_id: $('#district_id').val(),
+            region_id: $('#region_id').val(),
+            cocoa_type: $('#cocoa_type').val(),
+            age_class: $('#age_class').val(),
+            temp_code: $('#temp_code').val(),
+            disease_type: $('#disease_type').val(),
+            severity: $('#severity').val(),
+            status: $('#status').val(),
+            date_reported: $('#date_reported').val(),
+            inspection_date: $('#inspection_date').val(),
+            treatment_applied: $('#treatment_applied').val(),
+            treatment_date: $('#treatment_date').val(),
+            coordinates: $('#coordinates').val(),
+            reported_by_id: $('#reported_by_id').val() || null,
+            project_id: $('#project_id').val() || null,
+            farm_id: $('#farm_id').val() || null,
+            id_type: $('#id_type').val(),
+            id_number: $('#id_number').val(),
+            communitytbl: $('#communitytbl').val(),
+            uid: $('#uid').val() || null
+        };
+        
+        var outbreakId = $('#outbreakId').val();
+        var url = outbreakId ? 
+            "{% url 'outbreakfarm_update' 0 %}".replace('0', outbreakId) : 
+            "{% url 'outbreakfarm_create' %}";
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#saveBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#outbreakModal').modal('hide');
+                    enhancedTable.ajax.reload();
+                    loadEnhancedStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#saveBtn').prop('disabled', false).html('<i class="fas fa-save me-1"></i> Save Outbreak');
+            }
+        });
+    });
+    
+    // Basic Form Submission
+    $('#basicOutbreakForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+        
+        var formData = {
+            farmer_name: $('#basic_farmer_name').val(),
+            farm_location: $('#basic_farm_location').val(),
+            community_id: $('#basic_community_id').val() || null,
+            farm_size: $('#basic_farm_size').val(),
+            disease_type: $('#basic_disease_type').val(),
+            date_reported: $('#basic_date_reported').val(),
+            reported_by_id: $('#basic_reported_by_id').val() || null,
+            status: $('#basic_status').val(),
+            district_id: $('#basic_district_id').val(),
+            region_id: $('#basic_region_id').val(),
+            coordinates: $('#basic_coordinates').val(),
+            uid: $('#basicUid').val() || null
+        };
+        
+        var outbreakId = $('#basicOutbreakId').val();
+        var url = outbreakId ? 
+            "{% url 'outbreakfarmmodel_update' 0 %}".replace('0', outbreakId) : 
+            "{% url 'outbreakfarmmodel_create' %}";
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#saveBasicBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#basicOutbreakModal').modal('hide');
+                    basicTable.ajax.reload();
+                    loadBasicStats();
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#saveBasicBtn').prop('disabled', false).html('<i class="fas fa-save me-1"></i> Save Report');
+            }
+        });
+    });
+    
+    // ============== DELETE HANDLING ==============
+    
+    $(document).on('click', '.delete-outbreak', function() {
+        currentDeleteId = $(this).data('id');
+        currentDeleteType = $(this).data('type'); // 'enhanced' or 'basic'
+        $('#deleteReason').val('');
+        $('#deleteModal').modal('show');
+    });
+    
+    $('#confirmDeleteBtn').click(function() {
+        var reason = $('#deleteReason').val();
+        if (!reason.trim()) {
+            Swal.fire('Error', 'Please provide a reason for deletion', 'error');
+            return;
+        }
+        
+        var url;
+        if (currentDeleteType === 'enhanced') {
+            url = "{% url 'outbreakfarm_delete' 0 %}".replace('0', currentDeleteId);
+        } else {
+            url = "{% url 'outbreakfarmmodel_delete' 0 %}".replace('0', currentDeleteId);
+        }
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ reason: reason }),
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            beforeSend: function() {
+                $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Success', response.message, 'success');
+                    $('#deleteModal').modal('hide');
+                    
+                    if (currentDeleteType === 'enhanced') {
+                        enhancedTable.ajax.reload();
+                        loadEnhancedStats();
+                    } else {
+                        basicTable.ajax.reload();
+                        loadBasicStats();
+                    }
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'An error occurred';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.statusText || errorMsg;
+                }
+                Swal.fire('Error', errorMsg, 'error');
+            },
+            complete: function() {
+                $('#confirmDeleteBtn').prop('disabled', false).html('Delete');
+            }
+        });
+    });
+    
+    // Print Outbreak Details
+    $('#printOutbreakBtn').click(function() {
+        var printContent = $('#outbreakDetails').html();
+        var originalContent = $('body').html();
+        
+        $('body').html(`
+            <div class="container mt-5">
+                <h2 class="text-center mb-4 text-danger">Outbreak Report</h2>
+                <div class="text-center mb-4">
+                    <h5>Outbreak Farm Details</h5>
+                </div>
+                ${printContent}
+                <div class="mt-5 text-center">
+                    <small>Printed on: ${new Date().toLocaleString()}</small>
+                </div>
+            </div>
+        `);
+        
+        window.print();
+        $('body').html(originalContent);
+        location.reload();
+    });
+    
+    // CSRF Token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // ============== INITIAL LOADS ==============
+    
+    // Load all dropdowns
+    loadDistricts('#enhancedDistrictFilter');
+    loadDistricts('#basicDistrictFilter');
+    loadRegions('#enhancedRegionFilter');
+    loadRegions('#basicRegionFilter');
+    
+    // Load stats
+    loadEnhancedStats();
+    loadBasicStats();
+});
+</script>
+
+<style>
+.card-h-30 {
+    min-height: 120px;
+}
+
+.outbreak-details h5 {
+    color: #495057;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.outbreak-details table {
+    margin-bottom: 0;
+}
+
+.outbreak-details th {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.outbreak-details td {
+    font-size: 0.95rem;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.view-outbreak-link, .view-basic-link {
+    color: #dc3545;
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.view-basic-link {
+    color: #0dcaf0;
+}
+
+.view-outbreak-link:hover, .view-basic-link:hover {
+    text-decoration: underline;
+}
+
+.nav-tabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #dc3545;
+    font-weight: 600;
+    border-bottom: 2px solid #dc3545;
+}
+
+.nav-tabs .nav-link#basic-tab.active {
+    color: #0dcaf0;
+    border-bottom-color: #0dcaf0;
+}
+
+@media print {
+    .modal-header, .modal-footer, .btn, .btn-group, .nav-tabs {
+        display: none !important;
+    }
+    
+    .modal-dialog {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .modal-body {
+        padding: 0 !important;
+    }
+    
+    .outbreak-details {
+        font-size: 12pt;
+    }
+}
+</style>
+{% endblock %}

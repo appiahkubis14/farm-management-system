@@ -140,37 +140,37 @@ class Sidebar:
             }
         },
         
-        "Monitoring & Validation": {
-            "icon": "fas fa-search",
-            "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager", "Project Manager"],
-            "sub_items": {
-                "Farm Validation": {
-                    "icon": "fas fa-clipboard-check", 
-                    "url": "/monitoring/farm-validation/", 
-                    "groups": ["Admin", "Monitoring and Evaluation"]
-                },
-                "Seedling Enumeration": {
-                    "icon": "fas fa-seedling", 
-                    "url": "/monitoring/seedling-enumeration/", 
-                    "groups": ["Admin", "Monitoring and Evaluation", "Project Officer"]
-                },
-                "Verification Workdone": {
-                    "icon": "fas fa-check-circle", 
-                    "url": "/monitoring/verification-workdone/", 
-                    "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
-                },
-                "PO Route Monitoring": {
-                    "icon": "fas fa-route", 
-                    "url": "/monitoring/po-route-monitoring/", 
-                    "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
-                },
-                "ODK Integration": {
-                    "icon": "fas fa-sync-alt", 
-                    "url": "/monitoring/odk-urls/", 
-                    "groups": ["Admin", "Monitoring and Evaluation"]
-                },
-            }
-        },
+        # "Monitoring & Validation": {
+        #     "icon": "fas fa-search",
+        #     "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager", "Project Manager"],
+        #     "sub_items": {
+        #         "Farm Validation": {
+        #             "icon": "fas fa-clipboard-check", 
+        #             "url": "/monitoring/farm-validation/", 
+        #             "groups": ["Admin", "Monitoring and Evaluation"]
+        #         },
+        #         "Seedling Enumeration": {
+        #             "icon": "fas fa-seedling", 
+        #             "url": "/monitoring/seedling-enumeration/", 
+        #             "groups": ["Admin", "Monitoring and Evaluation", "Project Officer"]
+        #         },
+        #         "Verification Workdone": {
+        #             "icon": "fas fa-check-circle", 
+        #             "url": "/monitoring/verification-workdone/", 
+        #             "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
+        #         },
+        #         "PO Route Monitoring": {
+        #             "icon": "fas fa-route", 
+        #             "url": "/monitoring/po-route-monitoring/", 
+        #             "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
+        #         },
+        #         "ODK Integration": {
+        #             "icon": "fas fa-sync-alt", 
+        #             "url": "/monitoring/odk-urls/", 
+        #             "groups": ["Admin", "Monitoring and Evaluation"]
+        #         },
+        #     }
+        # },
         
         "Certification & Payment": {
             "icon": "fas fa-file-invoice-dollar",
@@ -186,41 +186,42 @@ class Sidebar:
                     "url": "/payment/payment-reports/", 
                     "groups": ["Admin", "Project Officer", "Regional Manager"]
                 },
-                "Detailed Payments": {
-                    "icon": "fas fa-file-invoice-dollar", 
-                    "url": "/payment/detailed-reports/", 
-                    "groups": ["Admin", "Project Officer", "Regional Manager"]
-                },
-                "CalBank Transactions": {
-                    "icon": "fas fa-mobile-alt", 
-                    "url": "/payment/calbank-transactions/", 
-                    "groups": ["Admin", "Project Manager"]
-                },
-                "Equipment": {
+                
+                "Equipment Overview": {
                     "icon": "fas fa-tools", 
                     "url": "/equipment/equipment/", 
+                    "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
+                },
+                "OutbreakFarms Overview": {
+                    "icon": "fas fa-virus", 
+                    "url": "/outbreakfarms/", 
+                    "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
+                },
+                "Irrigation Overview": {
+                    "icon": "fas fa-water", 
+                    "url": "/irrigation/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
                 },
             }
         },
         
-        "Reports & Analytics": {
-            "icon": "fas fa-chart-bar",
-            "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager", "Project Manager", "National"],
-            "sub_items": {
-                "Weekly Summary": {
-                    "icon": "fas fa-chart-line", 
-                    "url": "/reports/weekly-summary/", 
-                    "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
-                },
-                "Farm Database": {
-                    "icon": "fas fa-database", 
-                    "url": "/reports/farm-database/", 
-                    "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
-                },
+        # "Reports & Analytics": {
+        #     "icon": "fas fa-chart-bar",
+        #     "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager", "Project Manager", "National"],
+        #     "sub_items": {
+        #         "Weekly Summary": {
+        #             "icon": "fas fa-chart-line", 
+        #             "url": "/reports/weekly-summary/", 
+        #             "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
+        #         },
+        #         "Farm Database": {
+        #             "icon": "fas fa-database", 
+        #             "url": "/reports/farm-database/", 
+        #             "groups": ["Admin", "Monitoring and Evaluation", "Regional Manager"]
+        #         },
                
-            }
-        },
+        #     }
+        # },
         
         # "System": {
         #     "icon": "fas fa-cogs",
