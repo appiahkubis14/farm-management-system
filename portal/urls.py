@@ -24,7 +24,7 @@ from portal.view.outbreakfarms import *
 # from portal.view.contractor import *
 
 urlpatterns = [
-    path('home/', views.index, name='home'),
+    # path('home/', views.index, name='home'),
     path('login/', views.LoginView.as_view(), name='login'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
 
@@ -172,8 +172,8 @@ urlpatterns = [
 
      # Staff Overview Pages
     path('personnel/staff/', staff_overview, name='staff_overview'),
-    path('staff/list/', get_staff_list, name='staff_list_api'),
-    path('staff/<int:staff_id>/', get_staff_detail, name='staff_detail_api'),
+    path('staff/list/', get_staff_list_api, name='staff_list_api_2'),
+    path('staff/<int:staff_id>/', get_staff_detail_api, name='staff_detail_api'),
     path('staff/create/', create_staff, name='create_staff'),
     path('staff/<int:staff_id>/update/', update_staff, name='update_staff'),
     path('staff/<int:staff_id>/delete/', delete_staff, name='delete_staff'),

@@ -74,7 +74,8 @@ def staff_overview(request):
     return render(request, 'portal/personnel/staff_overview.html', context)
 
 @require_http_methods(["GET"])
-def get_staff_list(request):
+def get_staff_list_api(request):
+    print("=== get_staff_list_api called ===")
     """Get paginated staff list for DataTable"""
     try:
         draw = int(request.GET.get('draw', 1))
@@ -83,7 +84,8 @@ def get_staff_list(request):
         search_value = request.GET.get('search[value]', '')
         
         # Base queryset
-        queryset = PersonnelModel.objects.filter(delete_field='no')
+        queryset = PersonnelModel.objects.all()
+        print(f"SQL Query: {queryset.query}")
         
         # Apply search
         if search_value:
@@ -160,10 +162,10 @@ def get_staff_list(request):
         })
 
 @require_http_methods(["GET"])
-def get_staff_detail(request, staff_id):
+def get_staff_detail_api(request, staff_id):
     """Get single staff details"""
     try:
-        staff = PersonnelModel.objects.get(id=staff_id, delete_field='no')
+        staff = PersonnelModel.objects.get(id=staff_id)
         
         # Calculate age
         age = None

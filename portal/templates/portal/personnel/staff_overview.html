@@ -502,7 +502,7 @@ $(document).ready(function() {
         processing: true,
         serverSide: true,
         ajax: {
-            url: "{% url 'staff_list_api' %}",
+            url: "{% url 'staff_list_api_2' %}",
             type: "GET"
         },
         columns: [
@@ -633,10 +633,11 @@ $(document).ready(function() {
     // Load stats
     function loadStats() {
         $.ajax({
-            url: "{% url 'staff_list_api' %}",
+            url: "{% url 'staff_list_api_2' %}",
             type: "GET",
             data: { draw: 1, start: 0, length: 1000 },
             success: function(response) {
+                console.log(response);
                 var data = response.data || [];
                 var total = data.length;
                 var ras = data.filter(s => s.personnel_type === 'Rehab Assistant').length;

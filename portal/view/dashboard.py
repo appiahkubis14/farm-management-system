@@ -524,7 +524,7 @@ def get_recent_activities(request):
                 'icon': 'fas fa-file-alt',
                 'icon_bg': 'bg-warning',
                 'title': f"Activity Report: {report.activity.sub_activity if report.activity else 'N/A'}",
-                'description': f"By: {report.agent.first_name} {report.agent.last_name if report.agent else 'Unknown'} - {report.area_covered_ha} ha",
+                # 'description': f"By: {report.agent.first_name} {report.agent.last_name if report.agent else 'Unknown'} - {report.area_covered_ha} ha",
                 'time': report.created_date.strftime('%Y-%m-%d %H:%M'),
                 'timestamp': report.created_date.isoformat() if report.created_date else None,
                 'url': f"/reports/{report.id}/"
@@ -739,7 +739,7 @@ def get_upcoming_tasks(request):
             tasks.append({
                 'id': equip.id,
                 'type': 'equipment',
-                'title': f"Equipment Overdue: {equip.equipment.equipment_name if equip.equipment else 'Unknown'}",
+                'title': f"Equipment Overdue: {equip.equipment.equipment if equip.equipment else 'Unknown'}",
                 'description': f"Assigned to {equip.assigned_to.first_name} {equip.assigned_to.last_name} - {days_overdue} days overdue",
                 'due_date': equip.return_date.strftime('%Y-%m-%d'),
                 'priority': 'high',
@@ -757,8 +757,8 @@ def get_upcoming_tasks(request):
             tasks.append({
                 'id': assign.id,
                 'type': 'assignment',
-                'title': f"Pending Assignment: {assign.ra.first_name} {assign.ra.surname if assign.ra else 'Unknown'}",
-                'description': f"Assigned to {assign.po.first_name} {assign.po.last_name if assign.po else 'Unknown'} - {days_pending} days pending",
+                # 'title': f"Pending Assignment: {assign.ra.first_name} {assign.ra.surname if assign.ra else 'Unknown'}",
+                # 'description': f"Assigned to {assign.po.first_name} {assign.po.last_name if assign.po else 'Unknown'} - {days_pending} days pending",
                 'due_date': assign.date_assigned.strftime('%Y-%m-%d') if assign.date_assigned else '',
                 'priority': 'high' if days_pending > 7 else 'medium',
                 'url': f"/personnel/assignments/{assign.id}/"
@@ -791,6 +791,8 @@ def get_upcoming_tasks(request):
         })
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Error in get_upcoming_tasks: {str(e)}")
         return JsonResponse({
             'success': False,

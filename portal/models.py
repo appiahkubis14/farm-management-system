@@ -938,7 +938,7 @@ class OutbreakFarm(timeStamp):
     def save(self, *args, **kwargs):
         if not self.outbreak_id:
             # Generate outbreak ID (e.g., OB-2024-0001)
-            last_outbreak = OutbreakFarmModel.objects.order_by('-id').first()
+            last_outbreak = OutbreakFarm.objects.order_by('-id').first()
             if last_outbreak and last_outbreak.outbreak_id:
                 try:
                     last_num = int(last_outbreak.outbreak_id.split('-')[-1])

@@ -26,4 +26,7 @@ urlpatterns = [
     path('api/devices/<str:device_id>/update/', views.api_device_update, name='api_device_update'),
     path('api/devices/<str:device_id>/delete/', views.api_device_delete, name='api_device_delete'),
     path('api/devices/<str:device_id>/generate-key/', views.api_device_generate_key, name='api_device_generate_key'),
+
+
+    
 ]
