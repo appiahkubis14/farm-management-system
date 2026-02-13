@@ -31,7 +31,7 @@ class LoginView(View):
         if request.user.is_authenticated:
             logger.info(f"User {request.user} already authenticated, redirecting")
             messages.info(request, "You're already logged in!")
-            return redirect('home')
+            return redirect('dashboard')
         
         logger.debug("Rendering login form")
         return render(request, self.template_name)
@@ -62,7 +62,7 @@ class LoginView(View):
                     request.session.set_expiry(0)
                 
                 messages.success(request, f"Welcome back, {user.get_full_name() or user.username}!")
-                next_url = request.GET.get('next', reverse_lazy('home'))
+                next_url = request.GET.get('next', reverse_lazy('dashboard'))
                 logger.debug(f"Redirecting to: {next_url}")
                 return redirect(next_url)
             else:
@@ -82,12 +82,12 @@ class LogoutView(View):
             logger.info(f"Logging out user: {request.user}")
             logout(request)
             messages.success(request, "You've been successfully logged out!")
-            return redirect('login')
+            return redirect('/')
         else:
             logger.debug("Anonymous user attempted logout")
             messages.info(request, "You weren't logged in to begin with.")
         logger.debug("Redirecting to login page")
-        return redirect('login')
+        return redirect('/')
 
 
 from django.contrib.auth.decorators import login_required
