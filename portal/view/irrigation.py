@@ -368,6 +368,7 @@ def irrigation_chart_api(request):
     """API endpoint for irrigation chart data"""
     try:
         queryset = IrrigationModel.objects.filter(delete_field='no')
+        print(queryset)
         
         # Apply filters
         district_id = request.GET.get('district_id')
@@ -405,6 +406,7 @@ def irrigation_chart_api(request):
             'daily': daily_data,
             'by_type': list(type_data)
         }
+        print(chart_data)
         
         return JsonResponse({'success': True, 'data': chart_data})
         

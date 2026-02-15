@@ -112,7 +112,7 @@
 </div>
 
 <!-- Filters -->
-<div class="row mb-3">
+<!-- <div class="row mb-3">
     <div class="col-12">
         <div class="card">
             <div class="card-body">
@@ -150,7 +150,7 @@
             </div>
         </div>
     </div>
-</div>
+</div> -->
 
 <!-- Main Table -->
 <div class="row">
@@ -408,10 +408,21 @@ $(document).ready(function() {
             { data: 'farm_reference' },
             { data: 'farmer_name' },
             { 
-                data: 'irrigation_type_display',
+                data: 'irrigation_type',
                 render: function(data, type, row) {
-                    var badgeClass = row.irrigation_type_badge || 'bg-secondary';
-                    return `<span class="badge ${badgeClass}">${data}</span>`;
+                    // Map irrigation types to Bootstrap badge classes
+                    var badgeMap = {
+                        'drip': 'success',
+                        'sprinkler': 'info',
+                        'furrow': 'warning',
+                        'basin': 'primary',
+                        'center pivot': 'danger'
+                    };
+                    
+                    var badgeClass = badgeMap[data] || 'secondary';
+                    var displayText = data ? data.charAt(0).toUpperCase() + data.slice(1) : 'N/A';
+                    
+                    return `<span class="badge bg-${badgeClass}">${displayText}</span>`;
                 }
             },
             { 
@@ -663,6 +674,7 @@ $(document).ready(function() {
                 project_id: $('#projectFilter').val()
             },
             success: function(response) {
+                console.log(response);
                 if (response.success) {
                     updateCharts(response.data);
                 }
@@ -670,52 +682,233 @@ $(document).ready(function() {
         });
     }
     
+
     function updateCharts(data) {
-        // Volume Chart
-        if (volumeChart) {
-            volumeChart.destroy();
-        }
-        
-        var ctx = document.getElementById('volumeChart').getContext('2d');
-        volumeChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.daily.map(d => d.date),
-                datasets: [{
+    // Volume Chart
+    if (volumeChart) {
+        volumeChart.destroy();
+    }
+    
+    // Calculate average volume for the period
+    const volumes = data.daily.map(d => d.volume);
+    const totalVolume = volumes.reduce((a, b) => a + b, 0);
+    const averageVolume = totalVolume / volumes.filter(v => v > 0).length || 0; // Only average days with data
+    
+    // Find max volume for better y-axis scaling
+    const maxVolume = Math.max(...volumes, averageVolume * 1.2);
+    
+    var ctx = document.getElementById('volumeChart').getContext('2d');
+    volumeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.daily.map(d => {
+                // Format date for better display
+                const date = new Date(d.date + 'T00:00:00');
+                return date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            }),
+            datasets: [
+                {
                     label: 'Water Volume (Liters)',
-                    data: data.daily.map(d => d.volume),
+                    data: volumes,
                     borderColor: 'rgba(54, 162, 235, 1)',
                     backgroundColor: 'rgba(54, 162, 235, 0.2)',
                     tension: 0.4,
-                    fill: true
-                }]
+                    fill: true,
+                    pointBackgroundColor: volumes.map(v => 
+                        v > 0 ? 'rgba(54, 162, 235, 1)' : 'rgba(200, 200, 200, 0.3)'
+                    ),
+                    pointRadius: volumes.map(v => v > 0 ? 5 : 2),
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                },
+                {
+                    label: 'Average Volume',
+                    data: Array(data.daily.length).fill(averageVolume),
+                    type: 'line',
+                    borderColor: 'rgba(255, 99, 132, 0.8)',
+                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Volume (Liters)'
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 6,
+                        font: {
+                            size: 12
                         }
                     }
                 },
-                plugins: {
-                    legend: {
-                        display: false
+                tooltip: {
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleFont: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 12
+                    },
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                if (context.dataset.label === 'Average Volume') {
+                                    label += context.parsed.y.toFixed(0) + ' L (avg)';
+                                } else {
+                                    label += context.parsed.y.toLocaleString() + ' L';
+                                    
+                                    // Add record count for volume dataset
+                                    const recordCount = data.daily[context.dataIndex].count;
+                                    if (recordCount > 0) {
+                                        label += ` (${recordCount} record${recordCount > 1 ? 's' : ''})`;
+                                    }
+                                }
+                            }
+                            return label;
+                        },
+                        afterLabel: function(context) {
+                            if (context.dataset.label === 'Water Volume (Liters)' && context.parsed.y > 0) {
+                                const volume = context.parsed.y;
+                                const percentDiff = ((volume - averageVolume) / averageVolume * 100).toFixed(1);
+                                if (percentDiff > 0) {
+                                    return `↑ ${percentDiff}% above average`;
+                                } else if (percentDiff < 0) {
+                                    return `↓ ${Math.abs(percentDiff)}% below average`;
+                                }
+                            }
+                            return null;
+                        }
+                    }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x',
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true,
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'x',
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        avgLine: {
+                            type: 'line',
+                            yMin: averageVolume,
+                            yMax: averageVolume,
+                            borderColor: 'rgba(255, 99, 132, 0.5)',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            label: {
+                                enabled: true,
+                                content: `Avg: ${averageVolume.toFixed(0)} L`,
+                                position: 'end',
+                                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                                font: {
+                                    size: 11,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
                     }
                 }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: maxVolume * 1.1, // Add 10% padding
+                    title: {
+                        display: true,
+                        text: 'Volume (Liters)',
+                        font: {
+                            size: 13,
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)',
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' L';
+                        },
+                        stepSize: maxVolume / 5 // Suggest 5 ticks on y-axis
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date',
+                        font: {
+                            size: 13,
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        maxTicksLimit: 15 // Limit number of x-axis labels
+                    }
+                }
+            },
+            elements: {
+                line: {
+                    borderJoinStyle: 'round',
+                },
+                point: {
+                    hoverBorderWidth: 2,
+                    hoverBorderColor: '#ffffff'
+                }
             }
-        });
-        
-        // Type Chart
-        if (typeChart) {
-            typeChart.destroy();
         }
-        
-        var typeCtx = document.getElementById('typeChart').getContext('2d');
+    });
+
+    // Add some interactivity with hover effects
+    const canvas = document.getElementById('volumeChart');
+    canvas.addEventListener('mousemove', function(e) {
+        // You can add custom hover effects here if needed
+    });
+
+    // Type Chart
+    if (typeChart) {
+        typeChart.destroy();
+    }
+    
+    var typeCtx = document.getElementById('typeChart').getContext('2d');
         
         var typeLabels = data.by_type.map(t => t.irrigation_type ? t.irrigation_type.toUpperCase() : 'Unknown');
         var typeData = data.by_type.map(t => t.count);
@@ -747,6 +940,65 @@ $(document).ready(function() {
                 }
             }
         });
+    
+    // Add summary statistics display
+    updateSummaryStats(data, averageVolume, totalVolume);
+}
+
+// Add this helper function to display summary statistics
+function updateSummaryStats(data, avgVolume, totalVol) {
+    // Calculate additional statistics
+    const daysWithData = data.daily.filter(d => d.volume > 0).length;
+    const maxVolumeDay = data.daily.reduce((max, d) => d.volume > max.volume ? d : max, { volume: 0 });
+    const totalRecords = data.daily.reduce((sum, d) => sum + d.count, 0);
+    
+    // Update or create summary stats display
+    let statsContainer = document.getElementById('chartStats');
+    if (!statsContainer) {
+        statsContainer = document.createElement('div');
+        statsContainer.id = 'chartStats';
+        statsContainer.className = 'row mt-3 mb-3';
+        document.querySelector('.chart-container').appendChild(statsContainer);
+    }
+    
+    statsContainer.innerHTML = `
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body p-2">
+                    <small class="text-muted">Total Volume</small>
+                    <h6>${totalVol.toLocaleString()} L</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body p-2">
+                    <small class="text-muted">Average Daily</small>
+                    <h6>${avgVolume.toFixed(0)} L</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body p-2">
+                    <small class="text-muted">Peak Volume</small>
+                    <h6>${maxVolumeDay.volume.toLocaleString()} L</h6>
+                    <small>${maxVolumeDay.date}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body p-2">
+                    <small class="text-muted">Active Days</small>
+                    <h6>${daysWithData} / ${data.daily.length}</h6>
+                </div>
+            </div>
+        </div>
+    `;
+
+        
+        
     }
     
     // ============== EVENT HANDLERS ==============
