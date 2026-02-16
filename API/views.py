@@ -1520,7 +1520,7 @@ class FetchFarmsView(View):
                     "farmername": farm.farmername,
                     "location": farm.location,
                     "region_id": farm.region.id if farm.region else None,
-                    "region_name": farm.region.name if farm.region else None,
+                    "region_name": farm.region.region if farm.region else None,
                     "district_id": farm.district.id if farm.district else None,
                     "district_name": farm.district.name if farm.district else None,
                     "community_id": farm.community.id if farm.community else None,
