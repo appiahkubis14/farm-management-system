@@ -285,6 +285,7 @@ class SaveDailyReportView(View):
         try:
             data = json.loads(request.body)
             status = {"status": False, "message": "", "data": {}}
+            # print(data)
             
             uid = data.get("uid", "")
             
@@ -343,17 +344,13 @@ class SaveDailyReportView(View):
             main_activity_code = data.get("main_activity", "")
             activity_code = data.get("activity", "")
             
-            if main_activity_code:
-                try:
-                    main_activity_obj = Activities.objects.get(id=main_activity_code)
-                except:
-                    pass
-            
-            if activity_code:
-                try:
-                    activity_obj = Activities.objects.get(id=activity_code)
-                except:
-                    pass
+            print(main_activity_code, activity_code)
+
+            main_activity_obj = Activities.objects.get(id=main_activity_code)
+               
+
+            activity_obj = Activities.objects.get(id=activity_code)
+
             
             # Parse RAS if it's a list
             ras_ids = data.get("ras", [])
@@ -380,6 +377,8 @@ class SaveDailyReportView(View):
                 projectTbl_foreignkey=project,
                 district=district
             )
+
+            print(report)
             
             # Add RAS if provided
             if ras_ids:
