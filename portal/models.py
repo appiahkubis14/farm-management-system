@@ -245,6 +245,9 @@ class Feedback(timeStamp):
     ra_id = models.CharField(max_length=2500, blank=True, null=True)
     Status = models.CharField(default="Open", max_length=2500, choices=status)
 
+    def __str__(self):
+        return str(self.title)
+
 class Sidebar(models.Model):
     name = models.CharField(max_length=50, null=True, blank=True)
     
@@ -371,26 +374,29 @@ class PersonnelModel(timeStamp):
     
     def save(self, *args, **kwargs):
         """Generate staff_id based on personnel_type"""
-        # Check if this is a new instance
-        is_new = self.pk is None
-        
-        if is_new:
-            # First save without staff_id to get an ID
-            super(PersonnelModel, self).save(*args, **kwargs)
-            
-            # Generate staff_id based on personnel_type using the now-available ID
-            if self.personnel_type == "Rehab Assistant":
-                self.staff_id = f"RA-{self.id:06d}"
-            elif self.personnel_type == "Rehab Technician":
-                self.staff_id = f"RT-{self.id:06d}"
+        # Handle staff_id generation
+        if not self.staff_id:  # Only generate if staff_id doesn't exist
+            if self.pk is None:
+                # New instance - save first to get an ID
+                super().save(*args, **kwargs)
+                
+                # Generate staff_id using the new ID
+                if self.personnel_type == "Rehab Assistant":
+                    self.staff_id = f"RA-{self.pk:06d}"
+                elif self.personnel_type == "Rehab Technician":
+                    self.staff_id = f"RT-{self.pk:06d}"
+                else:
+                    self.staff_id = f"ST-{self.pk:06d}"
+                
+                # Save again with staff_id - use update_fields to avoid recursion
+                kwargs.pop('force_insert', None)  # Remove force_insert if present
+                super().save(update_fields=['staff_id'])
             else:
-                self.staff_id = f"ST-{self.id:06d}"
-            
-            # Save again with the staff_id
-            super(PersonnelModel, self).save(*args, **kwargs)
+                # Existing instance - just save normally
+                super().save(*args, **kwargs)
         else:
-            # For existing records, just save normally
-            super(PersonnelModel, self).save(*args, **kwargs)
+            # Staff_id already exists - just save normally
+            super().save(*args, **kwargs)
 
 
             

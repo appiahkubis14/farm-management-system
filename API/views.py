@@ -1,4 +1,5 @@
 # views.py
+import traceback
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -618,6 +619,8 @@ class SaveRegisterView(View):
                 "data": {}
             }, status=400)
         except Exception as e:
+            print(traceback.format_exc())
+            print(e)
             return JsonResponse({
                 "status": False,
                 "message": f"Error occurred: {str(e)}",
@@ -1229,57 +1232,120 @@ class SaveVerificationFarmsView(View):
 
 # ============== 10. SUBMIT ISSUE / FEEDBACK ==============
 
+# @method_decorator(csrf_exempt, name='dispatch')
+# class SaveFeedbackView(View):
+#     """Handle issue/feedback submission (POST only)"""
+#     def post(self, request):
+#         try:
+#             data = json.loads(request.body)
+#             status = {"status": False, "message": "", "data": {}}
+            
+#             uid = data.get("uid", "")
+            
+#             # Check if UID already exists
+#             if uid and IssueModel.objects.filter(uid=uid).exists():
+#                 status["message"] = "Issue with this UID already exists"
+#                 status["data"] = {"uid": uid}
+#                 return JsonResponse(status)
+            
+#             # Get user
+#             user = None
+#             user_id = data.get("user_id", "")
+#             if user_id:
+#                 try:
+#                     user = staffTbl.objects.get(id=user_id)
+#                 except:
+#                     pass
+            
+#             # Get district and project from user
+#             district = None
+#             project = None
+            
+#             if user and user.projectTbl_foreignkey:
+#                 project = user.projectTbl_foreignkey
+#                 if project.district:
+#                     district = project.district
+            
+#             # Create issue
+#             issue = IssueModel.objects.create(
+#                 uid=uid,
+#                 user=user,
+#                 issue_type=data.get("issue_type", ""),
+#                 description=data.get("description", ""),
+#                 date_reported=data.get("date_reported"),
+#                 status=data.get("status", 0),
+#                 projectTbl_foreignkey=project,
+#                 district=district
+#             )
+            
+#             status["status"] = True
+#             status["message"] = "Issue/feedback submitted successfully"
+#             status["data"] = {
+#                 "uid": issue.uid,
+#                 "id": issue.id
+#             }
+            
+#         except json.JSONDecodeError:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": "Invalid JSON data",
+#                 "data": {}
+#             }, status=400)
+#         except Exception as e:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": f"Error occurred: {str(e)}",
+#                 "data": {}
+#             }, status=500)
+            
+#         return JsonResponse(status)
+
 @method_decorator(csrf_exempt, name='dispatch')
 class SaveFeedbackView(View):
     """Handle issue/feedback submission (POST only)"""
     def post(self, request):
         try:
             data = json.loads(request.body)
-            status = {"status": False, "message": "", "data": {}}
+            status_response = {"status": False, "message": "", "data": {}}
             
             uid = data.get("uid", "")
             
-            # Check if UID already exists
-            if uid and IssueModel.objects.filter(uid=uid).exists():
-                status["message"] = "Issue with this UID already exists"
-                status["data"] = {"uid": uid}
-                return JsonResponse(status)
+            # Check if UID already exists (optional - remove if you want to allow multiple feedbacks with same UID)
+            if uid and Feedback.objects.filter(uid=uid).exists():
+                status_response["message"] = "Feedback with this UID already exists"
+                status_response["data"] = {"uid": uid}
+                return JsonResponse(status_response)
             
-            # Get user
-            user = None
-            user_id = data.get("user_id", "")
-            if user_id:
+            # Get staff user
+            staff = None
+            staff_id = data.get("staff_id", "") or data.get("user_id", "")  # Accept both field names
+            if staff_id:
                 try:
-                    user = staffTbl.objects.get(id=user_id)
-                except:
+                    staff = staffTbl.objects.get(id=staff_id)
+                except staffTbl.DoesNotExist:
                     pass
             
-            # Get district and project from user
-            district = None
-            project = None
-            
-            if user and user.projectTbl_foreignkey:
-                project = user.projectTbl_foreignkey
-                if project.district:
-                    district = project.district
-            
-            # Create issue
-            issue = IssueModel.objects.create(
+            # Create feedback
+            feedback = Feedback.objects.create(
+                staffTbl_foreignkey=staff,
+                title=data.get("title", ""),
+                feedback=data.get("feedback", "") or data.get("description", ""),  # Accept both
                 uid=uid,
-                user=user,
-                issue_type=data.get("issue_type", ""),
-                description=data.get("description", ""),
-                date_reported=data.get("date_reported"),
-                status=data.get("status", 0),
-                projectTbl_foreignkey=project,
-                district=district
+                farm_reference=data.get("farm_reference", ""),
+                activity=data.get("activity", ""),
+                ra_id=data.get("ra_id", ""),
+                Status=data.get("status", "Open") or data.get("Status", "Open"),  # Accept both cases
+                # sent_date will be auto_now=True, so no need to set it
             )
             
-            status["status"] = True
-            status["message"] = "Issue/feedback submitted successfully"
-            status["data"] = {
-                "uid": issue.uid,
-                "id": issue.id
+            status_response["status"] = True
+            status_response["message"] = "Feedback submitted successfully"
+            status_response["data"] = {
+                "id": feedback.id,
+                "uid": feedback.uid,
+                "title": feedback.title,
+                "status": feedback.Status,
+                "created_at": feedback.sent_date.isoformat() if feedback.sent_date else None
             }
             
         except json.JSONDecodeError:
@@ -1289,13 +1355,15 @@ class SaveFeedbackView(View):
                 "data": {}
             }, status=400)
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             return JsonResponse({
                 "status": False,
                 "message": f"Error occurred: {str(e)}",
                 "data": {}
             }, status=500)
             
-        return JsonResponse(status)
+        return JsonResponse(status_response)
 
 # ============== 11. IRRIGATION ==============
 
