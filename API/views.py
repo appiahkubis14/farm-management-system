@@ -345,13 +345,13 @@ class SaveDailyReportView(View):
             
             if main_activity_code:
                 try:
-                    main_activity_obj = Activities.objects.get(activity_code=main_activity_code)
+                    main_activity_obj = Activities.objects.get(id=main_activity_code)
                 except:
                     pass
             
             if activity_code:
                 try:
-                    activity_obj = Activities.objects.get(activity_code=activity_code)
+                    activity_obj = Activities.objects.get(id=activity_code)
                 except:
                     pass
             
