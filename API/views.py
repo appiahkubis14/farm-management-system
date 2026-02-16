@@ -1613,7 +1613,7 @@ class FetchJobOrderView(View):
                     "farmername": job.farmername,
                     "location": job.location,
                     "region_id": job.region.id if job.region else None,
-                    "region_name": job.region.name if job.region else None,
+                    "region_name": job.region.region if job.region else None,
                     "district_id": job.district.id if job.district else None,
                     "district_name": job.district.name if job.district else None,
                     "community_id": job.community.id if job.community else None,
