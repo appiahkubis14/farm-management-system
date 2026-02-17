@@ -1889,7 +1889,8 @@ class FetchPOAssignedFarmsView(View):
     """Load assigned farms for PO (GET)"""
     def get(self, request):
         try:
-            user_id = request.GET.get('user_id')
+            user_id = json.loads(request.body).get("user_id", "")
+            print(f"Fetching assigned farms for user_id: {user_id}")
             
             if not user_id:
                 return JsonResponse({
@@ -1900,7 +1901,9 @@ class FetchPOAssignedFarmsView(View):
             
             try:
                 staff = staffTbl.objects.get(id=user_id)
+
                 project = staff.projectTbl_foreignkey
+                print(f"Found project: {project}")
                 
                 if project:
                     farms = FarmdetailsTbl.objects.filter(projectTbl_foreignkey=project)
@@ -1926,7 +1929,7 @@ class FetchPOAssignedFarmsView(View):
                             "district_id": farm.district.id if farm.district else None,
                             "district_name": farm.district.name if farm.district else None,
                             "region_id": farm.region.id if farm.region else None,
-                            "region_name": farm.region.name if farm.region else None
+                            "region_name": farm.region.region if farm.region else None
                         })
                     
                     return JsonResponse({
