@@ -337,7 +337,7 @@ def farm_assignment_api(request):
             })
         except Exception as e:
             print(f"Error processing assignment {assignment.id}: {e}")
-            continue
+            # continue
     
     return JsonResponse({
         'draw': draw,
