@@ -1901,48 +1901,34 @@ class FetchPOAssignedFarmsView(View):
             
             try:
                 staff = staffTbl.objects.get(id=user_id)
-
-                project = staff.projectTbl_foreignkey
-                print(f"Found project: {project}")
+                print(f"Found staff: {staff.first_name} {staff.last_name}")
                 
-                if project:
-                    farms = FarmdetailsTbl.objects.filter(projectTbl_foreignkey=project)
-                    
-                    farm_data = []
-                    for farm in farms:
-                        # Get farm boundary if available from mappedFarms
-                        boundary = ""
-                        try:
-                            mapped_farm = mappedFarms.objects.get(farm_reference=farm.farm_reference)
-                            if mapped_farm.farmboundary:
-                                boundary = mapped_farm.farmboundary
-                        except:
-                            pass
-                        
-                        farm_data.append({
-                            "id": farm.id,
-                            "farm_boundary": boundary,
-                            "farmername": farm.farmername,
-                            "location": farm.location,
-                            "farm_reference": farm.farm_reference,
-                            "farm_size": farm.farm_size,
-                            "district_id": farm.district.id if farm.district else None,
-                            "district_name": farm.district.name if farm.district else None,
-                            "region_id": farm.region.id if farm.region else None,
-                            "region_name": farm.region.region if farm.region else None
-                        })
-                    
-                    return JsonResponse({
-                        "status": True,
-                        "message": f"Found {len(farm_data)} assigned farms",
-                        "data": farm_data
+                # Get farms directly from mappedFarms that are assigned to this staff
+                farms = mappedFarms.objects.filter(staffTbl_foreignkey=staff)
+                print(f"Found {len(farms)} assigned farms")
+                
+                farm_data = []
+                for farm in farms:
+                    farm_data.append({
+                        "id": farm.id,
+                        "farm_boundary": farm.farmboundary,
+                        "farmername": farm.farmer_name,
+                        "location": farm.location,
+                        "farm_reference": farm.farm_reference,
+                        "farm_size": farm.farm_area,
+                        # District and region info not available in mappedFarms
+                        # Setting to None as these fields are not in mappedFarms model
+                        # "district_id": None,
+                        # "district_name": None,
+                        # "region_id": None,
+                        # "region_name": None
                     })
-                else:
-                    return JsonResponse({
-                        "status": False,
-                        "message": "User is not assigned to any project",
-                        "data": []
-                    }, status=404)
+                
+                return JsonResponse({
+                    "status": True,
+                    "message": f"Found {len(farm_data)} assigned farms",
+                    "data": farm_data
+                })
                     
             except staffTbl.DoesNotExist:
                 return JsonResponse({
@@ -1957,6 +1943,7 @@ class FetchPOAssignedFarmsView(View):
                 "message": f"Error occurred: {str(e)}",
                 "data": []
             }, status=500)
+        
 
 @method_decorator(csrf_exempt, name='dispatch')
 class FetchOutbreakView(View):
