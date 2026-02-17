@@ -2556,7 +2556,7 @@ class SaveCalculatedAreaView(View):
                 "message": "Area calculation saved successfully",
                 "data": {
                     "id": area.id,
-                    "date": area.date.strftime("%Y-%m-%d %H:%M:%S"),
+                    # "date": date,
                     "title": area.title,
                     "value": f"{area.value} ha",
                     "district": area.district.name if area.district else None,
