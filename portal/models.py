@@ -209,25 +209,7 @@ class contratorDistrictAssignment(timeStamp):
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
 
-class posRoutemonitoring(timeStamp):
-    staffTbl_foreignkey = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True)
-    lat = models.FloatField(max_length=2540, blank=True, null=True)
-    lng = models.FloatField(max_length=2540, blank=True, null=True)
-    accuracy = models.FloatField(max_length=2540, blank=True, null=True)
-    inspection_date = models.DateTimeField(max_length=250, blank=True, null=True)
-    geom = GeometryField(blank=True, null=True)
-    uid = models.CharField(max_length=2500, blank=True, null=True)
-    
-    class Meta:
-        verbose_name_plural = "POs Monitor"
-    
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        if self.lat and self.lng:
-            try:
-                self.geom = Point(float(self.lng), float(self.lat))
-            except:
-                pass
-        return super(posRoutemonitoring, self).save()
+
 
 class Feedback(timeStamp):
     status = (
@@ -244,6 +226,9 @@ class Feedback(timeStamp):
     activity = models.CharField(max_length=2500, blank=True, null=True)
     ra_id = models.CharField(max_length=2500, blank=True, null=True)
     Status = models.CharField(default="Open", max_length=2500, choices=status)
+    week = models.CharField(max_length=2500, blank=True, null=True)
+    month = models.CharField(max_length=2500, blank=True, null=True)
+    year = models.CharField(max_length=2500, blank=True, null=True)
 
     def __str__(self):
         return str(self.title)
@@ -399,6 +384,34 @@ class PersonnelModel(timeStamp):
             super().save(*args, **kwargs)
 
 
+class posRoutemonitoring(timeStamp):
+    staffTbl_foreignkey = models.ForeignKey(PersonnelModel, on_delete=models.CASCADE, blank=True, null=True)
+    lat = models.FloatField(max_length=2540, blank=True, null=True)
+    lng = models.FloatField(max_length=2540, blank=True, null=True)
+    accuracy = models.FloatField(max_length=2540, blank=True, null=True)
+    inspection_date = models.DateTimeField(max_length=250, blank=True, null=True)
+    geom = GeometryField(blank=True, null=True)
+    uid = models.CharField(max_length=2500, blank=True, null=True)
+    
+    class Meta:
+        verbose_name_plural = "POs Monitor"
+    
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if self.lat and self.lng:
+            try:
+                self.geom = Point(float(self.lng), float(self.lat))
+            except:
+                pass
+        return super(posRoutemonitoring, self).save()
+
+# class PoMonitoringModel(timeStamp):
+#     lat = models.FloatField(max_length=2540, blank=True, null=True)
+#     lng = models.FloatField(max_length=2540, blank=True, null=True)
+#     uid = models.CharField(max_length=2500, blank=True, null=True)
+#     accuracy = models.FloatField(max_length=2540, blank=True, null=True)
+#     inspection_date = models.DateTimeField(max_length=250, blank=True, null=True)
+#     po = models.ForeignKey(PersonnelModel, on_delete=models.CASCADE, blank=True, null=True)
+#     # geom = GeometryField(blank=True, null=True)
             
 class PersonnelAssignmentModel(timeStamp):
     """Model for Assign Rehab Assistant (RA) module"""

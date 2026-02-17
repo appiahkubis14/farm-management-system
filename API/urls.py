@@ -36,7 +36,7 @@ urlpatterns = [
     path('v1/saveverificationfarms/', views.SaveVerificationFarmsView.as_view(), name='save_verification_farms'),
     
     # 9. Submit Issue / Feedback (POST only)
-    path('v1/savefeedback/', views.SaveFeedbackView.as_view(), name='save_feedback'),
+    path('v1/savefeedback/', views.FeedbackView.as_view(), name='save_feedback'),
     
     # 10. Irrigation (POST only - new endpoint)
     path('v1/saveirrigation/', views.SaveIrrigationView.as_view(), name='save_irrigation'),
@@ -77,4 +77,13 @@ urlpatterns = [
   
     # 18. save map farms
     path('v1/savemapfarms/', views.SaveMappedFarmView.as_view(), name='save_map_farms'),
+
+     # POS Route Monitoring
+    path('v1/pos-monitoring/', views.PosRouteMonitoringView.as_view(), name='pos_route_v1'),
+    
+    # Verify Record
+    path('v1/verify-record/', views.VerifyRecordView.as_view(), name='verify_record_api'),
+    
+    # Feedback
+    # path('api/feedback/', views.FeedbackView.as_view(), name='feedback_api'),
 ]

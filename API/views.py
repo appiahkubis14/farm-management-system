@@ -3235,3 +3235,524 @@ class SaveFeedbackAPIView(View):
             }, status=500)
             
         return JsonResponse(status)
+
+
+
+####################################################################################################################################################
+
+import json
+import traceback
+from django.utils import timezone
+from django.views import View
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
+
+# ==================== POS ROUTE MONITORING APIs ====================
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PosRouteMonitoringView(View):
+    """Handle POST and GET for PosRouteMonitoring model"""
+    
+    def post(self, request):
+        """Create new POS route monitoring record"""
+        try:
+            data = json.loads(request.body)
+            status_response = {"status": False, "message": "", "data": {}}
+            
+            # Check if record with same UID exists (optional)
+            uid = data.get("uid", "")
+            if uid and posRoutemonitoring.objects.filter(uid=uid).exists():
+                status_response["message"] = "Record with this UID already exists"
+                status_response["data"] = {"uid": uid}
+                return JsonResponse(status_response)
+            
+            # Get staff
+            staff = None
+            staff_id = data.get("staff_id", "")
+            if staff_id:
+                try:
+                    staff = PersonnelModel.objects.get(id=staff_id)
+                except PersonnelModel.DoesNotExist:
+                    pass
+            
+            # Parse date if provided
+            inspection_date = None
+            if data.get("inspection_date"):
+                try:
+                    inspection_date = timezone.datetime.fromisoformat(data.get("inspection_date").replace('Z', '+00:00'))
+                except:
+                    inspection_date = timezone.now()
+            
+            # Create record
+            record = posRoutemonitoring.objects.create(
+                staffTbl_foreignkey=staff,
+                lat=data.get("lat"),
+                lng=data.get("lng"),
+                accuracy=data.get("accuracy"),
+                inspection_date=inspection_date or timezone.now(),
+                uid=uid,
+            )
+            
+            status_response["status"] = True
+            status_response["message"] = "POS route monitoring record created successfully"
+            status_response["data"] = {
+                "id": record.id,
+                "uid": record.uid,
+                "lat": record.lat,
+                "lng": record.lng,
+                "accuracy": record.accuracy,
+                "inspection_date": record.inspection_date.isoformat() if record.inspection_date else None,
+                "staff_id": staff_id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"status": False, "message": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            print(traceback.format_exc())
+            return JsonResponse({"status": False, "message": f"Error: {str(e)}"}, status=500)
+        
+        return JsonResponse(status_response)
+    
+    def get(self, request):
+        """Get POS route monitoring records with filters"""
+        try:
+            # Query parameters for filtering
+            uid = request.GET.get('uid', '')
+            staff_id = request.GET.get('staff_id', '')
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            limit = int(request.GET.get('limit', 100))
+            page = int(request.GET.get('page', 1))
+            
+            # Build query
+            queryset = posRoutemonitoring.objects.all().order_by('-inspection_date')
+            
+            if uid:
+                queryset = queryset.filter(uid=uid)
+            
+            if staff_id:
+                queryset = queryset.filter(staffTbl_foreignkey_id=staff_id)
+            
+            if start_date:
+                queryset = queryset.filter(inspection_date__gte=start_date)
+            
+            if end_date:
+                queryset = queryset.filter(inspection_date__lte=end_date)
+            
+            # Pagination
+            paginator = Paginator(queryset, limit)
+            try:
+                records = paginator.page(page)
+            except PageNotAnInteger:
+                records = paginator.page(1)
+            except EmptyPage:
+                records = paginator.page(paginator.num_pages)
+            
+            # Prepare response data
+            data_list = []
+            for record in records:
+                data_list.append({
+                    "id": record.id,
+                    "uid": record.uid,
+                    "lat": record.lat,
+                    "lng": record.lng,
+                    "accuracy": record.accuracy,
+                    "inspection_date": record.inspection_date.isoformat() if record.inspection_date else None,
+                    "staff_id": record.staffTbl_foreignkey_id,
+                    "staff_name": str(record.staffTbl_foreignkey) if record.staffTbl_foreignkey else None,
+                    "created_at": record.timeStamp.isoformat() if hasattr(record, 'timeStamp') and record.timeStamp else None
+                })
+            
+            response = {
+                "status": True,
+                "message": "Records fetched successfully",
+                "data": data_list,
+                "pagination": {
+                    "total": paginator.count,
+                    "page": records.number,
+                    "limit": limit,
+                    "pages": paginator.num_pages
+                }
+            }
+            
+        except Exception as e:
+            print(traceback.format_exc())
+            return JsonResponse({"status": False, "message": f"Error: {str(e)}"}, status=500)
+        
+        return JsonResponse(response)
+
+
+# ==================== VERIFY RECORD APIs ====================
+
+@method_decorator(csrf_exempt, name='dispatch')
+class VerifyRecordView(View):
+    """Handle POST and GET for VerifyRecord model"""
+    
+    def post(self, request):
+        """Create new verification record"""
+        try:
+            # Handle both JSON and multipart form data for file uploads
+            if request.content_type and 'multipart/form-data' in request.content_type:
+                data = request.POST
+                video_file = request.FILES.get('videoPath', None)
+            else:
+                data = json.loads(request.body)
+                video_file = None
+            
+            status_response = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID exists
+            if uid and VerifyRecord.objects.filter(uid=uid).exists():
+                status_response["message"] = "Record with this UID already exists"
+                status_response["data"] = {"uid": uid}
+                return JsonResponse(status_response)
+            
+            # Get farm
+            farm = None
+            farm_id = data.get("farm_id", "")
+            if farm_id:
+                try:
+                    farm = FarmdetailsTbl.objects.get(id=farm_id)
+                except FarmdetailsTbl.DoesNotExist:
+                    pass
+            
+            # Get project
+            project = None
+            project_id = data.get("project_id", "")
+            if project_id:
+                try:
+                    project = projectTbl.objects.get(id=project_id)
+                except projectTbl.DoesNotExist:
+                    pass
+            
+            # Get district
+            district = None
+            district_id = data.get("district_id", "")
+            if district_id:
+                try:
+                    district = cocoaDistrict.objects.get(id=district_id)
+                except cocoaDistrict.DoesNotExist:
+                    pass
+            
+            # Parse timestamp
+            timestamp = None
+            if data.get("timestamp"):
+                try:
+                    timestamp = timezone.datetime.fromisoformat(data.get("timestamp").replace('Z', '+00:00'))
+                except:
+                    timestamp = timezone.now()
+            else:
+                timestamp = timezone.now()
+            
+            # Create record
+            record = VerifyRecord(
+                uid=uid,
+                farm=farm,
+                farmRef=data.get("farmRef", ""),
+                timestamp=timestamp,
+                status=int(data.get("status", 0)),
+                projectTbl_foreignkey=project,
+                district=district
+            )
+            
+            # Handle video file
+            if video_file:
+                record.videoPath = video_file
+            elif data.get("videoPath"):
+                # If video path is provided as string (URL/path)
+                record.videoPath = data.get("videoPath")
+            
+            record.save()
+            
+            status_response["status"] = True
+            status_response["message"] = "Verification record created successfully"
+            status_response["data"] = {
+                "id": record.id,
+                "uid": record.uid,
+                "farmRef": record.farmRef,
+                "timestamp": record.timestamp.isoformat() if record.timestamp else None,
+                "status": record.status,
+                "videoPath": record.videoPath.url if record.videoPath and hasattr(record.videoPath, 'url') else str(record.videoPath),
+                "farm_id": farm_id,
+                "project_id": project_id,
+                "district_id": district_id
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"status": False, "message": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            print(traceback.format_exc())
+            return JsonResponse({"status": False, "message": f"Error: {str(e)}"}, status=500)
+        
+        return JsonResponse(status_response)
+    
+    def get(self, request):
+        """Get verification records with filters"""
+        try:
+            # Query parameters
+            uid = request.GET.get('uid', '')
+            farm_id = request.GET.get('farm_id', '')
+            farmRef = request.GET.get('farmRef', '')
+            project_id = request.GET.get('project_id', '')
+            district_id = request.GET.get('district_id', '')
+            status = request.GET.get('status', '')
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            limit = int(request.GET.get('limit', 100))
+            page = int(request.GET.get('page', 1))
+            
+            # Build query
+            queryset = VerifyRecord.objects.all().order_by('-timestamp')
+            
+            if uid:
+                queryset = queryset.filter(uid=uid)
+            
+            if farm_id:
+                queryset = queryset.filter(farm_id=farm_id)
+            
+            if farmRef:
+                queryset = queryset.filter(farmRef__icontains=farmRef)
+            
+            if project_id:
+                queryset = queryset.filter(projectTbl_foreignkey_id=project_id)
+            
+            if district_id:
+                queryset = queryset.filter(district_id=district_id)
+            
+            if status:
+                queryset = queryset.filter(status=status)
+            
+            if start_date:
+                queryset = queryset.filter(timestamp__gte=start_date)
+            
+            if end_date:
+                queryset = queryset.filter(timestamp__lte=end_date)
+            
+            # Pagination
+            paginator = Paginator(queryset, limit)
+            try:
+                records = paginator.page(page)
+            except PageNotAnInteger:
+                records = paginator.page(1)
+            except EmptyPage:
+                records = paginator.page(paginator.num_pages)
+            
+            # Prepare response
+            data_list = []
+            for record in records:
+                data_list.append({
+                    "id": record.id,
+                    "uid": record.uid,
+                    "farmRef": record.farmRef,
+                    "farm_id": record.farm_id,
+                    "farm_name": str(record.farm) if record.farm else None,
+                    "timestamp": record.timestamp.isoformat() if record.timestamp else None,
+                    "status": record.status,
+                    "status_display": "Synced" if record.status == 1 else "Pending",
+                    "videoPath": record.videoPath.url if record.videoPath and hasattr(record.videoPath, 'url') else str(record.videoPath),
+                    "project_id": record.projectTbl_foreignkey_id,
+                    "project_name": str(record.projectTbl_foreignkey) if record.projectTbl_foreignkey else None,
+                    "district_id": record.district_id,
+                    "district_name": str(record.district) if record.district else None,
+                    "created_at": record.timeStamp.isoformat() if hasattr(record, 'timeStamp') and record.timeStamp else None
+                })
+            
+            response = {
+                "status": True,
+                "message": "Records fetched successfully",
+                "data": data_list,
+                "pagination": {
+                    "total": paginator.count,
+                    "page": records.number,
+                    "limit": limit,
+                    "pages": paginator.num_pages
+                }
+            }
+            
+        except Exception as e:
+            print(traceback.format_exc())
+            return JsonResponse({"status": False, "message": f"Error: {str(e)}"}, status=500)
+        
+        return JsonResponse(response)
+
+
+# ==================== UPDATED FEEDBACK API ====================
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FeedbackView(View):
+    """Handle POST and GET for Feedback model"""
+    
+    def post(self, request):
+        """Create new feedback with all fields"""
+        try:
+            data = json.loads(request.body)
+            status_response = {"status": False, "message": "", "data": {}}
+            
+            uid = data.get("uid", "")
+            
+            # Check if UID exists (optional - remove if you want duplicates)
+            if uid and Feedback.objects.filter(uid=uid).exists():
+                status_response["message"] = "Feedback with this UID already exists"
+                status_response["data"] = {"uid": uid}
+                return JsonResponse(status_response)
+            
+            # Get staff user
+            staff = None
+            staff_id = data.get("staff_id", "") or data.get("user_id", "")
+            if staff_id:
+                try:
+                    staff = staffTbl.objects.get(id=staff_id)
+                except staffTbl.DoesNotExist:
+                    pass
+            
+            # Get current date for week/month/year if not provided
+            now = timezone.now()
+            
+            # Create feedback with all fields
+            feedback = Feedback.objects.create(
+                staffTbl_foreignkey=staff,
+                title=data.get("title", ""),
+                feedback=data.get("feedback", "") or data.get("description", ""),
+                uid=uid,
+                farm_reference=data.get("farm_reference", ""),
+                activity=data.get("activity", ""),
+                ra_id=data.get("ra_id", ""),
+                Status=data.get("status", "Open") or data.get("Status", "Open"),
+                week=data.get("week", str(now.isocalendar()[1])),  # ISO week number
+                month=data.get("month", now.strftime("%B")),  # Month name
+                year=data.get("year", str(now.year)),
+            )
+            
+            status_response["status"] = True
+            status_response["message"] = "Feedback submitted successfully"
+            status_response["data"] = {
+                "id": feedback.id,
+                "uid": feedback.uid,
+                "title": feedback.title,
+                "feedback": feedback.feedback,
+                "status": feedback.Status,
+                "farm_reference": feedback.farm_reference,
+                "activity": feedback.activity,
+                "ra_id": feedback.ra_id,
+                "week": feedback.week,
+                "month": feedback.month,
+                "year": feedback.year,
+                "staff_id": staff_id,
+                "created_at": feedback.sent_date.isoformat() if feedback.sent_date else None
+            }
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"status": False, "message": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            print(traceback.format_exc())
+            return JsonResponse({"status": False, "message": f"Error: {str(e)}"}, status=500)
+        
+        return JsonResponse(status_response)
+    
+    def get(self, request):
+        """Get feedback records with filters"""
+        try:
+            # Query parameters
+            uid = request.GET.get('uid', '')
+            staff_id = request.GET.get('staff_id', '')
+            ra_id = request.GET.get('ra_id', '')
+            farm_reference = request.GET.get('farm_reference', '')
+            status = request.GET.get('status', '')
+            week = request.GET.get('week', '')
+            month = request.GET.get('month', '')
+            year = request.GET.get('year', '')
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            limit = int(request.GET.get('limit', 100))
+            page = int(request.GET.get('page', 1))
+            
+            # Build query
+            queryset = Feedback.objects.all().order_by('-sent_date')
+            
+            if uid:
+                queryset = queryset.filter(uid=uid)
+            
+            if staff_id:
+                queryset = queryset.filter(staffTbl_foreignkey_id=staff_id)
+            
+            if ra_id:
+                queryset = queryset.filter(ra_id__icontains=ra_id)
+            
+            if farm_reference:
+                queryset = queryset.filter(farm_reference__icontains=farm_reference)
+            
+            if status:
+                queryset = queryset.filter(Status__iexact=status)
+            
+            if week:
+                queryset = queryset.filter(week=week)
+            
+            if month:
+                queryset = queryset.filter(month__iexact=month)
+            
+            if year:
+                queryset = queryset.filter(year=year)
+            
+            if start_date:
+                queryset = queryset.filter(sent_date__gte=start_date)
+            
+            if end_date:
+                queryset = queryset.filter(sent_date__lte=end_date)
+            
+            # Pagination
+            paginator = Paginator(queryset, limit)
+            try:
+                feedbacks = paginator.page(page)
+            except PageNotAnInteger:
+                feedbacks = paginator.page(1)
+            except EmptyPage:
+                feedbacks = paginator.page(paginator.num_pages)
+            
+            # Prepare response
+            data_list = []
+            for fb in feedbacks:
+                data_list.append({
+                    "id": fb.id,
+                    "uid": fb.uid,
+                    "title": fb.title,
+                    "feedback": fb.feedback,
+                    "staff_id": fb.staffTbl_foreignkey_id,
+                    "staff_name": str(fb.staffTbl_foreignkey) if fb.staffTbl_foreignkey else None,
+                    "farm_reference": fb.farm_reference,
+                    "activity": fb.activity,
+                    "ra_id": fb.ra_id,
+                    "status": fb.Status,
+                    "week": fb.week,
+                    "month": fb.month,
+                    "year": fb.year,
+                    "sent_date": fb.sent_date.isoformat() if fb.sent_date else None,
+                    "created_at": fb.timeStamp.isoformat() if hasattr(fb, 'timeStamp') and fb.timeStamp else None
+                })
+            
+            response = {
+                "status": True,
+                "message": "Feedbacks fetched successfully",
+                "data": data_list,
+                "pagination": {
+                    "total": paginator.count,
+                    "page": feedbacks.number,
+                    "limit": limit,
+                    "pages": paginator.num_pages,
+                    "has_next": feedbacks.has_next(),
+                    "has_previous": feedbacks.has_previous()
+                }
+            }
+            
+        except Exception as e:
+            print(traceback.format_exc())
+            return JsonResponse({"status": False, "message": f"Error: {str(e)}"}, status=500)
+        
+        return JsonResponse(response)
+
+
+# ==================== URLS CONFIGURATION ====================
