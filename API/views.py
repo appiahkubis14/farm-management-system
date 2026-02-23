@@ -506,6 +506,9 @@ class SaveActivityReportView(View):
                 activity_uid = uid
                 if len(activities_list) > 1:
                     activity_uid = f"{uid}_{len(created_reports)}"
+
+                contractor = contractorsTbl.objects.get(id=data.get("contractor_name"))
+                # contractor_name = contractor.contractor_name
                 
                 # Create the report
                 report = ActivityReportingModel.objects.create(
@@ -528,7 +531,11 @@ class SaveActivityReportView(View):
                     group_work=data.get("group_work", ""),
                     sector=data.get("sector"),
                     projectTbl_foreignkey=project,
-                    district=district
+                    district=district,
+                    is_done_by_contractor=data.get("is_done_by_contractor"),
+                    contractor_name=contractor,
+                    rounds_of_weeding=data.get("rounds_of_weeding"),
+                    is_done_equally=data.get("is_done_equally")
                 )
                 
                 # Add RAS
@@ -700,6 +707,10 @@ class SaveDailyReportView(View):
                 activity_uid = uid
                 if len(activities_list) > 1:
                     activity_uid = f"{uid}_{len(created_reports)}"
+
+                contractor = contractorsTbl.objects.get(id=data.get("contractor_name"))
+                # contractor_name = contractor.contractor_name
+                
                 
                 # Create report
                 report = DailyReportingModel.objects.create(
@@ -722,7 +733,11 @@ class SaveDailyReportView(View):
                     group_work=data.get("group_work", ""),
                     sector=data.get("sector"),
                     projectTbl_foreignkey=project,
-                    district=district
+                    district=district,
+                    is_done_by_contractor=data.get("is_done_by_contractor"),
+                    contractor_name=contractor,
+                    rounds_of_weeding=data.get("rounds_of_weeding"),
+                    is_done_equally=data.get("is_done_equally")
                 )
                 
                 # Add RAS

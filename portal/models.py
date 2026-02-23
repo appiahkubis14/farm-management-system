@@ -522,6 +522,10 @@ class DailyReportingModel(timeStamp):
     ras = models.ManyToManyField(PersonnelModel, blank=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    is_done_by_contractor = models.BooleanField(default=False)
+    contractor_name = models.ForeignKey(contractorsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    rounds_of_weeding = models.IntegerField(default=0, blank=True, null=True)
+    is_done_equally = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
@@ -556,6 +560,10 @@ class ActivityReportingModel(timeStamp):
     ras = models.ManyToManyField(PersonnelModel, blank=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    is_done_by_contractor = models.BooleanField(default=False)
+    contractor_name = models.ForeignKey(contractorsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    rounds_of_weeding = models.IntegerField(default=0, blank=True, null=True)
+    is_done_equally = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
