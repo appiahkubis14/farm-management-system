@@ -143,6 +143,276 @@ class LoginView(View):
 
 # ============== 2. DAILY REPORTING / ACTIVITY REPORTING ==============
 
+# @method_decorator(csrf_exempt, name='dispatch')
+# class SaveActivityReportView(View):
+#     """Handle daily reporting and activity reporting (POST only)"""
+#     def post(self, request):
+#         try:
+#             data = json.loads(request.body)
+#             status = {"status": False, "message": "", "data": {}}
+            
+#             uid = data.get("uid", "")
+            
+#             # Check if UID already exists
+#             if uid and  ActivityReportingModel.objects.filter(uid=uid).exists():
+#                 status["message"] = "Report with this UID already exists"
+#                 status["data"] = {"uid": uid}
+#                 return JsonResponse(status)
+            
+#             # Get agent
+#             agent = None
+#             agent_id = data.get("agent", "")
+#             if agent_id:
+#                 try:
+#                     agent = staffTbl.objects.get(id=agent_id)
+#                 except:
+#                     pass
+            
+#             # Get farm
+#             farm = None
+#             farm_ref = data.get("farm_ref_number", "")
+#             if farm_ref:
+#                 try:
+#                     farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
+#                 except:
+#                     pass
+            
+#             # Get community
+#             community = None
+#             community_id = data.get("community", "")
+#             if community_id:
+#                 try:
+#                     community = Community.objects.get(id=community_id)
+#                 except:
+#                     # Try by name if ID doesn't work
+#                     try:
+#                         community = Community.objects.get(name=community_id)
+#                     except:
+#                         pass
+            
+#             # Get district (from farm or agent's project)
+#             district = None
+#             if farm and farm.district:
+#                 district = farm.district
+#             elif agent and agent.projectTbl_foreignkey and agent.projectTbl_foreignkey.district:
+#                 district = agent.projectTbl_foreignkey.district
+            
+#             # Get project
+#             project = None
+#             if agent and agent.projectTbl_foreignkey:
+#                 project = agent.projectTbl_foreignkey
+            
+#             # Get activities
+#             main_activity_obj = None
+#             activity_obj = None
+#             main_activity_code = data.get("main_activity", "")
+#             activity_code = data.get("activity", "")
+            
+#             if main_activity_code:
+#                 try:
+#                     main_activity_obj = Activities.objects.get(id=main_activity_code)
+#                 except:
+#                     pass
+            
+#             if activity_code:
+#                 try:
+#                     activity_obj = Activities.objects.get(id=activity_code)
+#                 except:
+#                     pass
+            
+#             # Parse RAS if it's a list
+#             ras_ids = data.get("ras", [])
+            
+#             # Create daily report
+#             report = ActivityReportingModel.objects.create(
+#                 uid=uid,
+#                 agent=agent,
+#                 completion_date=data.get("completion_date"),
+#                 reporting_date=data.get("reporting_date"),
+#                 main_activity=main_activity_obj,
+#                 activity=activity_obj,
+#                 no_rehab_assistants=data.get("no_rehab_assistants", 0),
+#                 area_covered_ha=data.get("area_covered_ha", 0.0),
+#                 remark=data.get("remark", ""),
+#                 status=data.get("status", 0),
+#                 farm=farm,
+#                 farm_ref_number=farm_ref,
+#                 farm_size_ha=data.get("farm_size_ha", 0.0),
+#                 community=community,
+#                 number_of_people_in_group=data.get("number_of_people_in_group", 0),
+#                 group_work=data.get("group_work", ""),
+#                 sector=data.get("sector"),
+#                 projectTbl_foreignkey=project,
+#                 district=district
+#             )
+            
+#             # Add RAS if provided
+#             if ras_ids:
+#                 for ra_id in ras_ids:
+#                     try:
+#                         ra = PersonnelModel.objects.get(id=ra_id)
+#                         report.ras.add(ra)
+#                     except:
+#                         continue
+            
+#             status["status"] = True
+#             status["message"] = "Activity report saved successfully"
+#             status["data"] = {
+#                 "uid": report.uid,
+#                 "id": report.id
+#             }
+            
+#         except json.JSONDecodeError:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": "Invalid JSON data",
+#                 "data": {}
+#             }, status=400)
+#         except Exception as e:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": f"Error occurred: {str(e)}",
+#                 "data": {}
+#             }, status=500)
+            
+#         return JsonResponse(status)
+    
+
+
+# @method_decorator(csrf_exempt, name='dispatch')
+# class SaveDailyReportView(View):
+#     """Handle daily reporting and activity reporting (POST only)"""
+#     def post(self, request):
+#         try:
+#             data = json.loads(request.body)
+#             status = {"status": False, "message": "", "data": {}}
+#             # print(data)
+            
+#             uid = data.get("uid", "")
+            
+#             # Check if UID already exists
+#             if uid and DailyReportingModel.objects.filter(uid=uid).exists():
+#                 status["message"] = "Report with this UID already exists"
+#                 status["data"] = {"uid": uid}
+#                 return JsonResponse(status)
+            
+#             # Get agent
+#             agent = None
+#             agent_id = data.get("agent", "")
+#             if agent_id:
+#                 try:
+#                     agent = staffTbl.objects.get(id=agent_id)
+#                 except:
+#                     pass
+            
+#             # Get farm
+#             farm = None
+#             farm_ref = data.get("farm_ref_number", "")
+#             if farm_ref:
+#                 try:
+#                     farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
+#                 except:
+#                     pass
+            
+#             # Get community
+#             community = None
+#             community_id = data.get("community", "")
+#             if community_id:
+#                 try:
+#                     community = Community.objects.get(id=community_id)
+#                 except:
+#                     # Try by name if ID doesn't work
+#                     try:
+#                         community = Community.objects.get(name=community_id)
+#                     except:
+#                         pass
+            
+#             # Get district (from farm or agent's project)
+#             district = None
+#             if farm and farm.district:
+#                 district = farm.district
+#             elif agent and agent.projectTbl_foreignkey and agent.projectTbl_foreignkey.district:
+#                 district = agent.projectTbl_foreignkey.district
+            
+#             # Get project
+#             project = None
+#             if agent and agent.projectTbl_foreignkey:
+#                 project = agent.projectTbl_foreignkey
+            
+#             # Get activities
+#             main_activity_obj = None
+#             activity_obj = None
+#             main_activity_code = data.get("main_activity", "")
+#             activity_code = data.get("activity", "")
+            
+#             print(main_activity_code, activity_code)
+
+#             main_activity_obj = Activities.objects.get(id=main_activity_code)
+               
+#             activity_obj = Activities.objects.get(id=activity_code)
+
+#             # Parse RAS if it's a list
+#             ras_ids = data.get("ras", [])
+            
+#             # Create daily report
+#             report = DailyReportingModel.objects.create(
+#                 uid=uid,
+#                 agent=agent,
+#                 completion_date=data.get("completion_date"),
+#                 reporting_date=data.get("reporting_date"),
+#                 main_activity=main_activity_obj,
+#                 activity=activity_obj,
+#                 no_rehab_assistants=data.get("no_rehab_assistants", 0),
+#                 area_covered_ha=data.get("area_covered_ha", 0.0),
+#                 remark=data.get("remark", ""),
+#                 status=data.get("status", 0),
+#                 farm=farm,
+#                 farm_ref_number=farm_ref,
+#                 farm_size_ha=data.get("farm_size_ha", 0.0),
+#                 community=community,
+#                 number_of_people_in_group=data.get("number_of_people_in_group", 0),
+#                 group_work=data.get("group_work", ""),
+#                 sector=data.get("sector"),
+#                 projectTbl_foreignkey=project,
+#                 district=district
+#             )
+
+#             print(report)
+            
+#             # Add RAS if provided
+#             if ras_ids:
+#                 for ra_id in ras_ids:
+#                     try:
+#                         ra = PersonnelModel.objects.get(id=ra_id)
+#                         report.ras.add(ra)
+#                     except:
+#                         continue
+            
+#             status["status"] = True
+#             status["message"] = "Activity report saved successfully"
+#             status["data"] = {
+#                 "uid": report.uid,
+#                 "id": report.id
+#             }
+            
+#         except json.JSONDecodeError:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": "Invalid JSON data",
+#                 "data": {}
+#             }, status=400)
+#         except Exception as e:
+#             return JsonResponse({
+#                 "status": False,
+#                 "message": f"Error occurred: {str(e)}",
+#                 "data": {}
+#             }, status=500)
+            
+#         return JsonResponse(status)
+
+
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class SaveActivityReportView(View):
     """Handle daily reporting and activity reporting (POST only)"""
@@ -154,112 +424,134 @@ class SaveActivityReportView(View):
             uid = data.get("uid", "")
             
             # Check if UID already exists
-            if uid and  ActivityReportingModel.objects.filter(uid=uid).exists():
+            if uid and ActivityReportingModel.objects.filter(uid=uid).exists():
                 status["message"] = "Report with this UID already exists"
                 status["data"] = {"uid": uid}
                 return JsonResponse(status)
             
-            # Get agent
-            agent = None
-            agent_id = data.get("agent", "")
-            if agent_id:
-                try:
-                    agent = staffTbl.objects.get(id=agent_id)
-                except:
-                    pass
-            
-            # Get farm
-            farm = None
-            farm_ref = data.get("farm_ref_number", "")
-            if farm_ref:
-                try:
-                    farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
-                except:
-                    pass
-            
-            # Get community
-            community = None
-            community_id = data.get("community", "")
-            if community_id:
-                try:
-                    community = Community.objects.get(id=community_id)
-                except:
-                    # Try by name if ID doesn't work
-                    try:
-                        community = Community.objects.get(name=community_id)
-                    except:
-                        pass
-            
-            # Get district (from farm or agent's project)
-            district = None
-            if farm and farm.district:
-                district = farm.district
-            elif agent and agent.projectTbl_foreignkey and agent.projectTbl_foreignkey.district:
-                district = agent.projectTbl_foreignkey.district
-            
-            # Get project
-            project = None
-            if agent and agent.projectTbl_foreignkey:
-                project = agent.projectTbl_foreignkey
-            
-            # Get activities
-            main_activity_obj = None
-            activity_obj = None
-            main_activity_code = data.get("main_activity", "")
-            activity_code = data.get("activity", "")
-            
-            if main_activity_code:
-                try:
-                    main_activity_obj = Activities.objects.get(id=main_activity_code)
-                except:
-                    pass
-            
-            if activity_code:
-                try:
-                    activity_obj = Activities.objects.get(id=activity_code)
-                except:
-                    pass
-            
-            # Parse RAS if it's a list
+            # Get common data
+            agent = self._get_agent(data.get("agent", ""))
+            farm, farm_ref = self._get_farm(data.get("farm_ref_number", ""))
+            community = self._get_community(data.get("community", ""))
+            district = self._get_district(farm, agent)
+            project = self._get_project(agent)
             ras_ids = data.get("ras", [])
             
-            # Create daily report
-            report = ActivityReportingModel.objects.create(
-                uid=uid,
-                agent=agent,
-                completion_date=data.get("completion_date"),
-                reporting_date=data.get("reporting_date"),
-                main_activity=main_activity_obj,
-                activity=activity_obj,
-                no_rehab_assistants=data.get("no_rehab_assistants", 0),
-                area_covered_ha=data.get("area_covered_ha", 0.0),
-                remark=data.get("remark", ""),
-                status=data.get("status", 0),
-                farm=farm,
-                farm_ref_number=farm_ref,
-                farm_size_ha=data.get("farm_size_ha", 0.0),
-                community=community,
-                number_of_people_in_group=data.get("number_of_people_in_group", 0),
-                group_work=data.get("group_work", ""),
-                sector=data.get("sector"),
-                projectTbl_foreignkey=project,
-                district=district
-            )
+            # Get activities data - can be single or multiple
+            activities_list = data.get("activities", [])
             
-            # Add RAS if provided
-            if ras_ids:
-                for ra_id in ras_ids:
+            # If no activities array, try to get single activity for backward compatibility
+            if not activities_list:
+                main_activity_id = data.get("main_activity", "")
+                sub_activities = data.get("sub_activities", [])
+                activity_id = data.get("activity", "")  # For backward compatibility
+                
+                if main_activity_id:
+                    activities_list = [{
+                        "main_activity": main_activity_id,
+                        "activity": activity_id,
+                        "sub_activities": sub_activities,
+                        "area_covered_ha": data.get("area_covered_ha", 0.0),
+                        "no_rehab_assistants": data.get("no_rehab_assistants", 0),
+                        "remark": data.get("remark", "")
+                    }]
+            
+            created_reports = []
+            
+            # Process each main activity with its sub-activities
+            for activity_item in activities_list:
+                main_activity_id = activity_item.get("main_activity", "")
+                activity_id = activity_item.get("activity", "")  # Could be specific activity ID
+                sub_activities = activity_item.get("sub_activities", [])
+                
+                if not main_activity_id:
+                    continue
+                
+                # Get the main activity object
+                try:
+                    main_activity_obj = Activities.objects.get(id=main_activity_id)
+                except Activities.DoesNotExist:
+                    continue
+                
+                # Get activity object (if different from main_activity)
+                activity_obj = main_activity_obj
+                if activity_id and activity_id != main_activity_id:
                     try:
-                        ra = PersonnelModel.objects.get(id=ra_id)
-                        report.ras.add(ra)
-                    except:
-                        continue
+                        activity_obj = Activities.objects.get(id=activity_id)
+                    except Activities.DoesNotExist:
+                        pass
+                
+                # Get all sub-activities for this main activity
+                available_sub_activities = main_activity_obj.get_sub_activities_list()
+                
+                # Process selected sub-activities
+                selected_sub_activities = []
+                if sub_activities:
+                    for sub in sub_activities:
+                        if isinstance(sub, (int, str)) and str(sub).isdigit():
+                            idx = int(sub)
+                            if idx < len(available_sub_activities):
+                                selected_sub_activities.append(available_sub_activities[idx])
+                        elif sub in available_sub_activities:
+                            selected_sub_activities.append(sub)
+                
+                # If no specific sub-activities selected, use all
+                if not selected_sub_activities and available_sub_activities:
+                    selected_sub_activities = available_sub_activities
+                
+                # Store sub-activities as comma-separated string
+                sub_activities_string = ', '.join(selected_sub_activities) if selected_sub_activities else ""
+                
+                # Create a unique UID for this activity combination
+                activity_uid = uid
+                if len(activities_list) > 1:
+                    activity_uid = f"{uid}_{len(created_reports)}"
+                
+                # Create the report
+                report = ActivityReportingModel.objects.create(
+                    uid=activity_uid,
+                    agent=agent,
+                    completion_date=data.get("completion_date"),
+                    reporting_date=data.get("reporting_date"),
+                    main_activity=main_activity_obj,
+                    activity=activity_obj,
+                    sub_activities=sub_activities_string,  # Store selected sub-activities
+                    no_rehab_assistants=activity_item.get("no_rehab_assistants", 0),
+                    area_covered_ha=activity_item.get("area_covered_ha", 0.0),
+                    remark=activity_item.get("remark", ""),
+                    status=data.get("status", 0),
+                    farm=farm,
+                    farm_ref_number=farm_ref,
+                    farm_size_ha=data.get("farm_size_ha", 0.0),
+                    community=community,
+                    number_of_people_in_group=data.get("number_of_people_in_group", 0),
+                    group_work=data.get("group_work", ""),
+                    sector=data.get("sector"),
+                    projectTbl_foreignkey=project,
+                    district=district
+                )
+                
+                # Add RAS
+                if ras_ids:
+                    for ra_id in ras_ids:
+                        try:
+                            ra = PersonnelModel.objects.get(id=ra_id)
+                            report.ras.add(ra)
+                        except:
+                            continue
+                
+                created_reports.append({
+                    "uid": report.uid,
+                    "id": report.id,
+                    "main_activity": main_activity_obj.main_activity,
+                    "activity": activity_obj.main_activity if activity_obj else None,
+                    "sub_activities": selected_sub_activities
+                })
             
             status["status"] = True
-            status["message"] = "Activity report saved successfully"
+            status["message"] = f"{len(created_reports)} activity report(s) saved successfully"
             status["data"] = {
-                "uid": report.uid,
-                "id": report.id
+                "reports": created_reports
             }
             
         except json.JSONDecodeError:
@@ -277,6 +569,47 @@ class SaveActivityReportView(View):
             
         return JsonResponse(status)
     
+    # Helper methods remain the same
+    def _get_agent(self, agent_id):
+        if not agent_id:
+            return None
+        try:
+            return staffTbl.objects.get(id=agent_id)
+        except:
+            return None
+    
+    def _get_farm(self, farm_ref):
+        if not farm_ref:
+            return None, farm_ref
+        try:
+            farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
+            return farm, farm_ref
+        except:
+            return None, farm_ref
+    
+    def _get_community(self, community_id):
+        if not community_id:
+            return None
+        try:
+            return Community.objects.get(id=community_id)
+        except:
+            try:
+                return Community.objects.get(name=community_id)
+            except:
+                return None
+    
+    def _get_district(self, farm, agent):
+        if farm and farm.district:
+            return farm.district
+        elif agent and agent.projectTbl_foreignkey and agent.projectTbl_foreignkey.district:
+            return agent.projectTbl_foreignkey.district
+        return None
+    
+    def _get_project(self, agent):
+        if agent and agent.projectTbl_foreignkey:
+            return agent.projectTbl_foreignkey
+        return None
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -286,7 +619,6 @@ class SaveDailyReportView(View):
         try:
             data = json.loads(request.body)
             status = {"status": False, "message": "", "data": {}}
-            # print(data)
             
             uid = data.get("uid", "")
             
@@ -296,103 +628,124 @@ class SaveDailyReportView(View):
                 status["data"] = {"uid": uid}
                 return JsonResponse(status)
             
-            # Get agent
-            agent = None
-            agent_id = data.get("agent", "")
-            if agent_id:
-                try:
-                    agent = staffTbl.objects.get(id=agent_id)
-                except:
-                    pass
-            
-            # Get farm
-            farm = None
-            farm_ref = data.get("farm_ref_number", "")
-            if farm_ref:
-                try:
-                    farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
-                except:
-                    pass
-            
-            # Get community
-            community = None
-            community_id = data.get("community", "")
-            if community_id:
-                try:
-                    community = Community.objects.get(id=community_id)
-                except:
-                    # Try by name if ID doesn't work
-                    try:
-                        community = Community.objects.get(name=community_id)
-                    except:
-                        pass
-            
-            # Get district (from farm or agent's project)
-            district = None
-            if farm and farm.district:
-                district = farm.district
-            elif agent and agent.projectTbl_foreignkey and agent.projectTbl_foreignkey.district:
-                district = agent.projectTbl_foreignkey.district
-            
-            # Get project
-            project = None
-            if agent and agent.projectTbl_foreignkey:
-                project = agent.projectTbl_foreignkey
-            
-            # Get activities
-            main_activity_obj = None
-            activity_obj = None
-            main_activity_code = data.get("main_activity", "")
-            activity_code = data.get("activity", "")
-            
-            print(main_activity_code, activity_code)
-
-            main_activity_obj = Activities.objects.get(id=main_activity_code)
-               
-            activity_obj = Activities.objects.get(id=activity_code)
-
-            # Parse RAS if it's a list
+            # Get common data
+            agent = self._get_agent(data.get("agent", ""))
+            farm, farm_ref = self._get_farm(data.get("farm_ref_number", ""))
+            community = self._get_community(data.get("community", ""))
+            district = self._get_district(farm, agent)
+            project = self._get_project(agent)
             ras_ids = data.get("ras", [])
             
-            # Create daily report
-            report = DailyReportingModel.objects.create(
-                uid=uid,
-                agent=agent,
-                completion_date=data.get("completion_date"),
-                reporting_date=data.get("reporting_date"),
-                main_activity=main_activity_obj,
-                activity=activity_obj,
-                no_rehab_assistants=data.get("no_rehab_assistants", 0),
-                area_covered_ha=data.get("area_covered_ha", 0.0),
-                remark=data.get("remark", ""),
-                status=data.get("status", 0),
-                farm=farm,
-                farm_ref_number=farm_ref,
-                farm_size_ha=data.get("farm_size_ha", 0.0),
-                community=community,
-                number_of_people_in_group=data.get("number_of_people_in_group", 0),
-                group_work=data.get("group_work", ""),
-                sector=data.get("sector"),
-                projectTbl_foreignkey=project,
-                district=district
-            )
-
-            print(report)
+            # Get activities data
+            activities_list = data.get("activities", [])
             
-            # Add RAS if provided
-            if ras_ids:
-                for ra_id in ras_ids:
+            # If no activities array, try to get single activity
+            if not activities_list:
+                main_activity_id = data.get("main_activity", "")
+                activity_id = data.get("activity", "")
+                sub_activities = data.get("sub_activities", [])
+                
+                if main_activity_id:
+                    activities_list = [{
+                        "main_activity": main_activity_id,
+                        "activity": activity_id,
+                        "sub_activities": sub_activities,
+                        "area_covered_ha": data.get("area_covered_ha", 0.0),
+                        "no_rehab_assistants": data.get("no_rehab_assistants", 0),
+                        "remark": data.get("remark", "")
+                    }]
+            
+            created_reports = []
+            
+            for activity_item in activities_list:
+                main_activity_id = activity_item.get("main_activity", "")
+                activity_id = activity_item.get("activity", "")
+                sub_activities = activity_item.get("sub_activities", [])
+                
+                if not main_activity_id:
+                    continue
+                
+                try:
+                    main_activity_obj = Activities.objects.get(id=main_activity_id)
+                except Activities.DoesNotExist:
+                    continue
+                
+                # Get activity object
+                activity_obj = main_activity_obj
+                if activity_id and activity_id != main_activity_id:
                     try:
-                        ra = PersonnelModel.objects.get(id=ra_id)
-                        report.ras.add(ra)
-                    except:
-                        continue
+                        activity_obj = Activities.objects.get(id=activity_id)
+                    except Activities.DoesNotExist:
+                        pass
+                
+                # Get available sub-activities and filter selected ones
+                available_sub_activities = main_activity_obj.get_sub_activities_list()
+                selected_sub_activities = []
+                
+                for sub in sub_activities:
+                    if isinstance(sub, (int, str)) and str(sub).isdigit():
+                        idx = int(sub)
+                        if idx < len(available_sub_activities):
+                            selected_sub_activities.append(available_sub_activities[idx])
+                    elif sub in available_sub_activities:
+                        selected_sub_activities.append(sub)
+                
+                # If no specific selection, use all
+                if not selected_sub_activities and available_sub_activities:
+                    selected_sub_activities = available_sub_activities
+                
+                sub_activities_string = ', '.join(selected_sub_activities) if selected_sub_activities else ""
+                
+                # Create unique UID for each activity
+                activity_uid = uid
+                if len(activities_list) > 1:
+                    activity_uid = f"{uid}_{len(created_reports)}"
+                
+                # Create report
+                report = DailyReportingModel.objects.create(
+                    uid=activity_uid,
+                    agent=agent,
+                    completion_date=data.get("completion_date"),
+                    reporting_date=data.get("reporting_date"),
+                    main_activity=main_activity_obj,
+                    activity=activity_obj,
+                    sub_activities=sub_activities_string,
+                    no_rehab_assistants=activity_item.get("no_rehab_assistants", 0),
+                    area_covered_ha=activity_item.get("area_covered_ha", 0.0),
+                    remark=activity_item.get("remark", ""),
+                    status=data.get("status", 0),
+                    farm=farm,
+                    farm_ref_number=farm_ref,
+                    farm_size_ha=data.get("farm_size_ha", 0.0),
+                    community=community,
+                    number_of_people_in_group=data.get("number_of_people_in_group", 0),
+                    group_work=data.get("group_work", ""),
+                    sector=data.get("sector"),
+                    projectTbl_foreignkey=project,
+                    district=district
+                )
+                
+                # Add RAS
+                if ras_ids:
+                    for ra_id in ras_ids:
+                        try:
+                            ra = PersonnelModel.objects.get(id=ra_id)
+                            report.ras.add(ra)
+                        except:
+                            continue
+                
+                created_reports.append({
+                    "uid": report.uid,
+                    "id": report.id,
+                    "main_activity": main_activity_obj.main_activity,
+                    "activity": activity_obj.main_activity if activity_obj else None,
+                    "sub_activities": selected_sub_activities
+                })
             
             status["status"] = True
-            status["message"] = "Activity report saved successfully"
+            status["message"] = f"{len(created_reports)} daily report(s) saved successfully"
             status["data"] = {
-                "uid": report.uid,
-                "id": report.id
+                "reports": created_reports
             }
             
         except json.JSONDecodeError:
@@ -409,6 +762,49 @@ class SaveDailyReportView(View):
             }, status=500)
             
         return JsonResponse(status)
+    
+    # Helper methods same as above
+    def _get_agent(self, agent_id):
+        if not agent_id:
+            return None
+        try:
+            return staffTbl.objects.get(id=agent_id)
+        except:
+            return None
+    
+    def _get_farm(self, farm_ref):
+        if not farm_ref:
+            return None, farm_ref
+        try:
+            farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
+            return farm, farm_ref
+        except:
+            return None, farm_ref
+    
+    def _get_community(self, community_id):
+        if not community_id:
+            return None
+        try:
+            return Community.objects.get(id=community_id)
+        except:
+            try:
+                return Community.objects.get(name=community_id)
+            except:
+                return None
+    
+    def _get_district(self, farm, agent):
+        if farm and farm.district:
+            return farm.district
+        elif agent and agent.projectTbl_foreignkey and agent.projectTbl_foreignkey.district:
+            return agent.projectTbl_foreignkey.district
+        return None
+    
+    def _get_project(self, agent):
+        if agent and agent.projectTbl_foreignkey:
+            return agent.projectTbl_foreignkey
+        return None
+
+
 
 
 # ============== 3. FARM BOUNDARY ==============

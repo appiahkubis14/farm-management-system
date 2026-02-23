@@ -1078,7 +1078,7 @@ class PersonnelAssignmentModelAdmin(ImportExportModelAdmin):
 @admin.register(DailyReportingModel)
 class DailyReportingModelAdmin(ImportExportModelAdmin):
     resource_class = DailyReportingModelResource
-    list_display = ('reporting_date', 'agent', 'district', 'farm_ref_number', 'activity', 'area_covered_ha', 'status')
+    list_display = ("uid", 'reporting_date', 'agent', 'district', 'farm_ref_number', 'activity', 'area_covered_ha', 'status')
     list_filter = ('status', 'reporting_date', 'main_activity', 'district', 'projectTbl_foreignkey')
     search_fields = ('agent__first_name', 'agent__last_name', 'farm_ref_number', 'community__name', 'remark')
     readonly_fields = ('uid',)
@@ -1087,7 +1087,7 @@ class DailyReportingModelAdmin(ImportExportModelAdmin):
 @admin.register(ActivityReportingModel)
 class ActivityReportingModelAdmin(ImportExportModelAdmin):
     resource_class = ActivityReportingModelResource
-    list_display = ('reporting_date', 'agent', 'district', 'farm_ref_number', 'activity', 'area_covered_ha', 'status')
+    list_display = ("uid", 'reporting_date', 'agent', 'district', 'farm_ref_number', 'activity', 'area_covered_ha', 'status')
     list_filter = ('status', 'reporting_date', 'main_activity', 'district', 'projectTbl_foreignkey')
     search_fields = ('agent__first_name', 'agent__last_name', 'farm_ref_number', 'community__name', 'remark')
     readonly_fields = ('uid',)

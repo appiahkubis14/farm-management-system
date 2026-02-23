@@ -145,9 +145,19 @@ class projectStaffTbl(timeStamp):
 
 class Activities(timeStamp):
     main_activity = models.CharField(max_length=500)
-    sub_activity = models.TextField(max_length=500, blank=True, null=True)
+    sub_activity = models.TextField(max_length=500, blank=True, null=True)  # Will store comma-separated values
     activity_code = models.CharField(max_length=500)
     required_equipment = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.main_activity} - {self.sub_activity}"
+    
+    def get_sub_activities_list(self):
+        """Convert comma-separated string to list"""
+        if self.sub_activity:
+            return [s.strip() for s in self.sub_activity.split(',') if s.strip()]
+        return []
+    
     
     def __str__(self):
         return str(self.sub_activity)
@@ -432,6 +442,62 @@ class PersonnelAssignmentModel(timeStamp):
         verbose_name = 'Rehab Assistant'
         verbose_name_plural = 'Rehab Assistants'
 
+# class DailyReportingModel(timeStamp):
+#     """Model for Daily Reporting and Activity Reporting modules"""
+#     uid = models.CharField(max_length=2500, blank=True, null=True)
+#     agent = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True)
+#     completion_date = models.DateField(blank=True, null=True)
+#     reporting_date = models.DateField(blank=True, null=True)
+#     main_activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="main_activities")
+#     activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="sub_activities")
+#     no_rehab_assistants = models.IntegerField(default=0, blank=True, null=True)
+#     area_covered_ha = models.FloatField(default=0.0, blank=True, null=True)
+#     remark = models.TextField(blank=True, null=True)
+#     status = models.IntegerField(default=0)  # 0=Pending, 1=Submitted
+#     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+#     farm_ref_number = models.CharField(max_length=250, blank=True, null=True)
+#     farm_size_ha = models.FloatField(default=0.0, blank=True, null=True)
+#     community = models.ForeignKey(Community, on_delete=models.CASCADE, blank=True, null=True)
+#     number_of_people_in_group = models.IntegerField(default=0, blank=True, null=True)
+#     group_work = models.CharField(max_length=50, blank=True, null=True)  # Yes/No
+#     sector = models.IntegerField(blank=True, null=True)
+#     ras = models.ManyToManyField(PersonnelModel, blank=True)
+#     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
+#     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    
+#     def __str__(self):
+#         return f"{self.agent} - {self.reporting_date}"
+    
+
+# class ActivityReportingModel(timeStamp):
+#     """Model for Daily Reporting and Activity Reporting modules"""
+#     uid = models.CharField(max_length=2500, blank=True, null=True)
+#     agent = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True)
+#     completion_date = models.DateField(blank=True, null=True)
+#     reporting_date = models.DateField(blank=True, null=True)
+#     main_activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="main_activities_reporting")
+#     activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="sub_activities_reporting")
+#     no_rehab_assistants = models.IntegerField(default=0, blank=True, null=True)
+#     area_covered_ha = models.FloatField(default=0.0, blank=True, null=True)
+#     remark = models.TextField(blank=True, null=True)
+#     status = models.IntegerField(default=0)  # 0=Pending, 1=Submitted
+#     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+#     farm_ref_number = models.CharField(max_length=250, blank=True, null=True)
+#     farm_size_ha = models.FloatField(default=0.0, blank=True, null=True)
+#     community = models.ForeignKey(Community, on_delete=models.CASCADE, blank=True, null=True)
+#     number_of_people_in_group = models.IntegerField(default=0, blank=True, null=True)
+#     group_work = models.CharField(max_length=50, blank=True, null=True)  # Yes/No
+#     sector = models.IntegerField(blank=True, null=True)
+#     ras = models.ManyToManyField(PersonnelModel, blank=True)
+#     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
+#     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    
+#     def __str__(self):
+#         return f"{self.agent} - {self.reporting_date}"
+
+
+
+
 class DailyReportingModel(timeStamp):
     """Model for Daily Reporting and Activity Reporting modules"""
     uid = models.CharField(max_length=2500, blank=True, null=True)
@@ -440,6 +506,8 @@ class DailyReportingModel(timeStamp):
     reporting_date = models.DateField(blank=True, null=True)
     main_activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="main_activities")
     activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="sub_activities")
+    # Add this field to store selected sub-activities
+    sub_activities = models.TextField(blank=True, null=True)  # Will store comma-separated values
     no_rehab_assistants = models.IntegerField(default=0, blank=True, null=True)
     area_covered_ha = models.FloatField(default=0.0, blank=True, null=True)
     remark = models.TextField(blank=True, null=True)
@@ -458,6 +526,11 @@ class DailyReportingModel(timeStamp):
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
     
+    def get_sub_activities_list(self):
+        """Convert comma-separated string to list"""
+        if self.sub_activities:
+            return [s.strip() for s in self.sub_activities.split(',') if s.strip()]
+        return []
 
 class ActivityReportingModel(timeStamp):
     """Model for Daily Reporting and Activity Reporting modules"""
@@ -467,6 +540,8 @@ class ActivityReportingModel(timeStamp):
     reporting_date = models.DateField(blank=True, null=True)
     main_activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="main_activities_reporting")
     activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True, related_name="sub_activities_reporting")
+    # Add this field to store selected sub-activities
+    sub_activities = models.TextField(blank=True, null=True)  # Will store comma-separated values
     no_rehab_assistants = models.IntegerField(default=0, blank=True, null=True)
     area_covered_ha = models.FloatField(default=0.0, blank=True, null=True)
     remark = models.TextField(blank=True, null=True)
@@ -484,6 +559,12 @@ class ActivityReportingModel(timeStamp):
     
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
+    
+    def get_sub_activities_list(self):
+        """Convert comma-separated string to list"""
+        if self.sub_activities:
+            return [s.strip() for s in self.sub_activities.split(',') if s.strip()]
+        return []
     
 # models.py - Update your QR_CodeModel
 import uuid
