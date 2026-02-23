@@ -145,7 +145,7 @@ class projectStaffTbl(timeStamp):
 
 class Activities(timeStamp):
     main_activity = models.CharField(max_length=500)
-    sub_activity = models.CharField(max_length=500)
+    sub_activity = models.TextField(max_length=500, blank=True, null=True)
     activity_code = models.CharField(max_length=500)
     required_equipment = models.BooleanField(default=False)
     
@@ -237,6 +237,7 @@ class Sidebar(models.Model):
     name = models.CharField(max_length=50, null=True, blank=True)
     
     def __str__(self):
+        
         return str(self.name)
 
 class GroupSidebar(models.Model):

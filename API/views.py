@@ -1535,10 +1535,18 @@ class FetchActivitiesView(View):
             activity_data = []
             
             for activity in activities:
+                # Split sub_activity by comma and create a JSON object
+                sub_items = [s.strip() for s in activity.sub_activity.split(',') if s.strip()]
+                
+                # Create a dictionary with sequential keys
+                sub_activity_dict = {}
+                for i, item in enumerate(sub_items, 1):
+                    sub_activity_dict[str(i)] = item
+                
                 activity_data.append({
                     "id": activity.id,
                     "main_activity": activity.main_activity,
-                    "sub_activity": activity.sub_activity,
+                    "sub_activity": sub_activity_dict,  # Now returns as JSON object
                     "activity_code": activity.activity_code,
                     "required_equipment": activity.required_equipment
                 })
