@@ -526,6 +526,7 @@ class DailyReportingModel(timeStamp):
     contractor_name = models.ForeignKey(contractorsTbl, on_delete=models.CASCADE, blank=True, null=True)
     rounds_of_weeding = models.IntegerField(default=0, blank=True, null=True)
     is_done_equally = models.BooleanField(default=False)
+    done_by_a_group = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
@@ -564,6 +565,7 @@ class ActivityReportingModel(timeStamp):
     contractor_name = models.ForeignKey(contractorsTbl, on_delete=models.CASCADE, blank=True, null=True)
     rounds_of_weeding = models.IntegerField(default=0, blank=True, null=True)
     is_done_equally = models.BooleanField(default=False)
+    # done_by_a_group = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"

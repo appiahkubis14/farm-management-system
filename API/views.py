@@ -507,7 +507,18 @@ class SaveActivityReportView(View):
                 if len(activities_list) > 1:
                     activity_uid = f"{uid}_{len(created_reports)}"
 
-                contractor = contractorsTbl.objects.get(id=data.get("contractor_name"))
+                contractor_id = data.get("contractor_name")
+                if contractor_id:
+                    try:
+                        contractor = contractorsTbl.objects.get(id=contractor_id)
+                    except:
+                        try:
+                            contractor = contractorsTbl.objects.get(contractor_name=contractor_id)
+                        except:
+                            pass
+                else:
+                    contractor = None
+                # contractor = contractorsTbl.objects.get(id=)
                 # contractor_name = contractor.contractor_name
                 
                 # Create the report
@@ -708,8 +719,17 @@ class SaveDailyReportView(View):
                 if len(activities_list) > 1:
                     activity_uid = f"{uid}_{len(created_reports)}"
 
-                contractor = contractorsTbl.objects.get(id=data.get("contractor_name"))
-                # contractor_name = contractor.contractor_name
+                contractor_id = data.get("contractor_name")
+                if contractor_id:
+                    try:
+                        contractor = contractorsTbl.objects.get(id=contractor_id)
+                    except:
+                        try:
+                            contractor = contractorsTbl.objects.get(contractor_name=contractor_id)
+                        except:
+                            pass
+                else:
+                    contractor = None
                 
                 
                 # Create report
