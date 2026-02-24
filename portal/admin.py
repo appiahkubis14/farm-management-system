@@ -345,7 +345,7 @@ class districtStaffTblResource(resources.ModelResource):
 class ActivitiesResource(resources.ModelResource):
     class Meta:
         model = Activities
-        fields = ('main_activity', 'sub_activity', 'activity_code', 'required_equipment')
+        fields = ('id','main_activity', 'sub_activity', 'activity_code', 'required_equipment')
 
 # Farm Resources
 class FarmdetailsTblResource(resources.ModelResource):
