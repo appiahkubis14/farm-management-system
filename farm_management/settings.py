@@ -368,3 +368,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/"
 LOGIN_URL = 'login' 
+
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
