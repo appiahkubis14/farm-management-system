@@ -6,7 +6,7 @@ app_name = 'sensors'
 urlpatterns = [
     # Web views
     path('dashboard/', views.dashboard, name='dashboard'),
-     path('api/dashboard-stats/', views.api_dashboard_stats, name='api_dashboard_stats'),
+    path('api/dashboard-stats/', views.api_dashboard_stats, name='api_dashboard_stats'),
     path('devices/', views.devices_list, name='devices_list'),
     path('device/<str:device_id>/', views.device_detail, name='device_detail'),
     path('test/', views.websocket_test, name='websocket_test'),
