@@ -22,7 +22,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from sensors.routing import websocket_urlpatterns
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'soil.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'farm_management.settings')
 
 django_asgi_app = get_asgi_application()
 
