@@ -40,6 +40,7 @@ urlpatterns = [
     
     # 10. Irrigation (POST only - new endpoint)
     path('v1/saveirrigation/', views.SaveIrrigationView.as_view(), name='save_irrigation'),
+    path('v1/fetchirrigationtypes/', views.FetchIrrigationTypesView.as_view(), name='fetch_irrigation_types'),
     
     # 11. General Data Loading (GET endpoints)
     path('v1/regiondistricts/', views.FetchRegionDistrictsView.as_view(), name='region_districts'),

@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from portal.models import FarmdetailsTbl, projectTbl, staffTbl, projectStaffTbl, Farms, PersonnelModel
+from portal.models import FarmdetailsTbl, Region, cocoaDistrict, projectTbl, staffTbl, projectStaffTbl, Farms, PersonnelModel
 import json
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -12,6 +12,7 @@ from datetime import datetime
 
 @login_required
 def farm_details_page(request):
+    
     """Main page for farm details management"""
     projects = projectTbl.objects.all().order_by('name')
     farms = FarmdetailsTbl.objects.filter(expunge=False).select_related('farm_foreignkey', 'projectTbl_foreignkey')
@@ -26,57 +27,62 @@ def farm_details_page(request):
 
 @login_required
 def farm_details_api(request):
-    """API endpoint for datatable"""
-    draw = int(request.GET.get('draw', 1))
-    start = int(request.GET.get('start', 0))
-    length = int(request.GET.get('length', 10))
-    search_value = request.GET.get('search[value]', '')
-    
-    # Base queryset
-    queryset = FarmdetailsTbl.objects.filter(expunge=False).select_related(
-        'farm_foreignkey', 'projectTbl_foreignkey'
-    )
-    
-    # Search functionality
-    if search_value:
-        queryset = queryset.filter(
-            Q(farm_reference__icontains=search_value) |
-            Q(farmername__icontains=search_value) |
-            Q(location__icontains=search_value) |
-            Q(region__icontains=search_value) |
-            Q(status__icontains=search_value) |
-            Q(projectTbl_foreignkey__name__icontains=search_value)
+
+    try:
+        """API endpoint for datatable"""
+        draw = int(request.GET.get('draw', 1))
+        start = int(request.GET.get('start', 0))
+        length = int(request.GET.get('length', 10))
+        search_value = request.GET.get('search[value]', '')
+        
+        # Base queryset
+        queryset = FarmdetailsTbl.objects.filter(expunge=False).select_related(
+            'farm_foreignkey', 'projectTbl_foreignkey'
         )
-    
-    # Total records
-    total_records = queryset.count()
-    
-    # Apply pagination
-    queryset = queryset.order_by('-id')[start:start + length]
-    
-    # Prepare data
-    data = []
-    for farm in queryset:
-        data.append({
-            'id': farm.id,
-            'farm_reference': farm.farm_reference,
-            'farmer_name': farm.farmername,
-            'region': farm.region,
-            'project': farm.projectTbl_foreignkey.name if farm.projectTbl_foreignkey else "N/A",
-            'location': farm.location,
-            'farm_size': f"{farm.farm_size} acres" if farm.farm_size else "N/A",
-            'status': farm.status,
-            'year_of_establishment': farm.year_of_establishment.strftime('%Y-%m-%d') if farm.year_of_establishment else "N/A",
-            'sector': farm.sector if farm.sector else "N/A",
-            'created_date': farm.created_date.strftime('%Y-%m-%d %H:%M') if farm.created_date else "N/A",
+        
+        # Search functionality
+        if search_value:
+            queryset = queryset.filter(
+                Q(farm_reference__icontains=search_value) |
+                Q(farmername__icontains=search_value) |
+                Q(location__icontains=search_value) |
+                Q(region__icontains=search_value) |
+                Q(status__icontains=search_value) |
+                Q(projectTbl_foreignkey__name__icontains=search_value)
+            )
+        
+        # Total records
+        total_records = queryset.count()
+        
+        # Apply pagination
+        queryset = queryset.order_by('-id')[start:start + length]
+        
+        # Prepare data
+        data = []
+        for farm in queryset:
+            data.append({
+                'id': farm.id,
+                'farm_reference': farm.farm_reference,
+                'farmer_name': farm.farmername,
+                'region': farm.region.region if farm.region else "N/A",
+                'project': farm.projectTbl_foreignkey.name if farm.projectTbl_foreignkey else "N/A",
+                'location': farm.location,
+                'farm_size': f"{farm.farm_size} acres" if farm.farm_size else "N/A",
+                'status': farm.status,
+                'year_of_establishment': farm.year_of_establishment.strftime('%Y-%m-%d') if farm.year_of_establishment else "N/A",
+                'sector': farm.sector if farm.sector else "N/A",
+                'created_date': farm.created_date.strftime('%Y-%m-%d %H:%M') if farm.created_date else "N/A",
+            })
+        
+        return JsonResponse({
+            'draw': draw,
+            'recordsTotal': total_records,
+            'recordsFiltered': total_records,
+            'data': data
         })
-    
-    return JsonResponse({
-        'draw': draw,
-        'recordsTotal': total_records,
-        'recordsFiltered': total_records,
-        'data': data
-    })
+    except Exception as e:
+        print(f"Error in farm_details_api: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Error fetching farm details'}, status=500)
 
 @login_required
 @require_http_methods(["GET"])
@@ -89,7 +95,7 @@ def get_farm_details(request, farm_id):
             'id': farm.id,
             'farm_reference': farm.farm_reference,
             'farmer_name': farm.farmername,
-            'region': farm.region,
+            'region': farm.region.region if farm.region else None,
             'project_id': farm.projectTbl_foreignkey.id if farm.projectTbl_foreignkey else None,
             'project_name': farm.projectTbl_foreignkey.name if farm.projectTbl_foreignkey else None,
             'location': farm.location,
@@ -101,7 +107,8 @@ def get_farm_details(request, farm_id):
         }
         
         return JsonResponse({'success': True, 'data': data})
-    except FarmdetailsTbl.DoesNotExist:
+    except Exception as e:
+        print(f"Error fetching farm details: {str(e)}")
         return JsonResponse({'success': False, 'message': 'Farm not found'}, status=404)
 
 @login_required
@@ -137,15 +144,25 @@ def create_farm(request):
                 year_of_establishment = datetime.strptime(data['year_of_establishment'], '%Y-%m-%d').date()
             except:
                 pass
+
+        #region 
+        if data.get('region'):
+           region = Region.objects.get(id=data['region'])
+       
+        print(region)
+
+        # #district
+        # if data.get('location'):
+        #     cocoaDistrict.objects.get_or_create(id=data[''])
         
         # Create farm
         farm = FarmdetailsTbl.objects.create(
             farm_reference=data['farm_reference'],
             farmername=data['farmer_name'],
-            region=data['region'],
+            region=region,
             location=data['location'],
             farm_size=data.get('farm_size'),
-            status=data.get('status', 'Maintenance'),
+            status=data.get('farm_status', 'Maintenance'),
             sector=data.get('sector'),
             year_of_establishment=year_of_establishment,
             projectTbl_foreignkey=project
@@ -160,6 +177,7 @@ def create_farm(request):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
+        print(f"Error creating farm: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
@@ -169,6 +187,8 @@ def update_farm(request, farm_id):
     try:
         data = json.loads(request.body)
         farm = FarmdetailsTbl.objects.get(id=farm_id)
+
+        print(data)
         
         # Check if farm reference is being changed and already exists
         if data.get('farm_reference') and data['farm_reference'] != farm.farm_reference:
@@ -189,14 +209,23 @@ def update_farm(request, farm_id):
                 farm.year_of_establishment = datetime.strptime(data['year_of_establishment'], '%Y-%m-%d').date()
             except:
                 pass
+
+         #region 
+        if data.get('region'):
+           region = Region.objects.get(region=data['region'])
+       
+        print(region)
+
+
+
         
         # Update fields
         farm.farm_reference = data.get('farm_reference', farm.farm_reference)
         farm.farmername = data.get('farmer_name', farm.farmername)
-        farm.region = data.get('region', farm.region)
+        farm.region =region
         farm.location = data.get('location', farm.location)
         farm.farm_size = data.get('farm_size', farm.farm_size)
-        farm.status = data.get('status', farm.status)
+        farm.status = data.get('farm_status', farm.status)
         farm.sector = data.get('sector', farm.sector)
         
         farm.save()

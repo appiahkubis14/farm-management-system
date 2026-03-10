@@ -410,13 +410,19 @@ def download_qr_code(request, qr_id):
             'message': f'Error downloading QR code: {str(e)}'
         }, status=500)
 
+
 @login_required
 @require_http_methods(["POST"])
 def download_bulk_qr_codes(request):
-    """Download multiple QR codes as ZIP"""
+    """Download multiple QR codes as a single PDF"""
     try:
         import json
-        import zipfile
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4, letter
+        from reportlab.lib.units import mm, inch
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER
         from io import BytesIO
         
         data = json.loads(request.body)
@@ -428,31 +434,201 @@ def download_bulk_qr_codes(request):
                 'message': 'No QR codes selected'
             }, status=400)
         
-        qr_codes = QR_CodeModel.objects.filter(id__in=ids)
+        # Get QR codes with images
+        qr_codes = QR_CodeModel.objects.filter(id__in=ids).exclude(qr_code='')
         
-        # Create ZIP file in memory
-        zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for qr in qr_codes:
-                if qr.qr_code and qr.qr_code.name:
-                    try:
-                        qr.qr_code.open('rb')
-                        file_content = qr.qr_code.read()
-                        zip_file.writestr(f"{qr.uid}.png", file_content)
-                        qr.qr_code.close()
-                    except Exception as e:
-                        print(f"Error adding {qr.uid} to zip: {e}")
-                        continue
+        if not qr_codes.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'No QR codes with images found'
+            }, status=404)
         
-        zip_buffer.seek(0)
+        # Create PDF in memory
+        pdf_buffer = BytesIO()
         
-        response = HttpResponse(zip_buffer, content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename="qr_codes_{timezone.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+        # Set up the document
+        doc = SimpleDocTemplate(
+            pdf_buffer,
+            pagesize=A4,
+            rightMargin=10*mm,
+            leftMargin=10*mm,
+            topMargin=10*mm,
+            bottomMargin=10*mm
+        )
+        
+        # Container for the 'Flowable' objects
+        elements = []
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            alignment=TA_CENTER,
+            spaceAfter=20
+        )
+        
+        # Add title
+        elements.append(Paragraph(f"QR Codes - {len(qr_codes)} selected", title_style))
+        elements.append(Spacer(1, 10*mm))
+        
+        # Calculate grid layout (3x3 per page for A4)
+        cols = 3
+        rows_per_page = 3
+        qr_size = 60*mm  # 60mm x 60mm for QR code
+        label_height = 10*mm  # Height for the label
+        
+        # Create table data
+        qr_list = list(qr_codes)
+        total_qrs = len(qr_list)
+        
+        for i in range(0, total_qrs, cols * rows_per_page):
+            # Get QR codes for this page
+            page_qrs = qr_list[i:i + (cols * rows_per_page)]
+            
+            # Prepare table data for this page
+            table_data = []
+            
+            for row in range(rows_per_page):
+                row_data = []
+                for col in range(cols):
+                    idx = row * cols + col
+                    if idx < len(page_qrs):
+                        qr = page_qrs[idx]
+                        
+                        # Create cell content
+                        cell_content = []
+                        
+                        # Add QR code image
+                        if qr.qr_code:
+                            qr_file = qr.qr_code.open('rb')
+                            img = Image(qr_file, width=qr_size, height=qr_size)
+                            cell_content.append(img)
+                            
+                            # Add QR code number/label
+                            label_style = ParagraphStyle(
+                                'Label',
+                                parent=styles['Normal'],
+                                fontSize=8,
+                                alignment=TA_CENTER,
+                                textColor=colors.black
+                            )
+                            cell_content.append(Paragraph(f"QR Code: {qr.uid}", label_style))
+                            
+                            # Create a table for each cell to stack image and label
+                            cell_table = Table([[cell_content[0]], [cell_content[1]]], 
+                                             colWidths=[qr_size])
+                            cell_table.setStyle(TableStyle([
+                                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                            ]))
+                            
+                            row_data.append(cell_table)
+                            
+                            # Close the file
+                            qr.qr_code.close()
+                        else:
+                            row_data.append('')
+                    else:
+                        row_data.append('')
+                
+                if row_data:
+                    table_data.append(row_data)
+            
+            # Create table for this page
+            if table_data:
+                # Calculate column widths
+                col_widths = [qr_size] * cols
+                
+                # Create the table
+                table = Table(table_data, colWidths=col_widths, rowHeights=[qr_size + label_height] * len(table_data))
+                table.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.lightgrey),
+                    ('TOPPADDING', (0, 0), (-1, -1), 5),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                ]))
+                
+                elements.append(table)
+                
+                # Add page break if not last page
+                if i + (cols * rows_per_page) < total_qrs:
+                    elements.append(PageBreak())
+        
+        # Build PDF
+        doc.build(elements)
+        pdf_buffer.seek(0)
+        
+        # Create response
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="qr_codes_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
         
         return response
         
-    except Exception as e:
+    except ImportError as e:
         return JsonResponse({
             'success': False,
-            'message': f'Error downloading QR codes: {str(e)}'
+            'message': 'ReportLab is required for PDF generation. Please install it: pip install reportlab'
         }, status=500)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': f'Error generating PDF: {str(e)}'
+        }, status=500)
+
+# @login_required
+# @require_http_methods(["POST"])
+# def download_bulk_qr_codes(request):
+#     """Download multiple QR codes as ZIP"""
+#     try:
+#         import json
+#         import zipfile
+#         from io import BytesIO
+        
+#         data = json.loads(request.body)
+#         ids = data.get('ids', [])
+        
+#         if not ids:
+#             return JsonResponse({
+#                 'success': False,
+#                 'message': 'No QR codes selected'
+#             }, status=400)
+        
+#         qr_codes = QR_CodeModel.objects.filter(id__in=ids)
+        
+#         # Create ZIP file in memory
+#         zip_buffer = BytesIO()
+#         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+#             for qr in qr_codes:
+#                 if qr.qr_code and qr.qr_code.name:
+#                     try:
+#                         qr.qr_code.open('rb')
+#                         file_content = qr.qr_code.read()
+#                         zip_file.writestr(f"{qr.uid}.png", file_content)
+#                         qr.qr_code.close()
+#                     except Exception as e:
+#                         print(f"Error adding {qr.uid} to zip: {e}")
+#                         continue
+        
+#         zip_buffer.seek(0)
+        
+#         response = HttpResponse(zip_buffer, content_type='application/zip')
+#         response['Content-Disposition'] = f'attachment; filename="qr_codes_{timezone.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+        
+#         return response
+        
+#     except Exception as e:
+#         return JsonResponse({
+#             'success': False,
+#             'message': f'Error downloading QR codes: {str(e)}'
+#         }, status=500)

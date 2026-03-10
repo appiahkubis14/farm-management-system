@@ -18,7 +18,7 @@ class Sidebar:
                     "url": "/farm-management/farms/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer"]
                 },
-                "Farm Mapping": {
+                "Map Window": {
                     "icon": "fas fa-map-marked-alt", 
                     "url": "/farm-management/mapped-farms/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
@@ -95,7 +95,7 @@ class Sidebar:
                     "url": "/po-daily-reports/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
                 },
-                "Activity Reporting": {
+                "Weekly Activity Reporting": {
                     "icon": "fas fa-file-upload", 
                     "url": "/activity-reporting/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
@@ -172,37 +172,37 @@ class Sidebar:
         #     }
         # },
        
-            "Certification & Payment": {
-                "icon": "fas fa-file-invoice-dollar",
-                "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "Regional Manager", "Project Manager"],
-                "sub_items": {
-                    "Work Certificates": {
-                        "icon": "fas fa-file-certificate", 
-                        "url": "/certification/ched-certificates/", 
-                        "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
-                    },
-                    "Payment Reports": {
-                        "icon": "fas fa-file-invoice", 
-                        "url": "/payment/payment-reports/", 
-                        "groups": ["Admin", "Project Officer", "Regional Manager"]
-                    }
-                }
-            },
+            # "Certification & Payment": {
+            #     "icon": "fas fa-file-invoice-dollar",
+            #     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "Regional Manager", "Project Manager"],
+            #     "sub_items": {
+            #         "Work Certificates": {
+            #             "icon": "fas fa-file-certificate", 
+            #             "url": "/certification/ched-certificates/", 
+            #             "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
+            #         },
+            #         "Payment Reports": {
+            #             "icon": "fas fa-file-invoice", 
+            #             "url": "/payment/payment-reports/", 
+            #             "groups": ["Admin", "Project Officer", "Regional Manager"]
+            #         }
+            #     }
+            # },
             
             "Operations Overview": {
                 "icon": "fas fa-chart-line",
                 "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "Regional Manager", "Project Manager"],
                 "sub_items": {
-                    "Equipment Overview": {
-                        "icon": "fas fa-tools", 
-                        "url": "/equipment/equipment/", 
-                        "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
-                    },
-                    "OutbreakFarms Overview": {
-                        "icon": "fas fa-virus", 
-                        "url": "/outbreakfarms/", 
-                        "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
-                    },
+                    # "Equipment Overview": {
+                    #     "icon": "fas fa-tools", 
+                    #     "url": "/equipment/equipment/", 
+                    #     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
+                    # },
+                    # "OutbreakFarms Overview": {
+                    #     "icon": "fas fa-virus", 
+                    #     "url": "/outbreakfarms/", 
+                    #     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
+                    # },
                     "Irrigation Overview": {
                         "icon": "fas fa-water", 
                         "url": "/irrigation/", 

@@ -98,7 +98,7 @@
                                     <th>Farm Ref</th>
                                     <th>Farmer Name</th>
                                     <th>Region</th>
-                                    <th>District</th>
+                                    <!-- <th>District</th> -->
                                     <th>Location</th>
                                     <th>Farm Size</th>
                                     <th>Status</th>
@@ -168,13 +168,13 @@
                                 <div class="invalid-feedback">Please select district</div>
                             </div>
                         </div> -->
-                        <div class="col-md-4">
+                        <!-- <div class="col-md-4">
                             <div class="form-group">
                                 <label for="district" class="form-label">District *</label>
                                 <input type="text" class="form-control" id="district" name="district" required>
                                 <div class="invalid-feedback">Please enter district</div>
                             </div>
-                        </div>
+                        </div> -->
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="location" class="form-label">Location *</label>
@@ -200,8 +200,8 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="status" class="form-label">Status</label>
-                                <select class="form-select" id="status" name="status" required>
+                                <label for="farm_status" class="form-label">Status</label>
+                                <select class="form-select" id="farm_status" name="farm_status" required>
                                     {% for value, label in status_choices %}
                                         <option value="{{ value }}" {% if value == 'Maintenance' %}selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
@@ -329,7 +329,7 @@ $(document).ready(function() {
             { data: 'farm_reference' },
             { data: 'farmer_name' },
             { data: 'region' },
-            { data: 'district' },
+            // { data: 'district' },
             { data: 'location' },
             { data: 'farm_size' },
             { 
@@ -447,7 +447,7 @@ $(document).ready(function() {
             location: $('#location').val(),
             farm_size: $('#farm_size').val(),
             sector: $('#sector').val(),
-            status: $('#status').val(),
+            farm_status: $('#farm_status').val(),
             year_of_establishment: $('#year_of_establishment').val(),
             reason4expunge: $('#reason4expunge').val()
         };
@@ -512,7 +512,7 @@ $(document).ready(function() {
                     $('#location').val(farm.location);
                     $('#farm_size').val(farm.farm_size);
                     $('#sector').val(farm.sector);
-                    $('#status').val(farm.status);
+                    $('#farm_status').val(farm.status);
                     $('#year_of_establishment').val(farm.year_of_establishment);
                     $('#reason4expunge').val(farm.reason4expunge);
                     

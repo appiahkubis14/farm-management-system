@@ -520,6 +520,8 @@ class SaveActivityReportView(View):
                     contractor = None
                 # contractor = contractorsTbl.objects.get(id=)
                 # contractor_name = contractor.contractor_name
+
+                created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
                 
                 # Create the report
                 report = ActivityReportingModel.objects.create(
@@ -546,7 +548,8 @@ class SaveActivityReportView(View):
                     is_done_by_contractor=data.get("is_done_by_contractor"),
                     contractor_name=contractor,
                     rounds_of_weeding=data.get("rounds_of_weeding"),
-                    is_done_equally=data.get("is_done_equally")
+                    is_done_equally=data.get("is_done_equally"),
+                    created_by=created_by
                 )
                 
                 # Add RAS
@@ -731,6 +734,7 @@ class SaveDailyReportView(View):
                 else:
                     contractor = None
                 
+                created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
                 
                 # Create report
                 report = DailyReportingModel.objects.create(
@@ -757,7 +761,8 @@ class SaveDailyReportView(View):
                     is_done_by_contractor=data.get("is_done_by_contractor"),
                     contractor_name=contractor,
                     rounds_of_weeding=data.get("rounds_of_weeding"),
-                    is_done_equally=data.get("is_done_equally")
+                    is_done_equally=data.get("is_done_equally"),
+                    created_by=created_by
                 )
                 
                 # Add RAS
@@ -988,6 +993,9 @@ class SaveRegisterView(View):
                 except:
                     pass
             
+                    
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None        
+
             # Save images if provided
             primary_phone = data.get("primary_phone_number", "")
             image = save_image(data.get("image", ""), f"{primary_phone}_image") if data.get("image") else None
@@ -1032,7 +1040,8 @@ class SaveRegisterView(View):
                 id_image_front=id_image_front,
                 id_image_back=id_image_back,
                 consent_form_image=consent_form_image,
-                uid=data.get("uid", "")
+                uid=data.get("uid", ""),
+                created_by=created_by
             )
             
             status["status"] = True
@@ -1129,6 +1138,8 @@ class SaveRehabAssignmentView(View):
                     project = projectTbl.objects.get(district=district)
                 except:
                     pass
+
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
             
             # Create personnel assignment
             assignment = PersonnelAssignmentModel.objects.create(
@@ -1139,7 +1150,9 @@ class SaveRehabAssignmentView(View):
                 district=district,
                 community=community,
                 date_assigned=data.get("date_assigned"),
-                status=data.get("status", 0)
+                status=data.get("status", 0),
+                created_by=created_by
+                
             )
             
             status["status"] = True
@@ -1238,6 +1251,8 @@ class GrowthMonitoringView(View):
             project = agent.projectTbl_foreignkey
             if project.district:
                 district = project.district
+
+        created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
         
         # Create growth monitoring record
         record = GrowthMonitoringModel.objects.create(
@@ -1253,7 +1268,8 @@ class GrowthMonitoringView(View):
             qr_code=qr_code,
             agent=agent,
             projectTbl_foreignkey=project,
-            district=district
+            district=district,
+            created_by=created_by
         )
         
         status["status"] = True
@@ -1324,6 +1340,8 @@ class GrowthMonitoringView(View):
                     if project.district:
                         district = project.district
                 
+                created_by = staffTbl.objects.get(id=record_data.get("user_id")) if record_data.get("user_id") else None
+
                 # Create growth monitoring record
                 record = GrowthMonitoringModel.objects.create(
                     uid=uid or None,
@@ -1338,7 +1356,8 @@ class GrowthMonitoringView(View):
                     qr_code=qr_code,
                     agent=agent,
                     projectTbl_foreignkey=project,
-                    district=district
+                    district=district,
+                    created_by=created_by
                 )
                 
                 successful_records.append(self.format_record_response(
@@ -1457,6 +1476,8 @@ class SaveOutbreakFarmView(View):
                 except:
                     pass
             
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
             # Create outbreak farm record
             outbreak = OutbreakFarmModel.objects.create(
                 uid=uid,
@@ -1472,7 +1493,8 @@ class SaveOutbreakFarmView(View):
                 geom=geom,
                 projectTbl_foreignkey=project,
                 district=district,
-                region=region
+                region=region,
+                created_by=created_by
             )
             
             status["status"] = True
@@ -1540,6 +1562,8 @@ class SaveContractorCertificateView(View):
                     project = projectTbl.objects.get(district=district)
                 except:
                     pass
+
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
             
             # Create contractor certificate
             certificate = ContractorCertificateModel.objects.create(
@@ -1551,7 +1575,8 @@ class SaveContractorCertificateView(View):
                 status=data.get("status", "Pending"),
                 remarks=data.get("remarks", ""),
                 projectTbl_foreignkey=project,
-                district=district
+                district=district,
+                created_by=created_by
             )
             
             status["status"] = True
@@ -1627,6 +1652,8 @@ class SaveVerificationFarmsView(View):
                 if project.district:
                     district = project.district
             
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
             # Create certificate verification
             verification = ContractorCertificateVerificationModel.objects.create(
                 uid=uid,
@@ -1636,7 +1663,8 @@ class SaveVerificationFarmsView(View):
                 is_verified=data.get("is_verified", False),
                 comments=data.get("comments", ""),
                 projectTbl_foreignkey=project,
-                district=district
+                district=district,
+                created_by=created_by
             )
             
             status["status"] = True
@@ -1756,6 +1784,8 @@ class SaveFeedbackView(View):
                 except staffTbl.DoesNotExist:
                     pass
             
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
             # Create feedback
             feedback = Feedback.objects.create(
                 staffTbl_foreignkey=staff,
@@ -1767,6 +1797,7 @@ class SaveFeedbackView(View):
                 ra_id=data.get("ra_id", ""),
                 Status=data.get("status", "Open") or data.get("Status", "Open"),  # Accept both cases
                 # sent_date will be auto_now=True, so no need to set it
+                created_by=created_by
             )
             
             status_response["status"] = True
@@ -1846,6 +1877,8 @@ class SaveIrrigationView(View):
                 project = agent.projectTbl_foreignkey
                 if project.district:
                     district = project.district
+
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
             
             # Create irrigation record
             irrigation = IrrigationModel.objects.create(
@@ -1856,7 +1889,8 @@ class SaveIrrigationView(View):
                 date=data.get("date"),
                 agent=agent,
                 projectTbl_foreignkey=project,
-                district=district
+                district=district,
+                created_by=created_by
             )
             
             status["status"] = True
@@ -1880,6 +1914,36 @@ class SaveIrrigationView(View):
             }, status=500)
             
         return JsonResponse(status)
+
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchIrrigationTypesView(View):
+    """Load irrigation types (GET)"""
+    def get(self, request):
+        try:
+            irrigation_types = irrigationTypeModel.objects.all()
+            types_data = []
+            
+            for irrigation_type in irrigation_types:
+                types_data.append({
+                    "id": irrigation_type.id,
+                    "irrigation_type": irrigation_type.irrigation_type,
+                    "description": irrigation_type.description
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(types_data)} irrigation types",
+                "data": types_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
 
 # ============== 12. GENERAL DATA LOADING ==============
 
@@ -2774,6 +2838,9 @@ class SaveVerificationRecordView(View):
                 if farm:
                     district = farm.district
                     project = farm.projectTbl_foreignkey
+
+
+                created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
                 
                 # Create verification record
                 verification = VerifyRecord.objects.create(
@@ -2783,7 +2850,8 @@ class SaveVerificationRecordView(View):
                     timestamp=timestamp,
                     status=int(status_val),
                     projectTbl_foreignkey=project,
-                    district=district
+                    district=district,
+                    created_by=created_by
                 )
                 
                 # Handle video file if provided
@@ -2834,7 +2902,8 @@ class SaveVerificationRecordView(View):
                     timestamp=data.get("timestamp"),
                     status=data.get("status", 0),
                     projectTbl_foreignkey=project,
-                    district=district
+                    district=district,
+                    created_by=staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
                 )
                 
                 return JsonResponse({
@@ -2970,6 +3039,8 @@ class SaveCalculatedAreaView(View):
                 except:
                     pass
             
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
             # Create calculated area
             area = CalculatedArea.objects.create(
                 date=data.get("date", timezone.now()),
@@ -2977,7 +3048,8 @@ class SaveCalculatedAreaView(View):
                 value=data.get("value", 0.0),
                 geom=data.get("geom") if data.get("geom") else None,
                 projectTbl_foreignkey=project,
-                district=district
+                district=district,
+                created_by=created_by
             )
             
             return JsonResponse({
@@ -2991,7 +3063,7 @@ class SaveCalculatedAreaView(View):
                     "district": area.district.name if area.district else None,
                     "project": area.projectTbl_foreignkey.name if area.projectTbl_foreignkey else None
                 }
-            })
+            })  
             
         except json.JSONDecodeError:
             return JsonResponse({
@@ -3096,7 +3168,9 @@ class SaveEquipmentView(View):
                     staff = staffTbl.objects.get(id=data["staff_id"])
                 except staffTbl.DoesNotExist:
                     pass
-            
+
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
             # Create equipment
             equipment = EquipmentModel.objects.create(
                 equipment=data.get("equipment"),
@@ -3106,7 +3180,8 @@ class SaveEquipmentView(View):
                 staff_name=staff,
                 projectTbl_foreignkey=project,
                 district=district,
-                uid=str(uuid.uuid4())
+                uid=str(uuid.uuid4()),
+                created_by=created_by
             )
             
             return JsonResponse({
@@ -3259,6 +3334,9 @@ class SaveOutbreakFarmView(View):
                 except FarmdetailsTbl.DoesNotExist:
                     pass
             
+
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
             # Create outbreak farm
             outbreak = OutbreakFarm.objects.create(
                 farm=farm,
@@ -3286,7 +3364,8 @@ class SaveOutbreakFarmView(View):
                 projectTbl_foreignkey=project,
                 district=district,
                 region=region,
-                uid=str(uuid.uuid4())
+                uid=str(uuid.uuid4()),
+                created_by=created_by
             )
             
             return JsonResponse({
@@ -3553,7 +3632,11 @@ class SaveFarmValidationView(View):
                     farm = FarmdetailsTbl.objects.get(farm_reference=farm_id)
                 except:
                     pass
-            
+
+
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
+
             # Create farm validation record
             validation = FarmValidation.objects.create(
                 field_uri=field_uri,
@@ -3579,7 +3662,8 @@ class SaveFarmValidationView(View):
                 rice_maize_cassava_farm=data.get("rice_maize_cassava_farm", ""),
                 location=data.get("location", ""),
                 established_to_boundary=data.get("established_to_boundary", ""),
-                general_remarks=data.get("general_remarks", "")
+                general_remarks=data.get("general_remarks", ""),
+                created_by=created_by
             )
             
             status["status"] = True
@@ -3630,6 +3714,9 @@ class SaveFeedbackAPIView(View):
                     staff = staffTbl.objects.get(id=staff_id)
                 except:
                     pass
+
+
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
             
             # Create feedback
             feedback = Feedback.objects.create(
@@ -3640,7 +3727,8 @@ class SaveFeedbackAPIView(View):
                 farm_reference=data.get("farm_reference", ""),
                 activity=data.get("activity", ""),
                 ra_id=data.get("ra_id", ""),
-                Status=data.get("status", "Open")
+                Status=data.get("status", "Open"),
+                created_by=created_by
             )
             
             status["status"] = True
@@ -3715,6 +3803,8 @@ class PosRouteMonitoringView(View):
                 except:
                     inspection_date = timezone.now()
             
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
             # Create record
             record = posRoutemonitoring.objects.create(
                 staffTbl_foreignkey=staff,
@@ -3723,6 +3813,7 @@ class PosRouteMonitoringView(View):
                 accuracy=data.get("accuracy"),
                 inspection_date=inspection_date or timezone.now(),
                 uid=uid,
+                created_by=created_by
             )
             
             status_response["status"] = True
@@ -3877,6 +3968,9 @@ class VerifyRecordView(View):
                     timestamp = timezone.now()
             else:
                 timestamp = timezone.now()
+
+
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
             
             # Create record
             record = VerifyRecord(
@@ -3886,7 +3980,8 @@ class VerifyRecordView(View):
                 timestamp=timestamp,
                 status=int(data.get("status", 0)),
                 projectTbl_foreignkey=project,
-                district=district
+                district=district,
+                created_by=created_by
             )
             
             # Handle video file
@@ -4042,6 +4137,8 @@ class FeedbackView(View):
             # Get current date for week/month/year if not provided
             now = timezone.now()
             
+            created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
+
             # Create feedback with all fields
             feedback = Feedback.objects.create(
                 staffTbl_foreignkey=staff,
@@ -4055,6 +4152,7 @@ class FeedbackView(View):
                 week=data.get("week", str(now.isocalendar()[1])),  # ISO week number
                 month=data.get("month", now.strftime("%B")),  # Month name
                 year=data.get("year", str(now.year)),
+                created_by=created_by
             )
             
             status_response["status"] = True

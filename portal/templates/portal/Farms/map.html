@@ -2,20 +2,12 @@
 {% load static %}
 
 {% block content %}
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""/>
-
-<!-- Load Leaflet Draw AFTER Leaflet -->
-<link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/gokertanrisever/leaflet-ruler/master/src/leaflet-ruler.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.12/leaflet.draw.css" />
 
 
 <!-- Custom Map CSS -->
 <style>
     #map {
-        height: calc(100vh - 56px); /* Subtract navbar height */
+        height: calc(100vh - 130px); /* Subtract navbar height */
         width: 100%;
         z-index: 1;
     }
@@ -468,82 +460,142 @@
 </div>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet-fullscreen@1.0.2/dist/leaflet.fullscreen.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <!-- Add html2canvas for export functionality -->
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
 <script src="https://unpkg.com/leaflet-fullscreen@1.0.2/dist/Leaflet.fullscreen.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://unpkg.com/leaflet-geosearch@3.0.0/dist/geosearch.umd.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// Wait for Leaflet Draw to load
-let leafletDrawLoaded = false;
+// Global variables
+let map, farmLayer, markerCluster, selectedFarm, drawnItems, drawControl;
+let currentBasemap = 'satellite';
+let currentTool = null;
+let measuring = false;
 
-// Check if Leaflet Draw is loaded
-function checkLeafletDraw() {
-    if (typeof L.Control.Draw !== 'undefined' && L.Draw) {
-        leafletDrawLoaded = true;
-        console.log('Leaflet Draw loaded successfully');
-        initializeMap();
-    } else {
-        console.log('Waiting for Leaflet Draw to load...');
-        setTimeout(checkLeafletDraw, 100);
-    }
-}
-
-// Main initialization function
-function initializeMap() {
-    // Initialize map
-    var map = L.map('map').setView([7.9465, -1.0232], 8);
-
-    // Define base layers
-    var baseLayers = {
-        osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }),
-        
-        satellite:L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+// Base layers definition
+const baseLayers = {
+    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }),
+    
+    satellite: L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
         maxZoom: 20,
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
         attribution: '&copy; Google Satellite'
     }),
-        
-        topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenTopoMap',
-            maxZoom: 17
-        }),
-        
-        dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© CARTO',
-            maxZoom: 19
-        })
-    };
+    
+    topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenTopoMap',
+        maxZoom: 17
+    }),
+    
+    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© CARTO',
+        maxZoom: 19
+    })
+};
 
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize map immediately
+    initializeMap();
+    
+    // Check if Leaflet Draw is loaded, if not, load it dynamically
+    if (typeof L.Control.Draw === 'undefined') {
+        loadLeafletDraw();
+    }
+});
+
+function loadLeafletDraw() {
+    // Load Leaflet Draw CSS
+    const drawCSS = document.createElement('link');
+    drawCSS.rel = 'stylesheet';
+    drawCSS.href = 'https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css';
+    document.head.appendChild(drawCSS);
+    
+    // Load Leaflet Draw JS
+    const drawScript = document.createElement('script');
+    drawScript.src = 'https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js';
+    drawScript.onload = function() {
+        console.log('Leaflet Draw loaded dynamically');
+        initializeDrawControl();
+    };
+    document.body.appendChild(drawScript);
+}
+
+function initializeMap() {
+    // Initialize map
+    map = L.map('map').setView([7.9465, -1.0232], 8);
+    
     // Add default basemap
     baseLayers.satellite.addTo(map);
-    var currentBasemap = 'satellite';
-
-    // Farm layers
-    var farmLayer = L.layerGroup().addTo(map);
-    var markerCluster = null;
-    var selectedFarm = null;
-
-    // Drawing layers and control
-    var drawnItems = new L.FeatureGroup();
+    
+    // Initialize layers
+    farmLayer = L.layerGroup().addTo(map);
+    drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
+    
+    // Try to initialize draw control if available
+    if (typeof L.Control.Draw !== 'undefined') {
+        initializeDrawControl();
+    }
+    
+    // Load farm data
+    loadFarms();
+    
+    // Initialize all event listeners
+    initializeEventListeners();
+}
 
-    var drawControl = new L.Control.Draw({
+function initializeDrawControl() {
+    // Check if draw control already exists
+    if (drawControl) {
+        map.removeControl(drawControl);
+    }
+    
+    // Create new draw control
+    drawControl = new L.Control.Draw({
+        draw: {
+            polyline: {
+                shapeOptions: {
+                    color: '#198754',
+                    weight: 3
+                }
+            },
+            polygon: {
+                shapeOptions: {
+                    color: '#198754',
+                    weight: 3,
+                    fillColor: '#198754',
+                    fillOpacity: 0.2
+                }
+            },
+            rectangle: {
+                shapeOptions: {
+                    color: '#0d6efd',
+                    weight: 3,
+                    fillColor: '#0d6efd',
+                    fillOpacity: 0.2
+                }
+            },
+            circle: false,
+            marker: true,
+            circlemarker: false
+        },
         edit: {
             featureGroup: drawnItems
         }
@@ -551,272 +603,304 @@ function initializeMap() {
     
     // Add draw control to map
     map.addControl(drawControl);
+    
+    // Add draw event listeners
+    map.on(L.Draw.Event.CREATED, function(e) {
+        var type = e.layerType;
+        var layer = e.layer;
+        
+        drawnItems.addLayer(layer);
+        
+        if (type === 'polyline' && measuring) {
+            var distance = layer.getDistance() / 1000; // Convert to km
+            document.getElementById('distanceValue').textContent = distance.toFixed(2);
+            document.getElementById('distanceResult').style.display = 'block';
+            document.getElementById('measurementResults').style.display = 'block';
+        }
+        
+        if (type === 'polygon' && measuring) {
+            var area = layer.getArea() / 10000; // Convert to hectares
+            document.getElementById('areaValue').textContent = area.toFixed(2);
+            document.getElementById('areaResult').style.display = 'block';
+            document.getElementById('measurementResults').style.display = 'block';
+        }
+        
+        // Disable current tool after drawing
+        if (currentTool) {
+            try {
+                currentTool.disable();
+            } catch (e) {
+                console.log('Tool already disabled');
+            }
+            currentTool = null;
+        }
+    });
+}
 
-    // Measurement variables
-    var measuring = false;
-    var currentTool = null;
-
-    // Load farm data
-    function loadFarms() {
-        fetch("{% url 'get_farm_geojson' %}")
-            .then(response => response.json())
-            .then(geojson => {
-                farmLayer.clearLayers();
-                if (markerCluster) {
-                    markerCluster.clearLayers();
-                    map.removeLayer(markerCluster);
-                }
-                
-                var farms = L.geoJSON(geojson, {
-                    pointToLayer: function(feature, latlng) {
-                        var hasDetails = feature.properties.has_details;
-                        
-                        var marker = L.circleMarker(latlng, {
-                            radius: 8,
-                            fillColor: hasDetails ? '#dc3545' : '#198754',
-                            color: '#fff',
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        });
-                        
-                        if (feature.properties.popup_content) {
-                            marker.bindPopup(feature.properties.popup_content);
-                        }
-                        
-                        marker.on('click', function(e) {
-                            if (selectedFarm) {
-                                selectedFarm.setStyle({ radius: 8 });
-                            }
-                            selectedFarm = this;
-                            this.setStyle({ radius: 12, fillColor: '#ffc107' });
-                            showFarmDetails(feature.properties);
-                        });
-                        
-                        return marker;
-                    },
-                    onEachFeature: function(feature, layer) {
-                        layer.feature = feature;
+function loadFarms() {
+    fetch("{% url 'get_farm_geojson' %}")
+        .then(response => response.json())
+        .then(geojson => {
+            farmLayer.clearLayers();
+            if (markerCluster) {
+                markerCluster.clearLayers();
+                map.removeLayer(markerCluster);
+                markerCluster = null;
+            }
+            
+            var farms = L.geoJSON(geojson, {
+                pointToLayer: function(feature, latlng) {
+                    var hasDetails = feature.properties.has_details;
+                    
+                    var marker = L.circleMarker(latlng, {
+                        radius: 8,
+                        fillColor: hasDetails ? '#dc3545' : '#198754',
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                    
+                    if (feature.properties.popup_content) {
+                        marker.bindPopup(feature.properties.popup_content);
                     }
-                });
-                
-                // Add to appropriate layer based on clustering setting
-                if (document.getElementById('toggleClustering').checked) {
-                    markerCluster = L.markerClusterGroup();
-                    markerCluster.addLayer(farms);
-                    map.addLayer(markerCluster);
-                } else {
-                    farmLayer.addLayer(farms);
+                    
+                    marker.on('click', function(e) {
+                        if (selectedFarm) {
+                            selectedFarm.setStyle({ radius: 8 });
+                        }
+                        selectedFarm = this;
+                        this.setStyle({ radius: 12, fillColor: '#ffc107' });
+                        showFarmDetails(feature.properties);
+                    });
+                    
+                    return marker;
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.feature = feature;
                 }
-                
-                // Zoom to bounds if we have farms
-                if (geojson.features.length > 0) {
-                    var bounds = farms.getBounds();
+            });
+            
+            // Add to appropriate layer based on clustering setting
+            if (document.getElementById('toggleClustering') && 
+                document.getElementById('toggleClustering').checked) {
+                markerCluster = L.markerClusterGroup();
+                markerCluster.addLayer(farms);
+                map.addLayer(markerCluster);
+            } else {
+                farmLayer.addLayer(farms);
+            }
+            
+            // Zoom to bounds if we have farms
+            if (geojson.features.length > 0) {
+                var bounds = farms.getBounds();
+                if (bounds.isValid()) {
                     map.fitBounds(bounds, { padding: [50, 50] });
                 }
-            })
-            .catch(error => {
-                console.error('Error loading farm data:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to load farm data'
-                });
-            });
-    }
-
-    // Show farm details
-    function showFarmDetails(properties) {
-        var content = `
-            <div class="farm-popup">
-                <h5 style="margin-top: 0;">${properties.farm_id}</h5>
-        `;
-        
-        if (properties.has_details) {
-            content += `
-                <table style="width: 100%; font-size: 14px;">
-                    <tr>
-                        <td><strong>Farmer:</strong></td>
-                        <td>${properties.farmer_name}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Location:</strong></td>
-                        <td>${properties.location}, ${properties.district}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Size:</strong></td>
-                        <td>${properties.farm_size || 'N/A'} acres</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Status:</strong></td>
-                        <td>
-                            <span style="background-color: #198754; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
-                                ${properties.status}
-                            </span>
-                        </td>
-                    </tr>
-                </table>
-            `;
-        } else {
-            content += `
-                <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 8px; border-radius: 4px; margin: 10px 0;">
-                    <i class="fas fa-exclamation-triangle" style="color: #856404;"></i>
-                    No detailed information available
-                </div>
-            `;
-        }
-        
-        if (properties.has_details) {
-            content += `
-                <button onclick="viewFarmDetails('${properties.id}')" 
-                        style="width: 100%; background-color: #198754; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 10px;">
-                    <i class="fas fa-external-link-alt"></i> View Full Details
-                </button>
-            `;
-        }
-        
-        content += '</div>';
-        
-        Swal.fire({
-            html: content,
-            width: 350,
-            showCloseButton: true,
-            showConfirmButton: false
-        });
-    }
-
-    // View full details
-    window.viewFarmDetails = function(farmId) {
-        window.open(`/api/farm-details/`, '_blank');
-    }
-
-    // Search farms
-    function searchFarms(query) {
-        if (!query.trim()) return;
-        
-        fetch("{% url 'search_farms' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                type: 'all',
-                query: query
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displaySearchResults(data);
             }
         })
         .catch(error => {
-            console.error('Search error:', error);
+            console.error('Error loading farm data:', error);
         });
-    }
+}
 
-    // Display search results
-    function displaySearchResults(data) {
-        var resultsDiv = document.getElementById('searchResults');
-        resultsDiv.style.display = 'block';
-        
-        if (data.count === 0) {
-            resultsDiv.innerHTML = '<div style="padding: 10px; text-align: center; color: #6c757d;">No farms found</div>';
-            return;
+function showFarmDetails(properties) {
+    var content = `
+        <div class="farm-popup">
+            <h5 style="margin-top: 0;">${properties.farm_id}</h5>
+    `;
+    
+    if (properties.has_details) {
+        content += `
+            <table style="width: 100%; font-size: 14px;">
+                <tr>
+                    <td><strong>Farmer:</strong></td>
+                    <td>${properties.farmer_name}</td>
+                </tr>
+                <tr>
+                    <td><strong>Location:</strong></td>
+                    <td>${properties.location}, ${properties.district}</td>
+                </tr>
+                <tr>
+                    <td><strong>Size:</strong></td>
+                    <td>${properties.farm_size || 'N/A'} acres</td>
+                </tr>
+                <tr>
+                    <td><strong>Status:</strong></td>
+                    <td>
+                        <span style="background-color: #198754; color: white; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+                            ${properties.status}
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        `;
+    } else {
+        content += `
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 8px; border-radius: 4px; margin: 10px 0;">
+                <i class="fas fa-exclamation-triangle" style="color: #856404;"></i>
+                No detailed information available
+            </div>
+        `;
+    }
+    
+    if (properties.has_details) {
+        content += `
+            <button onclick="viewFarmDetails('${properties.id}')" 
+                    style="width: 100%; background-color: #198754; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 10px;">
+                <i class="fas fa-external-link-alt"></i> View Full Details
+            </button>
+        `;
+    }
+    
+    content += '</div>';
+    
+    Swal.fire({
+        html: content,
+        width: 350,
+        showCloseButton: true,
+        showConfirmButton: false
+    });
+}
+
+// View full details
+window.viewFarmDetails = function(farmId) {
+    window.open(`/api/farm-details/`, '_blank');
+}
+
+function searchFarms(query) {
+    if (!query.trim()) return;
+    
+    fetch("{% url 'search_farms' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            type: 'all',
+            query: query
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displaySearchResults(data);
         }
-        
-        var html = '<div style="max-height: 200px; overflow-y: auto;">';
-        data.features.forEach(function(feature) {
-            html += `
-                <div class="search-result-item" 
-                     onclick="zoomToFarm(${feature.geometry.coordinates[1]}, ${feature.geometry.coordinates[0]}, '${feature.properties.id}')">
-                    <div style="font-weight: bold; color: #198754;">${feature.properties.farm_id}</div>
-                    ${feature.properties.has_details ? `
-                        <div style="font-size: 12px; color: #495057;">${feature.properties.farmer_name}</div>
-                        <div style="font-size: 11px; color: #6c757d;">${feature.properties.location}</div>
-                    ` : '<div style="font-size: 11px; color: #6c757d;">No details available</div>'}
-                </div>
-            `;
-        });
-        html += '</div>';
-        resultsDiv.innerHTML = html;
-    }
+    })
+    .catch(error => {
+        console.error('Search error:', error);
+    });
+}
 
-    // Zoom to specific farm
-    window.zoomToFarm = function(lat, lng, farmId) {
-        map.setView([lat, lng], 15);
-        
-        farmLayer.eachLayer(function(layer) {
+function displaySearchResults(data) {
+    var resultsDiv = document.getElementById('searchResults');
+    if (!resultsDiv) return;
+    
+    resultsDiv.style.display = 'block';
+    
+    if (data.count === 0) {
+        resultsDiv.innerHTML = '<div style="padding: 10px; text-align: center; color: #6c757d;">No farms found</div>';
+        return;
+    }
+    
+    var html = '<div style="max-height: 200px; overflow-y: auto;">';
+    data.features.forEach(function(feature) {
+        html += `
+            <div class="search-result-item" 
+                 onclick="zoomToFarm(${feature.geometry.coordinates[1]}, ${feature.geometry.coordinates[0]}, '${feature.properties.id}')">
+                <div style="font-weight: bold; color: #198754;">${feature.properties.farm_id}</div>
+                ${feature.properties.has_details ? `
+                    <div style="font-size: 12px; color: #495057;">${feature.properties.farmer_name}</div>
+                    <div style="font-size: 11px; color: #6c757d;">${feature.properties.location}</div>
+                ` : '<div style="font-size: 11px; color: #6c757d;">No details available</div>'}
+            </div>
+        `;
+    });
+    html += '</div>';
+    resultsDiv.innerHTML = html;
+}
+
+// Zoom to specific farm
+window.zoomToFarm = function(lat, lng, farmId) {
+    map.setView([lat, lng], 15);
+    
+    farmLayer.eachLayer(function(layer) {
+        if (layer.feature && layer.feature.properties.id == farmId) {
+            layer.fire('click');
+        }
+    });
+    
+    if (markerCluster) {
+        markerCluster.eachLayer(function(layer) {
             if (layer.feature && layer.feature.properties.id == farmId) {
                 layer.fire('click');
             }
         });
-        
-        if (markerCluster) {
-            markerCluster.eachLayer(function(layer) {
-                if (layer.feature && layer.feature.properties.id == farmId) {
-                    layer.fire('click');
-                }
-            });
+    }
+    
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('quickSearch').value = '';
+}
+
+function changeBasemap(layerName) {
+    // Remove current basemap
+    map.removeLayer(baseLayers[currentBasemap]);
+    
+    // Add new basemap
+    baseLayers[layerName].addTo(map);
+    currentBasemap = layerName;
+    
+    // Update UI
+    document.querySelectorAll('.basemap-option').forEach(option => {
+        option.classList.remove('active');
+    });
+    var activeOption = document.querySelector(`[data-layer="${layerName}"]`);
+    if (activeOption) {
+        activeOption.classList.add('active');
+    }
+}
+
+function togglePanel(panelId) {
+    var panels = ['basemapPanel', 'toolsPanel', 'layerPanel', 'statsPanel', 'legend'];
+    panels.forEach(panel => {
+        var el = document.getElementById(panel);
+        if (el) {
+            el.style.display = panel === panelId ? 'block' : 'none';
         }
-        
-        document.getElementById('searchResults').style.display = 'none';
-        document.getElementById('quickSearch').value = '';
-    }
+    });
+}
 
-    // Change basemap
-    function changeBasemap(layerName) {
-        // Remove current basemap
-        map.removeLayer(baseLayers[currentBasemap]);
-        
-        // Add new basemap
-        baseLayers[layerName].addTo(map);
-        currentBasemap = layerName;
-        
-        // Update UI
-        document.querySelectorAll('.basemap-option').forEach(option => {
-            option.classList.remove('active');
-        });
-        document.querySelector(`[data-layer="${layerName}"]`).classList.add('active');
-    }
-
-    // Toggle panel
-    function togglePanel(panelId) {
-        var panels = ['basemapPanel', 'toolsPanel', 'layerPanel', 'statsPanel', 'legend'];
-        panels.forEach(panel => {
-            var el = document.getElementById(panel);
-            if (el) el.style.display = panel === panelId ? 'block' : 'none';
-        });
-    }
-
-    // Initialize drawing tools
-    function initDrawingTool(toolType) {
-        if (currentTool) {
+function initDrawingTool(toolType) {
+    if (currentTool) {
+        try {
             currentTool.disable();
-            currentTool = null;
+        } catch (e) {
+            console.log('Tool already disabled');
         }
-        
-        measuring = false;
-        
-        // Check if L.Draw is available
-        if (!L.Draw) {
-            console.error('Leaflet Draw not loaded');
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Drawing tools not available. Please refresh the page.'
-            });
-            return;
+        currentTool = null;
+    }
+    
+    measuring = false;
+    
+    // Check if L.Draw is available
+    if (typeof L.Draw === 'undefined') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Drawing tools not available. Please refresh the page.'
+        });
+        return;
+    }
+    
+    var toolOptions = {
+        shapeOptions: {
+            color: '#198754',
+            weight: 3
         }
-        
-        var toolOptions = {
-            shapeOptions: {
-                color: '#198754',
-                weight: 3
-            }
-        };
-        
+    };
+    
+    try {
         switch(toolType) {
             case 'distance':
                 currentTool = new L.Draw.Polyline(map, {
@@ -880,96 +964,139 @@ function initializeMap() {
             currentTool.enable();
             togglePanel(null);
         }
+    } catch (error) {
+        console.error('Error initializing drawing tool:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to initialize drawing tool'
+        });
     }
+}
 
-    // Get CSRF token
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
         }
-        return cookieValue;
     }
+    return cookieValue;
+}
 
-    // Initialize event listeners
-    function initEventListeners() {
-        // Load initial data
-        loadFarms();
-        
-        // Zoom to all farms
-        document.getElementById('zoomToAll').addEventListener('click', function() {
+function initializeEventListeners() {
+    // Zoom to all farms
+    var zoomToAllBtn = document.getElementById('zoomToAll');
+    if (zoomToAllBtn) {
+        zoomToAllBtn.addEventListener('click', function() {
             var bounds = farmLayer.getBounds();
             if (bounds.isValid()) {
                 map.fitBounds(bounds, { padding: [50, 50] });
             }
         });
-        
-        // Basemap controls
-        document.getElementById('toggleBasemaps').addEventListener('click', function() {
+    }
+    
+    // Basemap controls
+    var toggleBasemapsBtn = document.getElementById('toggleBasemaps');
+    if (toggleBasemapsBtn) {
+        toggleBasemapsBtn.addEventListener('click', function() {
             togglePanel('basemapPanel');
         });
-        
-        document.querySelectorAll('.basemap-option').forEach(option => {
-            option.addEventListener('click', function() {
-                var layerName = this.getAttribute('data-layer');
-                changeBasemap(layerName);
-            });
+    }
+    
+    document.querySelectorAll('.basemap-option').forEach(option => {
+        option.addEventListener('click', function() {
+            var layerName = this.getAttribute('data-layer');
+            changeBasemap(layerName);
         });
-        
-        // Tools controls
-        document.getElementById('toggleTools').addEventListener('click', function() {
+    });
+    
+    // Tools controls
+    var toggleToolsBtn = document.getElementById('toggleTools');
+    if (toggleToolsBtn) {
+        toggleToolsBtn.addEventListener('click', function() {
             togglePanel('toolsPanel');
         });
-        
-        // Layer controls
-        document.getElementById('toggleLayers').addEventListener('click', function() {
+    }
+    
+    // Layer controls
+    var toggleLayersBtn = document.getElementById('toggleLayers');
+    if (toggleLayersBtn) {
+        toggleLayersBtn.addEventListener('click', function() {
             togglePanel('layerPanel');
         });
-        
-        // Tool buttons
-        document.getElementById('measureDistance').addEventListener('click', function() {
+    }
+    
+    // Tool buttons
+    var measureDistanceBtn = document.getElementById('measureDistance');
+    if (measureDistanceBtn) {
+        measureDistanceBtn.addEventListener('click', function() {
             initDrawingTool('distance');
         });
-        
-        document.getElementById('measureArea').addEventListener('click', function() {
+    }
+    
+    var measureAreaBtn = document.getElementById('measureArea');
+    if (measureAreaBtn) {
+        measureAreaBtn.addEventListener('click', function() {
             initDrawingTool('area');
         });
-        
-        document.getElementById('drawMarker').addEventListener('click', function() {
+    }
+    
+    var drawMarkerBtn = document.getElementById('drawMarker');
+    if (drawMarkerBtn) {
+        drawMarkerBtn.addEventListener('click', function() {
             initDrawingTool('marker');
         });
-        
-        document.getElementById('drawPolyline').addEventListener('click', function() {
+    }
+    
+    var drawPolylineBtn = document.getElementById('drawPolyline');
+    if (drawPolylineBtn) {
+        drawPolylineBtn.addEventListener('click', function() {
             initDrawingTool('polyline');
         });
-        
-        document.getElementById('drawPolygon').addEventListener('click', function() {
+    }
+    
+    var drawPolygonBtn = document.getElementById('drawPolygon');
+    if (drawPolygonBtn) {
+        drawPolygonBtn.addEventListener('click', function() {
             initDrawingTool('polygon');
         });
-        
-        document.getElementById('drawRectangle').addEventListener('click', function() {
+    }
+    
+    var drawRectangleBtn = document.getElementById('drawRectangle');
+    if (drawRectangleBtn) {
+        drawRectangleBtn.addEventListener('click', function() {
             initDrawingTool('rectangle');
         });
-        
-        document.getElementById('clearDrawings').addEventListener('click', function() {
+    }
+    
+    var clearDrawingsBtn = document.getElementById('clearDrawings');
+    if (clearDrawingsBtn) {
+        clearDrawingsBtn.addEventListener('click', function() {
             drawnItems.clearLayers();
             if (currentTool) {
-                currentTool.disable();
+                try {
+                    currentTool.disable();
+                } catch (e) {
+                    console.log('Tool already disabled');
+                }
                 currentTool = null;
             }
             document.getElementById('measurementResults').style.display = 'none';
             togglePanel(null);
         });
-        
-        // Layer toggles
-        document.getElementById('toggleFarmMarkers').addEventListener('change', function() {
+    }
+    
+    // Layer toggles
+    var toggleFarmMarkers = document.getElementById('toggleFarmMarkers');
+    if (toggleFarmMarkers) {
+        toggleFarmMarkers.addEventListener('change', function() {
             if (this.checked) {
                 map.addLayer(farmLayer);
                 if (markerCluster) {
@@ -982,32 +1109,49 @@ function initializeMap() {
                 }
             }
         });
-        
-        document.getElementById('toggleClustering').addEventListener('change', function() {
+    }
+    
+    var toggleClustering = document.getElementById('toggleClustering');
+    if (toggleClustering) {
+        toggleClustering.addEventListener('change', function() {
             loadFarms();
         });
-        
-        // Other controls
-        document.getElementById('locateMe').addEventListener('click', function() {
+    }
+    
+    // Other controls
+    var locateMeBtn = document.getElementById('locateMe');
+    if (locateMeBtn) {
+        locateMeBtn.addEventListener('click', function() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(position) {
                     map.setView([position.coords.latitude, position.coords.longitude], 15);
                 });
             }
         });
-        
-        document.getElementById('toggleStats').addEventListener('click', function() {
+    }
+    
+    var toggleStatsBtn = document.getElementById('toggleStats');
+    if (toggleStatsBtn) {
+        toggleStatsBtn.addEventListener('click', function() {
             togglePanel('statsPanel');
         });
-        
-        document.getElementById('toggleLegend').addEventListener('click', function() {
+    }
+    
+    var toggleLegendBtn = document.getElementById('toggleLegend');
+    if (toggleLegendBtn) {
+        toggleLegendBtn.addEventListener('click', function() {
             var legend = document.getElementById('legend');
-            legend.style.display = legend.style.display === 'block' ? 'none' : 'block';
-            togglePanel(null);
+            if (legend) {
+                legend.style.display = legend.style.display === 'block' ? 'none' : 'block';
+                togglePanel(null);
+            }
         });
-        
-        // Fullscreen
-        document.getElementById('toggleFullscreen').addEventListener('click', function() {
+    }
+    
+    // Fullscreen
+    var toggleFullscreenBtn = document.getElementById('toggleFullscreen');
+    if (toggleFullscreenBtn) {
+        toggleFullscreenBtn.addEventListener('click', function() {
             var elem = document.getElementById('map');
             if (!document.fullscreenElement) {
                 if (elem.requestFullscreen) {
@@ -1027,106 +1171,71 @@ function initializeMap() {
                 }
             }
         });
-        
-        // Search functionality
-        document.getElementById('quickSearchBtn').addEventListener('click', function() {
+    }
+    
+    // Search functionality
+    var quickSearchBtn = document.getElementById('quickSearchBtn');
+    if (quickSearchBtn) {
+        quickSearchBtn.addEventListener('click', function() {
             var query = document.getElementById('quickSearch').value;
             searchFarms(query);
         });
-        
-        document.getElementById('quickSearch').addEventListener('keypress', function(e) {
+    }
+    
+    var quickSearch = document.getElementById('quickSearch');
+    if (quickSearch) {
+        quickSearch.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 searchFarms(this.value);
             }
         });
+    }
+    
+    // Close panels when clicking outside
+    document.addEventListener('click', function(e) {
+        var panels = ['basemapPanel', 'toolsPanel', 'layerPanel', 'statsPanel', 'searchResults'];
+        var inPanel = false;
         
-        // Close panels when clicking outside
-        document.addEventListener('click', function(e) {
-            var panels = ['basemapPanel', 'toolsPanel', 'layerPanel', 'statsPanel', 'searchResults'];
-            var inPanel = false;
-            
+        panels.forEach(panelId => {
+            var panel = document.getElementById(panelId);
+            if (panel && panel.contains(e.target)) {
+                inPanel = true;
+            }
+        });
+        
+        var controlBtns = document.querySelectorAll('.map-control-btn');
+        controlBtns.forEach(btn => {
+            if (btn.contains(e.target)) {
+                inPanel = true;
+            }
+        });
+        
+        if (!inPanel && e.target.id !== 'quickSearch' && e.target.id !== 'quickSearchBtn') {
             panels.forEach(panelId => {
                 var panel = document.getElementById(panelId);
-                if (panel && panel.contains(e.target)) {
-                    inPanel = true;
-                }
+                if (panel) panel.style.display = 'none';
             });
-            
-            var controlBtns = document.querySelectorAll('.map-control-btn');
-            controlBtns.forEach(btn => {
-                if (btn.contains(e.target)) {
-                    inPanel = true;
-                }
-            });
-            
-            if (!inPanel && e.target.id !== 'quickSearch' && e.target.id !== 'quickSearchBtn') {
-                panels.forEach(panelId => {
-                    var panel = document.getElementById(panelId);
-                    if (panel) panel.style.display = 'none';
-                });
-            }
-        });
-        
-        // Handle drawing events
-        map.on(L.Draw.Event.CREATED, function(e) {
-            var type = e.layerType;
-            var layer = e.layer;
-            
-            drawnItems.addLayer(layer);
-            
-            if (type === 'polyline' && measuring) {
-                var distance = layer.getDistance() / 1000; // Convert to km
-                document.getElementById('distanceValue').textContent = distance.toFixed(2);
-                document.getElementById('distanceResult').style.display = 'block';
-                document.getElementById('measurementResults').style.display = 'block';
-            }
-            
-            if (type === 'polygon' && measuring) {
-                var area = layer.getArea() / 10000; // Convert to hectares
-                document.getElementById('areaValue').textContent = area.toFixed(2);
-                document.getElementById('areaResult').style.display = 'block';
-                document.getElementById('measurementResults').style.display = 'block';
-            }
-            
-            // Disable current tool after drawing
-            if (currentTool) {
-                currentTool.disable();
-                currentTool = null;
-            }
-        });
-        
-        // Handle fullscreen change
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('msfullscreenchange', handleFullscreenChange);
-        
-        function handleFullscreenChange() {
-            var btn = document.getElementById('toggleFullscreen');
+        }
+    });
+    
+    // Handle fullscreen change
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    
+    function handleFullscreenChange() {
+        var btn = document.getElementById('toggleFullscreen');
+        if (btn) {
             if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
                 btn.innerHTML = '<i class="fas fa-compress"></i>';
             } else {
                 btn.innerHTML = '<i class="fas fa-expand"></i>';
             }
         }
-        
-        // Add draw control events
-        map.on('draw:drawstart', function(e) {
-            console.log('Drawing started:', e.layerType);
-        });
-        
-        map.on('draw:drawstop', function(e) {
-            console.log('Drawing stopped');
-        });
     }
-
-    // Start event listeners
-    initEventListeners();
-
-    // Auto-refresh farm data every 5 minutes
-    setInterval(loadFarms, 300000);
 }
 
-// Start checking for Leaflet Draw
-checkLeafletDraw();
+// Auto-refresh farm data every 5 minutes
+setInterval(loadFarms, 300000);
 </script>
 {% endblock %}

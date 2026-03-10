@@ -1329,6 +1329,18 @@
                 window.location.href = `/api/qr-codes/${qr.id}/download/`;
             }
         } else {
+            // Show loading indicator
+            Swal.fire({
+                title: 'Generating PDF...',
+                text: 'Please wait while we prepare your QR codes',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
             $.ajax({
                 url: '/api/qr-codes/bulk-download/',
                 type: 'POST',
@@ -1337,10 +1349,36 @@
                 headers: { 'X-CSRFToken': getCookie('csrftoken') },
                 xhrFields: { responseType: 'blob' },
                 success: function(blob) {
+                    // Check if response is JSON (error) or PDF blob
+                    if (blob.type === 'application/json') {
+                        const reader = new FileReader();
+                        reader.onload = function() {
+                            try {
+                                const error = JSON.parse(reader.result);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: error.message || 'Failed to generate PDF',
+                                    confirmButtonColor: '#1d5c37'
+                                });
+                            } catch {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Failed to generate PDF',
+                                    confirmButtonColor: '#1d5c37'
+                                });
+                            }
+                        };
+                        reader.readAsText(blob);
+                        return;
+                    }
+                    
+                    // Download the PDF
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `qr_codes_${Date.now()}.zip`;
+                    a.download = `qr_codes_${new Date().getTime()}.pdf`;
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
@@ -1349,16 +1387,25 @@
                     Swal.fire({
                         icon: 'success',
                         title: 'Downloaded!',
-                        text: `${ids.length} QR code(s) downloaded`,
-                        timer: 1500,
-                        showConfirmButton: false
+                        html: `${ids.length} QR code(s) downloaded as PDF<br>Each QR code is numbered for easy identification`,
+                        timer: 3000,
+                        showConfirmButton: true,
+                        confirmButtonColor: '#1d5c37'
                     });
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    let errorMessage = 'Failed to generate PDF';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.message || errorMessage;
+                    } catch {
+                        // Use default error message
+                    }
+                    
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'Failed to download QR codes',
+                        text: errorMessage,
                         confirmButtonColor: '#1d5c37'
                     });
                 }

@@ -1,0 +1,170 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls jazzmin %}
+
+{% block pagination %}
+    {% if cl.paginator.num_pages > 1 %}
+        <!-- Custom pagination that bypasses the jazzmin template tag -->
+        <div class="pagination-block">
+            <ul class="pagination">
+                {% if cl.page_num > 0 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?p={{ cl.page_num|add:"-1" }}">«</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">«</span>
+                    </li>
+                {% endif %}
+                
+                {% for i in cl.paginator.page_range %}
+                    {% if forloop.counter <= 10 %}  <!-- Show first 10 pages -->
+                        <li class="page-item {% if i == cl.page_num|add:1 %}active{% endif %}">
+                            <a class="page-link" href="?p={{ i|add:"-1" }}">{{ i }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if cl.page_num < cl.paginator.num_pages|add:"-1" %}
+                    <li class="page-item">
+                        <a class="page-link" href="?p={{ cl.page_num|add:1 }}">»</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">»</span>
+                    </li>
+                {% endif %}
+            </ul>
+            
+            <!-- Show all records option -->
+            <div class="show-all-container" style="margin-left: 15px; display: inline-block;">
+                <a href="?all=1" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-eye"></i> Show All Records
+                </a>
+            </div>
+            
+            <!-- Records per page selector -->
+            <div class="per-page-selector" style="margin-left: 15px; display: inline-block;">
+                <select onchange="window.location.href=this.value;" class="form-control form-control-sm">
+                    <option value="?list_per_page=25" {% if cl.list_per_page == 25 %}selected{% endif %}>25 per page</option>
+                    <option value="?list_per_page=50" {% if cl.list_per_page == 50 %}selected{% endif %}>50 per page</option>
+                    <option value="?list_per_page=100" {% if cl.list_per_page == 100 %}selected{% endif %}>100 per page</option>
+                    <option value="?list_per_page=250" {% if cl.list_per_page == 250 %}selected{% endif %}>250 per page</option>
+                    <option value="?all=1" {% if cl.show_all %}selected{% endif %}>All records</option>
+                </select>
+            </div>
+            
+            <div class="pagination-info" style="margin-left: 15px; display: inline-block; color: #666;">
+                {% with count=cl.result_count %}
+                    {{ count }} record{{ count|pluralize }}
+                {% endwith %}
+            </div>
+        </div>
+    {% else %}
+        <!-- No pagination needed, but still show all records option -->
+        <div class="show-all-container text-center" style="margin: 10px 0;">
+            <span class="badge badge-info" style="background-color: #17a2b8; padding: 5px 10px;">
+                {{ cl.result_count }} total records
+            </span>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block result_list %}
+    <!-- Add a hidden input to track show_all state -->
+    <input type="hidden" id="show_all_records" value="{{ request.GET.all|default:'0' }}">
+    
+    <!-- Display a banner when showing all records -->
+    {% if request.GET.all == '1' or cl.show_all %}
+        <div class="alert alert-info" style="margin: 10px 0; padding: 10px; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 4px;">
+            <i class="fas fa-info-circle"></i>
+            <strong>Showing all {{ cl.result_count }} records.</strong> 
+            <a href="?p=0" class="alert-link">Return to paginated view</a>
+        </div>
+    {% endif %}
+    
+    {{ block.super }}
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        /* Pagination styling */
+        .pagination-block {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 10px 0;
+            background: white;
+            border-top: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .pagination-block .pagination {
+            margin: 0;
+        }
+        
+        .pagination-block .page-link {
+            padding: 0.3rem 0.75rem;
+        }
+        
+        .pagination-block .per-page-selector select {
+            width: auto;
+            display: inline-block;
+            padding: 0.25rem 1.5rem 0.25rem 0.5rem;
+        }
+        
+        .show-all-container .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .pagination-block {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .pagination-block > div {
+                margin-left: 0 !important;
+            }
+        }
+    </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle show all functionality via URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Add show_all parameter if "Show All" is clicked
+            const showAllLinks = document.querySelectorAll('a[href*="all=1"]');
+            showAllLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set('all', '1');
+                    currentUrl.searchParams.delete('p'); // Remove pagination
+                    currentUrl.searchParams.delete('list_per_page'); // Remove per page setting
+                    window.location.href = currentUrl.toString();
+                });
+            });
+            
+            // Handle per page selector
+            const perPageSelect = document.querySelector('.per-page-selector select');
+            if (perPageSelect) {
+                perPageSelect.addEventListener('change', function() {
+                    if (this.value === '?all=1') {
+                        const currentUrl = new URL(window.location.href);
+                        currentUrl.searchParams.set('all', '1');
+                        currentUrl.searchParams.delete('p');
+                        currentUrl.searchParams.delete('list_per_page');
+                        window.location.href = currentUrl.toString();
+                    } else {
+                        window.location.href = this.value;
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

@@ -57,6 +57,7 @@ class timeStamp(models.Model):
     """
     created_date = models.DateTimeField(auto_now=True)
     delete_field = models.CharField(max_length=10, default="no")
+    
     objects = timeStampManager()
     default_objects = models.Manager()
     class Meta:
@@ -148,7 +149,9 @@ class Activities(timeStamp):
     sub_activity = models.TextField(max_length=500, blank=True, null=True)  # Will store comma-separated values
     activity_code = models.CharField(max_length=500)
     required_equipment = models.BooleanField(default=False)
-    
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="modified_by")
+
     def __str__(self):
         return f"{self.main_activity} - {self.sub_activity}"
     
@@ -172,6 +175,8 @@ class Activities(timeStamp):
 class Farms(models.Model):
     geom = models.MultiPolygonField(blank=True, null=True)
     farm_id = models.CharField(max_length=51, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="farms_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="farms_modified_by")
 
 class FarmdetailsTbl(timeStamp):
     STATUS_CHOICES = ( 
@@ -195,7 +200,9 @@ class FarmdetailsTbl(timeStamp):
     expunge = models.BooleanField(default=False, blank=True, null=True)
     reason4expunge = models.CharField(max_length=2500, blank=True, null=True)
     status = models.CharField(default="Maintenance", max_length=2500, blank=True, null=True, choices=STATUS_CHOICES)
-    
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="farmsdetails_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="farmsdetails_modified_by")
+
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         return super(FarmdetailsTbl, self).save()
     
@@ -210,7 +217,9 @@ class contractorsTbl(timeStamp):
     interested_services = models.CharField(max_length=250)
     target = models.CharField(max_length=250)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
-    
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="contractors_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="contractors_modified_by")
+
     def __str__(self):
         return str(self.contractor_name)
 
@@ -218,6 +227,8 @@ class contratorDistrictAssignment(timeStamp):
     contractor = models.ForeignKey(contractorsTbl, on_delete=models.CASCADE, blank=True, null=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="contractor_assignments_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="contractor_assignments_modified_by")
 
 
 
@@ -239,6 +250,8 @@ class Feedback(timeStamp):
     week = models.CharField(max_length=2500, blank=True, null=True)
     month = models.CharField(max_length=2500, blank=True, null=True)
     year = models.CharField(max_length=2500, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="feedback_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="feedback_modified_by")
 
     def __str__(self):
         return str(self.title)
@@ -267,6 +280,8 @@ class mappedFarms(timeStamp):
     farmboundary = models.CharField(max_length=925000)
     geom = GeometryField(blank=True, null=True)
     uid = models.CharField(max_length=2500, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="mapped_farms_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="mapped_farms_modified_by")
     
     class Meta:
         verbose_name_plural = "Farm Mapping Exercise"
@@ -296,6 +311,8 @@ class FarmValidation(timeStamp):
     location = models.CharField(max_length=1000, blank=True, null=True)
     established_to_boundary = models.CharField(max_length=1000, blank=True, null=True)
     general_remarks = models.CharField(max_length=1000, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="farm_validation_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="farm_validation_modified_by")
     
     class Meta:
         verbose_name_plural = "Farm Validation Exercise"
@@ -314,6 +331,8 @@ class Joborder(timeStamp):
     sector = models.IntegerField(blank=True, null=True)
     year_of_establishment = models.DateField(max_length=2500, blank=True, null=True)
     job_order_code = models.CharField(max_length=4540, blank=True, null=True, unique=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="joborder_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="joborder_modified_by")
     
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.job_order_code = f"{self.region}{self.location}{self.farm_size}{self.farm_reference}{self.farmername}"
@@ -364,6 +383,8 @@ class PersonnelModel(timeStamp):
     id_image_back = models.ImageField(upload_to='personnel/id_back/', blank=True, null=True)
     consent_form_image = models.ImageField(upload_to='personnel/consent/', blank=True, null=True)
     uid = models.CharField(max_length=2500, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="personnel_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="personnel_modified_by")
     
     def __str__(self):
         return f"{self.first_name} {self.surname}"
@@ -403,6 +424,8 @@ class posRoutemonitoring(timeStamp):
     inspection_date = models.DateTimeField(max_length=250, blank=True, null=True)
     geom = GeometryField(blank=True, null=True)
     uid = models.CharField(max_length=2500, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="pos_routemonitoring_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="pos_routemonitoring_modified_by")
     
     class Meta:
         verbose_name_plural = "POs Monitor"
@@ -434,6 +457,8 @@ class PersonnelAssignmentModel(timeStamp):
     community = models.ForeignKey(Community, on_delete=models.CASCADE, blank=True, null=True)
     date_assigned = models.DateField(blank=True, null=True)
     status = models.IntegerField(default=0)  # 0=Pending, 1=Submitted
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="personnel_assignment_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="personnel_assignment_modified_by")
     
     def __str__(self):
         return f"{self.po} -> {self.ra}"
@@ -527,7 +552,9 @@ class DailyReportingModel(timeStamp):
     rounds_of_weeding = models.IntegerField(default=0, blank=True, null=True)
     is_done_equally = models.BooleanField(default=False)
     # done_by_a_group = models.BooleanField(default=False)
-    
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="daily_reporting_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="daily_reporting_modified_by")
+
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
     
@@ -566,6 +593,8 @@ class ActivityReportingModel(timeStamp):
     rounds_of_weeding = models.IntegerField(default=0, blank=True, null=True)
     is_done_equally = models.BooleanField(default=False)
     # done_by_a_group = models.BooleanField(default=False)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="activity_reporting_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="activity_reporting_modified_by")
     
     def __str__(self):
         return f"{self.agent} - {self.reporting_date}"
@@ -593,12 +622,22 @@ class QR_CodeModel(timeStamp):
         null=True,
         help_text='QR code image file'
     )
-    
+    is_active = models.BooleanField(default=True)
+    is_used = models.BooleanField(default=False)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="qr_code_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="qr_code_modified_by")
+
     # Add default_objects manager to bypass soft delete
-    default_objects = models.Manager()
+    default_objects = models.Manager()  
     
     def __str__(self):
         return self.uid or f"QR Code {self.id}"
+    
+    #check if is linked to growth monitoring then set is_used to True
+    def check_if_used(self):
+        if GrowthMonitoringModel.objects.filter(qr_code=self).exists():
+            self.is_used = True
+            self.save()
     
     def generate_uid(self):
         """Generate UID in format: ACL-PLT-YEAR-TIME-00001"""
@@ -667,7 +706,9 @@ class GrowthMonitoringModel(timeStamp):
     agent = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
-    
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="growth_monitoring_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="growth_monitoring_modified_by")
+
     def __str__(self):
         return f"{self.plant_uid} - {self.date}"
     
@@ -690,6 +731,8 @@ class OutbreakFarmModel(timeStamp):
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="outbreak_farm_model_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="outbreak_farm_model_modified_by")
     
     def __str__(self):
         return f"{self.farmer_name} - {self.disease_type}"
@@ -705,6 +748,8 @@ class ContractorCertificateModel(timeStamp):
     remarks = models.TextField(blank=True, null=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="contractor_certificate_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="contractor_certificate_modified_by")
     
     def __str__(self):
         return f"{self.contractor} - {self.work_type}"
@@ -719,6 +764,8 @@ class ContractorCertificateVerificationModel(timeStamp):
     comments = models.TextField(blank=True, null=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="contractor_certificate_verification_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="contractor_certificate_verification_modified_by")
     
     def __str__(self):
         return f"{self.certificate} - Verified: {self.is_verified}"
@@ -733,21 +780,36 @@ class IssueModel(timeStamp):
     status = models.IntegerField(default=0)  # 0=Pending, 1=Submitted
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="issue_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="issue_modified_by")
     
     def __str__(self):
         return f"{self.user} - {self.issue_type}"
+
+class irrigationTypeModel(timeStamp):
+    """Model for Irrigation Type module"""
+
+    irrigation_type = models.CharField(max_length=200)  # drip/sprinkler
+    description = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="irrigation_type_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="irrigation_type_modified_by")
+    
+    def __str__(self):
+        return self.irrigation_type
 
 class IrrigationModel(timeStamp):
     """Model for Irrigation module"""
     uid = models.CharField(max_length=2500, blank=True, null=True)
     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="irrigation_farm")
     # farm_id = models.CharField(max_length=250, blank=True, null=True)
-    irrigation_type = models.CharField(max_length=50)  # drip/sprinkler
+    irrigation_type = models.ForeignKey(irrigationTypeModel, on_delete=models.CASCADE, blank=True, null=True)
     water_volume = models.FloatField()  # in liters
     date = models.DateField()
     agent = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="irrigation_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="irrigation_modified_by")
     
     def __str__(self):
         return f"{self.farm} - {self.irrigation_type}"
@@ -762,6 +824,8 @@ class VerifyRecord(timeStamp):
     status = models.IntegerField(default=0)  # 0=Pending, 1=Synced
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="verify_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="verify_modified_by")
     
     def __str__(self):
         return f"{self.farmRef} - {self.timestamp}"
@@ -774,6 +838,8 @@ class CalculatedArea(timeStamp):
     geom = GeometryField(blank=True, null=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="calculated_area_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="calculated_area_modified_by")
     
     def __str__(self):
         return f"{self.title} - {self.value} ha"
@@ -797,6 +863,8 @@ class PaymentReport(timeStamp):
     payment_option = models.CharField(max_length=50, blank=True, null=True)
     momo_acc = models.CharField(max_length=50, blank=True, null=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="payment_report_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="payment_report_modified_by")
     
     def __str__(self):
         return f"{self.ra_name} - {self.month} {self.year}"
@@ -828,6 +896,8 @@ class DetailedPaymentReport(timeStamp):
     issue = models.TextField(blank=True, null=True)
     sector = models.IntegerField(blank=True, null=True)
     act_code = models.CharField(max_length=250, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="detailed_payment_report_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="detailed_payment_report_modified_by")
     
     def __str__(self):
         return f"{self.ra_name} - {self.activity} - {self.month}/{self.year}"
@@ -969,6 +1039,8 @@ class EquipmentModel(timeStamp):
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
     uid = models.CharField(max_length=2500, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="equipment_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="equipment_modified_by")
     
     def __str__(self):
         return f"{self.equipment_code} - {self.equipment}"
@@ -1001,6 +1073,8 @@ class EquipmentAssignmentModel(timeStamp):
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
     uid = models.CharField(max_length=2500, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="equipment_assignment_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="equipment_assignment_modified_by")
     
     def __str__(self):
         return f"{self.equipment} assigned to {self.assigned_to}"
@@ -1042,6 +1116,8 @@ class OutbreakFarm(timeStamp):
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, blank=True, null=True)
     uid = models.CharField(max_length=2500, blank=True, null=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="outbreak_farm_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="outbreak_farm_modified_by")
     
     def __str__(self):
         return f"{self.outbreak_id} - {self.farmer_name} - {self.disease_type}"

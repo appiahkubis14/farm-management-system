@@ -2085,5 +2085,71 @@ class OutbreakInline(admin.TabularInline):
 
 
 # ============== INSTALL REQUIRED PACKAGES ==============
-# Run: pip install django-import-export
-# Add 'import_export' to INSTALLED_APPS in settings.py
+
+#register irrigation type model
+class IrrigationTypeAdmin(admin.ModelAdmin):
+    list_display = ("id", 'irrigation_type', 'description')
+admin.site.register(irrigationTypeModel, IrrigationTypeAdmin)
+
+
+from django.contrib import admin
+from django.utils.html import format_html
+
+from django.contrib import admin
+from django.utils.html import format_html
+from .models import QR_CodeModel
+
+class QR_CodeModelAdmin(admin.ModelAdmin):
+    list_display = ('uid', 'qr_code_thumbnail', 'is_active', 'is_used', 'created_by', 'created_date')
+    list_filter = ('is_active', 'is_used', 'created_by')
+    search_fields = ('uid',)
+    readonly_fields = ('uid', 'qr_code_preview', 'created_date',)
+    list_per_page = 25
+    
+    fieldsets = (
+        ('QR Code Information', {
+            'fields': ('uid', 'qr_code', 'qr_code_preview')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'is_used')
+        }),
+        ('Audit Information', {
+            'fields': ('created_by', 'modified_by', 'created_date',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def qr_code_thumbnail(self, obj):
+        """Display thumbnail in list view"""
+        if obj.qr_code and obj.qr_code.name:
+            return format_html(
+                '<img src="{}" style="max-height: 40px; max-width: 40px; border-radius: 4px;" />',
+                obj.qr_code.url
+            )
+        return format_html('<span style="color: #999;">No image</span>')
+    qr_code_thumbnail.short_description = 'QR Code'
+    
+    def qr_code_preview(self, obj):
+        """Display preview in detail view"""
+        if obj.qr_code and obj.qr_code.name:
+            return format_html(
+                '<div style="text-align: center;">'
+                '<img src="{}" style="max-height: 300px; max-width: 300px; border: 1px solid #ddd; border-radius: 8px; padding: 10px;" />'
+                '<br><a href="{}" target="_blank" style="margin-top: 10px; display: inline-block;">Download QR Code</a>'
+                '</div>',
+                obj.qr_code.url, obj.qr_code.url
+            )
+        return "No QR code image uploaded"
+    qr_code_preview.short_description = 'QR Code Preview'
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # If creating new object
+            obj.created_by = request.user.stafftbl
+        else:  # If updating existing object
+            obj.modified_by = request.user.stafftbl
+        super().save_model(request, obj, form, change)
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('created_by', 'modified_by')
+
+admin.site.register(QR_CodeModel, QR_CodeModelAdmin)
