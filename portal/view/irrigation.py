@@ -401,12 +401,13 @@ def irrigation_chart_api(request):
             count=Count('id'),
             volume=Sum('water_volume')
         )
+        print(type_data)
         
         chart_data = {
             'daily': daily_data,
             'by_type': list(type_data)
         }
-        print(chart_data)
+        # print(chart_data)
         
         return JsonResponse({'success': True, 'data': chart_data})
         

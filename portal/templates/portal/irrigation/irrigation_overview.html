@@ -910,7 +910,7 @@ $(document).ready(function() {
     
     var typeCtx = document.getElementById('typeChart').getContext('2d');
         
-        var typeLabels = data.by_type.map(t => t.irrigation_type ? t.irrigation_type.toUpperCase() : 'Unknown');
+        var typeLabels = data.by_type.map(t => t.irrigation_type__irrigation_type ? t.irrigation_type__irrigation_type.toUpperCase() : 'Unknown');
         var typeData = data.by_type.map(t => t.count);
         var backgroundColors = [
             'rgba(40, 167, 69, 0.8)',   // success - drip
