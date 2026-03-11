@@ -54,6 +54,9 @@ def save_image(image, imgname, format='PNG'):
 
 
 
+
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class versionTblView(View):
     def post(self, request):
