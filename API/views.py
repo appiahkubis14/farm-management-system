@@ -751,6 +751,9 @@ class SaveDailyReportView(View):
                 
                 created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
                 
+
+                sector = self._get_sector(data.get("sector", ""))
+
                 # Create report
                 report = DailyReportingModel.objects.create(
                     uid=activity_uid,
@@ -765,6 +768,7 @@ class SaveDailyReportView(View):
                     remark=activity_item.get("remark", ""),
                     status=data.get("status", 0),
                     farm=farm,
+                    sector=sector,
                     farm_ref_number=farm_ref,
                     farm_size_ha=data.get("farm_size_ha", 0.0),
                     community=community,
