@@ -1879,12 +1879,12 @@ class SaveIrrigationView(View):
                     district = project.district
 
             created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
-            
+            irrigation_type = irrigationTypeModel.objects.get(id=data.get("irrigation_type")) if data.get("irrigation_type") else None
             # Create irrigation record
             irrigation = IrrigationModel.objects.create(
                 uid=uid,
                 farm=farm,
-                irrigation_type=data.get("irrigation_type", ""),
+                irrigation_type=irrigation_type,
                 water_volume=data.get("water_volume", 0.0),
                 date=data.get("date"),
                 agent=agent,
