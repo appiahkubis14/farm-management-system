@@ -752,7 +752,7 @@ class SaveDailyReportView(View):
                 created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
                 
 
-                sector = self._get_sector(data.get("sector", ""))
+                
 
                 # Create report
                 report = DailyReportingModel.objects.create(
