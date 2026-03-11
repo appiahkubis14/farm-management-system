@@ -588,11 +588,12 @@ def download_bulk_qr_codes(request):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid request body'}, status=400)
     except Exception as e:
+        print(f"Error generating PDF: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'message': f'Error generating PDF: {str(e)}'}, status=500)
     
-    
+
 # @login_required
 # @require_http_methods(["POST"])
 # def download_bulk_qr_codes(request):
