@@ -410,7 +410,6 @@ def download_qr_code(request, qr_id):
             'message': f'Error downloading QR code: {str(e)}'
         }, status=500)
 
-
 @login_required
 @require_http_methods(["POST"])
 def download_bulk_qr_codes(request):
@@ -424,197 +423,176 @@ def download_bulk_qr_codes(request):
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_CENTER
         from io import BytesIO
-        import os
-        from django.conf import settings
-        
+
         data = json.loads(request.body)
         ids = data.get('ids', [])
-        
+
         if not ids:
-            return JsonResponse({
-                'success': False,
-                'message': 'No QR codes selected'
-            }, status=400)
-        
-        # Get QR codes with images
-        qr_codes = QR_CodeModel.objects.filter(id__in=ids).exclude(qr_code='')
-        
+            return JsonResponse({'success': False, 'message': 'No QR codes selected'}, status=400)
+
+        # Fetch QR codes that actually have an image file set
+        qr_codes = QR_CodeModel.objects.filter(id__in=ids).exclude(qr_code='').order_by('id')
+
         if not qr_codes.exists():
-            return JsonResponse({
-                'success': False,
-                'message': 'No QR codes with images found'
-            }, status=404)
-        
-        # Create PDF in memory
+            return JsonResponse({'success': False, 'message': 'No QR codes with images found'}, status=404)
+
+        # ── Grid settings ──────────────────────────────────────────────
+        COLS          = 3
+        ROWS_PER_PAGE = 3
+        QR_SIZE       = 55 * mm   # width & height of the QR image
+        LABEL_HEIGHT  = 12 * mm   # space below image for UID text
+        CELL_HEIGHT   = QR_SIZE + LABEL_HEIGHT
+        CELL_WIDTH    = QR_SIZE
+        PAGE_GAP      = COLS * ROWS_PER_PAGE   # QRs per page
+
+        # ── Styles ─────────────────────────────────────────────────────
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'BulkTitle',
+            parent=styles['Heading1'],
+            fontSize=14,
+            alignment=TA_CENTER,
+            spaceAfter=6,
+        )
+        sub_style = ParagraphStyle(
+            'BulkSub',
+            parent=styles['Normal'],
+            fontSize=9,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor('#666666'),
+            spaceAfter=10,
+        )
+        label_style = ParagraphStyle(
+            'QRLabel',
+            parent=styles['Normal'],
+            fontSize=6,
+            alignment=TA_CENTER,
+            textColor=colors.black,
+            leading=8,
+        )
+
+        # ── Build elements ─────────────────────────────────────────────
         pdf_buffer = BytesIO()
-        
-        # Set up the document
         doc = SimpleDocTemplate(
             pdf_buffer,
             pagesize=A4,
-            rightMargin=10*mm,
-            leftMargin=10*mm,
-            topMargin=10*mm,
-            bottomMargin=10*mm
+            rightMargin=10 * mm,
+            leftMargin=10 * mm,
+            topMargin=10 * mm,
+            bottomMargin=10 * mm,
         )
-        
-        # Container for the 'Flowable' objects
+
         elements = []
-        
-        # Styles
-        styles = getSampleStyleSheet()
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
-            alignment=TA_CENTER,
-            spaceAfter=20
-        )
-        
-        # Add title
-        elements.append(Paragraph(f"QR Codes - {len(qr_codes)} selected", title_style))
-        elements.append(Spacer(1, 10*mm))
-        
-        # Calculate grid layout (3x3 per page for A4)
-        cols = 3
-        rows_per_page = 3
-        qr_size = 60*mm  # 60mm x 60mm for QR code
-        cell_height = qr_size + 15*mm  # QR code + label space
-        
-        # Create table data
+        elements.append(Paragraph("QR Codes Report", title_style))
+        elements.append(Paragraph(
+            f"Total: {qr_codes.count()} &nbsp;|&nbsp; Generated: {timezone.now().strftime('%d %b %Y %H:%M')}",
+            sub_style,
+        ))
+        elements.append(Spacer(1, 5 * mm))
+
         qr_list = list(qr_codes)
-        total_qrs = len(qr_list)
-        
-        # Store image data to avoid file locking issues
-        qr_image_data = []
-        
-        # Pre-load all QR code images into memory
-        for qr in qr_list:
-            if qr.qr_code:
-                try:
-                    # Read the file content into memory
-                    qr.qr_code.open('rb')
-                    image_data = qr.qr_code.read()
-                    qr.qr_code.close()
-                    
-                    # Create BytesIO object for each image
-                    img_buffer = BytesIO(image_data)
-                    qr_image_data.append({
-                        'qr': qr,
-                        'image_buffer': img_buffer
-                    })
-                except Exception as e:
-                    print(f"Error loading QR code {qr.uid}: {e}")
-                    continue
-        
-        for i in range(0, len(qr_image_data), cols * rows_per_page):
-            # Get QR codes for this page
-            page_qrs = qr_image_data[i:i + (cols * rows_per_page)]
-            
-            # Prepare table data for this page
-            table_data = []
-            
-            for row in range(rows_per_page):
-                row_data = []
-                for col in range(cols):
-                    idx = row * cols + col
-                    if idx < len(page_qrs):
-                        item = page_qrs[idx]
-                        qr = item['qr']
-                        img_buffer = item['image_buffer']
-                        
-                        # Create a list for cell content
-                        cell_content = []
-                        
-                        # Add QR code image from buffer
-                        img = Image(img_buffer, width=qr_size, height=qr_size)
-                        cell_content.append(img)
-                        
-                        # Add QR code number/label
-                        label_style = ParagraphStyle(
-                            'Label',
-                            parent=styles['Normal'],
-                            fontSize=8,
-                            alignment=TA_CENTER,
-                            textColor=colors.black
-                        )
-                        cell_content.append(Paragraph(f"{qr.uid}", label_style))
-                        
-                        # Create a table for each cell to stack image and label
-                        cell_table = Table(
-                            [[cell_content[0]], [cell_content[1]]], 
-                            colWidths=[qr_size],
-                            rowHeights=[qr_size, 10*mm]
-                        )
-                        cell_table.setStyle(TableStyle([
-                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                            ('TOPPADDING', (0, 0), (-1, -1), 0),
-                            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                        ]))
-                        
-                        row_data.append(cell_table)
-                    else:
-                        row_data.append('')
-                
-                if row_data:
-                    table_data.append(row_data)
-            
-            # Create table for this page
-            if table_data:
-                # Calculate column widths
-                col_widths = [qr_size] * cols
-                
-                # Create the table
-                table = Table(
-                    table_data, 
-                    colWidths=col_widths, 
-                    rowHeights=[cell_height] * len(table_data)
+
+        def build_cell(qr):
+            """
+            Return a ReportLab flowable for one QR code cell, or None if the
+            file cannot be read (missing / permission error / bad path).
+            """
+            if not qr.qr_code:
+                return None
+            try:
+                # ★ KEY FIX: read the file through Django's storage backend
+                # into a BytesIO so ReportLab never touches the raw filesystem
+                # path (which breaks on external / mounted drives).
+                with qr.qr_code.open('rb') as fh:
+                    img_bytes = BytesIO(fh.read())
+
+                img = Image(img_bytes, width=QR_SIZE, height=QR_SIZE)
+
+                uid_text = qr.uid if qr.uid else f'ID-{qr.pk}'
+                label = Paragraph(uid_text, label_style)
+
+                # Stack image + label in a tiny inner table
+                inner = Table(
+                    [[img], [label]],
+                    colWidths=[CELL_WIDTH],
+                    rowHeights=[QR_SIZE, LABEL_HEIGHT],
                 )
-                table.setStyle(TableStyle([
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ('GRID', (0, 0), (-1, -1), 1, colors.lightgrey),
-                    ('TOPPADDING', (0, 0), (-1, -1), 5),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 5),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                inner.setStyle(TableStyle([
+                    ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
+                    ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+                    ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+                    ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+                    ('TOPPADDING',    (0, 0), (-1, -1), 0),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
                 ]))
-                
-                elements.append(table)
-                
-                # Add page break if not last page
-                if i + (cols * rows_per_page) < len(qr_image_data):
-                    elements.append(PageBreak())
-        
-        # Build PDF
+                return inner
+
+            except (FileNotFoundError, OSError, Exception):
+                # Gracefully skip unreadable files instead of crashing
+                return None
+
+        # Chunk the full list into pages
+        for page_start in range(0, len(qr_list), PAGE_GAP):
+            page_qrs = qr_list[page_start: page_start + PAGE_GAP]
+
+            table_data = []
+            for row_idx in range(ROWS_PER_PAGE):
+                row = []
+                for col_idx in range(COLS):
+                    flat_idx = row_idx * COLS + col_idx
+                    if flat_idx < len(page_qrs):
+                        cell = build_cell(page_qrs[flat_idx])
+                        row.append(cell if cell is not None else '')
+                    else:
+                        row.append('')   # empty filler cell
+                table_data.append(row)
+
+            # Only add a table if at least one cell has content
+            if any(cell != '' for row in table_data for cell in row):
+                grid = Table(
+                    table_data,
+                    colWidths=[CELL_WIDTH] * COLS,
+                    rowHeights=[CELL_HEIGHT] * ROWS_PER_PAGE,
+                )
+                grid.setStyle(TableStyle([
+                    ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
+                    ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+                    ('GRID',          (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+                    ('BACKGROUND',    (0, 0), (-1, -1), colors.HexColor('#fafafa')),
+                    ('TOPPADDING',    (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING',   (0, 0), (-1, -1), 4),
+                    ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
+                ]))
+                elements.append(grid)
+
+            # Page break between pages, but not after the very last one
+            if page_start + PAGE_GAP < len(qr_list):
+                elements.append(PageBreak())
+
+        # ── Render PDF ─────────────────────────────────────────────────
         doc.build(elements)
         pdf_buffer.seek(0)
-        
-        # Clean up image buffers
-        for item in qr_image_data:
-            item['image_buffer'].close()
-        
-        # Create response
-        response = HttpResponse(pdf_buffer, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="qr_codes_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
-        
+
+        filename = f"qr_codes_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
-        
-    except ImportError as e:
+
+    except ImportError:
         return JsonResponse({
             'success': False,
-            'message': 'ReportLab is required for PDF generation. Please install it: pip install reportlab'
+            'message': 'ReportLab is required. Install it with: pip install reportlab',
         }, status=500)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request body'}, status=400)
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({
-            'success': False,
-            'message': f'Error generating PDF: {str(e)}'
-        }, status=500)
+        return JsonResponse({'success': False, 'message': f'Error generating PDF: {str(e)}'}, status=500)
+    
+    
 # @login_required
 # @require_http_methods(["POST"])
 # def download_bulk_qr_codes(request):
