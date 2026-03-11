@@ -178,6 +178,23 @@ class Farms(models.Model):
     created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="farms_created_by")
     modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="farms_modified_by")
 
+
+class SectorModel(models.Model):
+    sector = models.CharField(max_length=255, unique=True)
+    size_Ha = models.FloatField(blank=True, null=True)
+    mean_pH = models.FloatField(blank=True, null=True)
+    mean_OC = models.FloatField(blank=True, null=True)
+    Texture_co = models.FloatField(blank=True, null=True)
+    geom = GeometryField(blank=True, null=True, srid=4326,dim=3)
+    create_at = models.DateTimeField(auto_now_add=True)
+    update_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="sector_created_by")
+    modified_by = models.ForeignKey(staffTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="sector_modified_by")
+
+    def __str__(self):
+        return self.sector
+  
+
 class FarmdetailsTbl(timeStamp):
     STATUS_CHOICES = ( 
         ("Treatment", "Treatment"), 
@@ -187,6 +204,7 @@ class FarmdetailsTbl(timeStamp):
     
     id = models.AutoField(primary_key=True) 
     farm_foreignkey = models.ForeignKey(Farms, on_delete=models.CASCADE, blank=True, null=True)
+    sector_foreignkey = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
     farmername = models.CharField(max_length=2500, blank=True, null=True)
@@ -295,6 +313,7 @@ class FarmValidation(timeStamp):
     sector_no = models.IntegerField(blank=True, null=True)
     region = models.CharField(max_length=1000, blank=True, null=True)
     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    sector = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     farm_size = models.FloatField(max_length=1000, blank=True, null=True)
     farmer_contact = models.CharField(max_length=1000, blank=True, null=True)
     farm_verified_by_ched = models.CharField(max_length=1000, blank=True, null=True)
@@ -320,6 +339,7 @@ class FarmValidation(timeStamp):
 class Joborder(timeStamp):
     id = models.AutoField(primary_key=True)
     farm_foreignkey = models.ForeignKey(Farms, on_delete=models.CASCADE, blank=True, null=True)
+    sector_foreignkey = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
     farmername = models.CharField(max_length=2500, blank=True, null=True)
@@ -538,12 +558,13 @@ class DailyReportingModel(timeStamp):
     remark = models.TextField(blank=True, null=True)
     status = models.IntegerField(default=0)  # 0=Pending, 1=Submitted
     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    sector = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     farm_ref_number = models.CharField(max_length=250, blank=True, null=True)
     farm_size_ha = models.FloatField(default=0.0, blank=True, null=True)
     community = models.ForeignKey(Community, on_delete=models.CASCADE, blank=True, null=True)
     number_of_people_in_group = models.IntegerField(default=0, blank=True, null=True)
     group_work = models.CharField(max_length=50, blank=True, null=True)  # Yes/No
-    sector = models.IntegerField(blank=True, null=True)
+    # sector = models.IntegerField(blank=True, null=True)
     ras = models.ManyToManyField(PersonnelModel, blank=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
@@ -579,12 +600,13 @@ class ActivityReportingModel(timeStamp):
     remark = models.TextField(blank=True, null=True)
     status = models.IntegerField(default=0)  # 0=Pending, 1=Submitted
     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    sector = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     farm_ref_number = models.CharField(max_length=250, blank=True, null=True)
     farm_size_ha = models.FloatField(default=0.0, blank=True, null=True)
     community = models.ForeignKey(Community, on_delete=models.CASCADE, blank=True, null=True)
     number_of_people_in_group = models.IntegerField(default=0, blank=True, null=True)
     group_work = models.CharField(max_length=50, blank=True, null=True)  # Yes/No
-    sector = models.IntegerField(blank=True, null=True)
+    # sector = models.IntegerField(blank=True, null=True)
     ras = models.ManyToManyField(PersonnelModel, blank=True)
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     district = models.ForeignKey(cocoaDistrict, on_delete=models.CASCADE, blank=True, null=True)
@@ -801,6 +823,7 @@ class IrrigationModel(timeStamp):
     """Model for Irrigation module"""
     uid = models.CharField(max_length=2500, blank=True, null=True)
     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True, related_name="irrigation_farm")
+    sector = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     # farm_id = models.CharField(max_length=250, blank=True, null=True)
     irrigation_type = models.ForeignKey(irrigationTypeModel, on_delete=models.CASCADE, blank=True, null=True)
     water_volume = models.FloatField()  # in liters
@@ -818,6 +841,7 @@ class VerifyRecord(timeStamp):
     """Model for Verification (Video Record) module"""
     uid = models.CharField(max_length=2500, blank=True, null=True)
     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    sector = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     farmRef = models.CharField(max_length=250, blank=True, null=True)
     videoPath = models.FileField(upload_to='verification/videos/', blank=True, null=True)
     timestamp = models.DateTimeField()
@@ -884,6 +908,7 @@ class DetailedPaymentReport(timeStamp):
     projectTbl_foreignkey = models.ForeignKey(projectTbl, on_delete=models.CASCADE, blank=True, null=True)
     farmhands_type = models.CharField(max_length=250, blank=True, null=True)
     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    sector = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     farm_reference = models.CharField(max_length=250, blank=True, null=True)
     number_in_a_group = models.IntegerField(blank=True, null=True)
     activity = models.ForeignKey(Activities, on_delete=models.CASCADE, blank=True, null=True)
@@ -1084,6 +1109,7 @@ class EquipmentAssignmentModel(timeStamp):
 class OutbreakFarm(timeStamp):
     """Model for Outbreak Farm module - Enhanced"""
     farm = models.ForeignKey(FarmdetailsTbl, on_delete=models.CASCADE, blank=True, null=True)
+    sector = models.ForeignKey(SectorModel, on_delete=models.CASCADE, blank=True, null=True)
     outbreak_id = models.CharField(max_length=100, unique=True, blank=True, null=True)
     farm_location = models.CharField(max_length=250)
     farmer_name = models.CharField(max_length=250)

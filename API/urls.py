@@ -47,6 +47,7 @@ urlpatterns = [
     path('v1/fetchallcontractors/', views.FetchAllContractorsView.as_view(), name='fetch_all_contractors'),
     path('v1/activity/', views.FetchActivitiesView.as_view(), name='activity'),
     path('v1/farms/', views.FetchFarmsView.as_view(), name='farms'),
+    path('v1/fetchsectors/', views.FetchSectorsView.as_view(), name='fetch_sectors'),
     path('v1/fetchcommunity/', views.FetchCommunityView.as_view(), name='fetch_community'),
     path('v1/fetchjoborder/', views.FetchJobOrderView.as_view(), name='fetch_joborder'),
     path('v1/fetchrehabassistants/', views.FetchRehabAssistantsView.as_view(), name='fetch_rehabassistants'),

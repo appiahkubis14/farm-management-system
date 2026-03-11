@@ -436,6 +436,7 @@ class SaveActivityReportView(View):
             district = self._get_district(farm, agent)
             project = self._get_project(agent)
             ras_ids = data.get("ras", [])
+            sector = self._get_sector(data.get("sector", ""))
             
             # Get activities data - can be single or multiple
             activities_list = data.get("activities", [])
@@ -537,12 +538,13 @@ class SaveActivityReportView(View):
                     remark=activity_item.get("remark", ""),
                     status=data.get("status", 0),
                     farm=farm,
+                    sector=sector,
                     farm_ref_number=farm_ref,
                     farm_size_ha=data.get("farm_size_ha", 0.0),
                     community=community,
                     number_of_people_in_group=data.get("number_of_people_in_group", 0),
                     group_work=data.get("group_work", ""),
-                    sector=data.get("sector"),
+                    # sector=data.get("sector"),
                     projectTbl_foreignkey=project,
                     district=district,
                     is_done_by_contractor=data.get("is_done_by_contractor"),
@@ -598,6 +600,14 @@ class SaveActivityReportView(View):
             return staffTbl.objects.get(id=agent_id)
         except:
             return None
+
+    def _get_sector(self, sector_id):
+        if not sector_id:
+            return None
+        try:
+            return SectorModel.objects.get(id=sector_id)
+        except:
+            return None
     
     def _get_farm(self, farm_ref):
         if not farm_ref:
@@ -606,7 +616,8 @@ class SaveActivityReportView(View):
             farm = FarmdetailsTbl.objects.get(farm_reference=farm_ref)
             return farm, farm_ref
         except:
-            return None, farm_ref
+            return None, 
+            
     
     def _get_community(self, community_id):
         if not community_id:
@@ -656,6 +667,7 @@ class SaveDailyReportView(View):
             district = self._get_district(farm, agent)
             project = self._get_project(agent)
             ras_ids = data.get("ras", [])
+            sector = self._get_sector(data.get("sector", ""))
             
             # Get activities data
             activities_list = data.get("activities", [])
@@ -809,6 +821,14 @@ class SaveDailyReportView(View):
             return None
         try:
             return staffTbl.objects.get(id=agent_id)
+        except:
+            return None
+
+    def _get_sector(self, sector_id):
+        if not sector_id:
+            return None
+        try:
+            return SectorModel.objects.get(id=sector_id)
         except:
             return None
     
@@ -1857,6 +1877,14 @@ class SaveIrrigationView(View):
                     except:
                         pass
             
+            sector = None
+            sector_id = data.get("sector", "")
+            if sector_id:
+                try:
+                    sector = SectorModel.objects.get(id=sector_id)
+                except:
+                    pass
+
             # Get agent
             agent = None
             agent_id = data.get("agent", "")
@@ -1884,6 +1912,7 @@ class SaveIrrigationView(View):
             irrigation = IrrigationModel.objects.create(
                 uid=uid,
                 farm=farm,
+                sector=sector,
                 irrigation_type=irrigation_type,
                 water_volume=data.get("water_volume", 0.0),
                 date=data.get("date"),
@@ -2104,6 +2133,38 @@ class FetchFarmsView(View):
                 "status": True,
                 "message": f"Found {len(farm_data)} farms",
                 "data": farm_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                "status": False,
+                "message": f"Error occurred: {str(e)}",
+                "data": []
+            }, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FetchSectorsView(View):
+    """Load sectors (GET)"""
+    def get(self, request):
+        try:
+            sectors = SectorModel.objects.all()
+            sector_data = []
+            
+            for sector in sectors:
+                sector_data.append({
+                    "id": sector.id,
+                    "sector": sector.sector,
+                    "size_Ha":sector.size_Ha,
+                    "mean_pH": sector.mean_pH,
+                    "mean_OC": sector.mean_OC,
+                    "Texture_co": sector.Texture_co
+                })
+            
+            return JsonResponse({
+                "status": True,
+                "message": f"Found {len(sector_data)} sectors",
+                "data": sector_data
             })
             
         except Exception as e:
@@ -2815,6 +2876,7 @@ class SaveVerificationRecordView(View):
                 farmRef = request.POST.get('farmRef', '')
                 timestamp = request.POST.get('timestamp', '')
                 status_val = request.POST.get('status', '0')
+                sector = request.POST.get('sector', '')
                 
                 # Check if UID already exists
                 if uid and VerifyRecord.objects.filter(uid=uid).exists():
@@ -2832,6 +2894,14 @@ class SaveVerificationRecordView(View):
                     except:
                         pass
                 
+                sector = None
+                if sector:
+                    try:
+                        sector = SectorModel.objects.get(id=sector)
+                    except:
+                        pass
+
+
                 # Get district and project
                 district = None
                 project = None
@@ -2846,6 +2916,7 @@ class SaveVerificationRecordView(View):
                 verification = VerifyRecord.objects.create(
                     uid=uid,
                     farm=farm,
+                    sector=sector,
                     farmRef=farmRef,
                     timestamp=timestamp,
                     status=int(status_val),
@@ -2887,6 +2958,13 @@ class SaveVerificationRecordView(View):
                         farm = FarmdetailsTbl.objects.get(farm_reference=farmRef)
                     except:
                         pass
+
+                sector = None
+                if sector:
+                    try:
+                        sector = SectorModel.objects.get(id=sector)
+                    except:
+                        pass
                 
                 # Get district and project
                 district = None
@@ -2898,6 +2976,7 @@ class SaveVerificationRecordView(View):
                 verification = VerifyRecord.objects.create(
                     uid=uid,
                     farm=farm,
+                    sector=sector,
                     farmRef=farmRef,
                     timestamp=data.get("timestamp"),
                     status=data.get("status", 0),
@@ -3333,6 +3412,13 @@ class SaveOutbreakFarmView(View):
                     farm = FarmdetailsTbl.objects.get(id=data["farm_id"])
                 except FarmdetailsTbl.DoesNotExist:
                     pass
+
+            sector = None
+            if data.get("sector"):
+                try:
+                    sector = SectorModel.objects.get(id=data["sector"])
+                except SectorModel.DoesNotExist:
+                    pass
             
 
             created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
@@ -3340,6 +3426,7 @@ class SaveOutbreakFarmView(View):
             # Create outbreak farm
             outbreak = OutbreakFarm.objects.create(
                 farm=farm,
+                sector=sector,
                 farm_location=data.get("farm_location"),
                 farmer_name=data.get("farmer_name"),
                 farmer_age=data.get("farmer_age"),
@@ -3373,6 +3460,8 @@ class SaveOutbreakFarmView(View):
                 "message": "Outbreak farm saved successfully",
                 "data": {
                     "farm_id": outbreak.farm.id if outbreak.farm else None,
+                    "sector_id": outbreak.sector.id if outbreak.sector else None,
+                    "sector_name": outbreak.sector.sector if outbreak.sector else None,
                     "outbreaks_id": outbreak.outbreak_id,
                     "farm_location": outbreak.farm_location,
                     "farmer_name": outbreak.farmer_name,
@@ -3633,6 +3722,14 @@ class SaveFarmValidationView(View):
                 except:
                     pass
 
+            sector = None
+            sector_id = data.get("sector", "")
+            if sector_id:
+                try:
+                    sector = SectorModel.objects.get(id=sector_id)
+                except:
+                    pass
+
 
             created_by = staffTbl.objects.get(id=data.get("user_id")) if data.get("user_id") else None
 
@@ -3647,6 +3744,7 @@ class SaveFarmValidationView(View):
                 sector_no=data.get("sector_no"),
                 region=data.get("region", ""),
                 farm=farm,
+                sector=sector,
                 farm_size=data.get("farm_size", 0.0),
                 farmer_contact=data.get("farmer_contact", ""),
                 farm_verified_by_ched=data.get("farm_verified_by_ched", ""),
@@ -3940,6 +4038,14 @@ class VerifyRecordView(View):
                     farm = FarmdetailsTbl.objects.get(id=farm_id)
                 except FarmdetailsTbl.DoesNotExist:
                     pass
+
+            sector = None
+            sector_id = data.get("sector", "")
+            if sector_id:
+                try:
+                    sector = SectorModel.objects.get(id=sector_id)
+                except SectorModel.DoesNotExist:
+                    pass
             
             # Get project
             project = None
@@ -3976,6 +4082,7 @@ class VerifyRecordView(View):
             record = VerifyRecord(
                 uid=uid,
                 farm=farm,
+                sector=sector,
                 farmRef=data.get("farmRef", ""),
                 timestamp=timestamp,
                 status=int(data.get("status", 0)),

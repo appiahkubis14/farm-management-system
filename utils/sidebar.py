@@ -13,6 +13,11 @@ class Sidebar:
             "icon": "fas fa-tractor",
             "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Project Coordinator"],
             "sub_items": {
+                "Sector Management": {
+                    "icon": "fas fa-map-marked-alt",
+                    "url": "/sector-management/",
+                    "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Project Coordinator"]
+                },
                 "Farms Overview": {
                     "icon": "fas fa-database", 
                     "url": "/farm-management/farms/", 

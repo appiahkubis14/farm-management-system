@@ -163,8 +163,9 @@
                             <tr>
                                 <th>ID</th>
                                 <th>UID</th>
-                                <th>Farm Reference</th>
-                                <th>Farmer Name</th>
+                                <th>Sector</th>
+                                <!-- <th>Farm Reference</th> -->
+                                <!-- <th>Farmer Name</th> -->
                                 <th>Irrigation Type</th>
                                 <th>Water Volume (L)</th>
                                 <th>Date</th>
@@ -405,8 +406,9 @@ $(document).ready(function() {
                     return `<a href="#" class="view-irrigation-link" data-id="${row.id}">${data}</a>`;
                 }
             },
-            { data: 'farm_reference' },
-            { data: 'farmer_name' },
+            { data: 'sector_name' },
+            // { data: 'farm_reference' },
+            // { data: 'farmer_name' },
             { 
                 data: 'irrigation_type',
                 render: function(data, type, row) {
@@ -1133,8 +1135,8 @@ function updateSummaryStats(data, avgVolume, totalVol) {
                                     <h5 class="border-bottom pb-2 text-primary">Farm Information</h5>
                                     <table class="table table-sm table-borderless">
                                         <tr>
-                                            <th width="40%">Farm Reference:</th>
-                                            <td><strong>${i.farm_reference || 'N/A'}</strong></td>
+                                            <th width="40%">Sector:</th>
+                                            <td><strong>${i.sector_name || 'N/A'}</strong></td>
                                         </tr>
                                         <tr>
                                             <th>Farmer Name:</th>

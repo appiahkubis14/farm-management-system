@@ -3,6 +3,7 @@ from django.contrib.auth import views as auth_views
 from . import views
 from portal.view.farms import *
 from portal.view.map import *
+from portal.view.sector import *
 from portal.view.qr_code import *
 from portal.view.activities import *
 from portal.view.daily_reporting import *
@@ -311,4 +312,21 @@ urlpatterns = [
     path('api/farms/list/', farm_list_api, name='farm_list_api'),
     path('api/staff/dropdown/', staff_list_dropdown_api, name='staff_list_dropdown_api'),
 
+
+   # Sector Management Pages
+    path('sector-management/', sector_management_page, name='sector_management'),
+    
+    # Sector API Endpoints
+    path('api/sectors/', sector_api, name='sector_api'),
+    path('api/sectors/create/', create_sector, name='create_sector'),
+    path('api/sectors/<int:sector_id>/', get_sector_details, name='get_sector_details'),
+    path('api/sectors/<int:sector_id>/update/', update_sector, name='update_sector'),
+    path('api/sectors/<int:sector_id>/delete/', delete_sector, name='delete_sector'),
+    
+    # Statistics endpoint
+    path('api/sectors/statistics/', get_sector_statistics, name='get_sector_statistics'),
+    
+    # Export endpoints
+    path('api/sectors/export/csv/', export_sectors_csv, name='export_sectors_csv'),
+    path('api/sectors/export/pdf/', export_sectors_pdf, name='export_sectors_pdf'),
 ]

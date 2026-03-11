@@ -98,7 +98,8 @@
                                 <th>Agent</th>
                                 <th>Main Activity</th>
                                 <th>Sub Activity</th>
-                                <th>Farm Ref</th>
+                                <th>Sector</th>
+                                <!-- <th>Farm Ref</th> -->
                                 <th>Area (ha)</th>
                                 <th># of RAs</th>
                                 <th>Status</th>
@@ -380,7 +381,13 @@ $(document).ready(function() {
                     return data || 'N/A';
                 }
             },
-            { data: 'farm_ref_number' },
+            {
+                data: 'sector_name',
+                render: function(data) {
+                    return data || 'N/A';
+                }
+            },
+            // { data: 'farm_ref_number' },
             { 
                 data: 'area_covered_ha',
                 render: function(data) {

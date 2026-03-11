@@ -112,7 +112,7 @@ def daily_report_list_api(request):
                 'farm_size_ha': float(report.farm_size_ha) if report.farm_size_ha else 0,
                 'community': report.community.name if report.community else 'N/A',
                 'community_id': report.community.id if report.community else '',
-                'sector': report.sector or '',
+                'sector': report.sector.sector if report.sector else 'N/A',
                 'group_work': report.group_work or 'No',
                 'number_of_people_in_group': report.number_of_people_in_group or 0,
                 'remark': report.remark or '',
@@ -137,7 +137,7 @@ def daily_report_list_api(request):
         return JsonResponse(response)
         
     except Exception as e:
-        print(e)
+        print(f'Error in daily_report_list_api: {str(e)}')
         return JsonResponse({
             'success': False,
             'error': str(e),
@@ -245,7 +245,7 @@ def daily_report_detail(request, report_id):
             'farm_size_ha': float(report.farm_size_ha) if report.farm_size_ha else 0,
             'community': report.community.name if report.community else '',
             'community_id': report.community.id if report.community else '',
-            'sector': report.sector or '',
+            'sector': report.sector.sector if report.sector else 'N/A',
             'group_work': report.group_work or 'No',
             'number_of_people_in_group': report.number_of_people_in_group or 0,
             'remark': report.remark or '',
