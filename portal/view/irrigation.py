@@ -397,7 +397,7 @@ def irrigation_chart_api(request):
             })
         
         # Data by irrigation type
-        type_data = queryset.values('irrigation_type').annotate(
+        type_data = queryset.values('irrigation_type__irrigation_type').annotate(
             count=Count('id'),
             volume=Sum('water_volume')
         )
