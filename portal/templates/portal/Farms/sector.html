@@ -395,19 +395,38 @@ $(document).ready(function() {
 
     // Load statistics
     function loadStats() {
-        $.ajax({
-            url: "{% url 'get_sector_statistics' %}",
-            type: "GET",
-            success: function(response) {
-                if (response.success) {
-                    $('#totalSectors').text(response.stats.total_sectors);
-                    $('#sectorsWithGeo').text(response.stats.sectors_with_geometry);
-                    $('#avgSize').text(response.stats.avg_size ? response.stats.avg_size.toFixed(2) : '0');
-                    $('#avgPh').text(response.stats.avg_ph ? response.stats.avg_ph.toFixed(2) : '0');
+    $.ajax({
+        url: "{% url 'get_sector_statistics' %}",
+        type: "GET",
+        success: function(response) {
+            console.log('Statistics response:', response);
+            if (response.success) {
+                // Update basic stats
+                $('#totalSectors').text(response.stats.total_sectors || 0);
+                $('#sectorsWithGeo').text(response.stats.sectors_with_geometry || 0);
+                $('#totalArea').text(response.stats.total_area ? response.stats.total_area.toFixed(2) : '0');
+                $('#avgPh').text(response.stats.avg_ph ? response.stats.avg_ph.toFixed(2) : '0');
+                $('#avgOc').text(response.stats.avg_oc ? response.stats.avg_oc.toFixed(2) : '0');
+                $('#avgSize').text(response.stats.avg_size ? response.stats.avg_size.toFixed(2) : '0');
+                
+                // Optional: Update more detailed stats if you have elements for them
+                $('#minSize').text(response.stats.min_size ? response.stats.min_size.toFixed(2) : '0');
+                $('#maxSize').text(response.stats.max_size ? response.stats.max_size.toFixed(2) : '0');
+                $('#minPh').text(response.stats.min_ph ? response.stats.min_ph.toFixed(2) : '0');
+                $('#maxPh').text(response.stats.max_ph ? response.stats.max_ph.toFixed(2) : '0');
+                
+                // You can also display texture distribution
+                if (response.stats.texture_distribution && response.stats.texture_distribution.length > 0) {
+                    console.log('Texture distribution:', response.stats.texture_distribution);
+                    // Update texture chart if you have one
                 }
             }
-        });
-    }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading stats:', error);
+        }
+    });
+}
 
     // Apply filters
     $('#applyFilters').click(function() {

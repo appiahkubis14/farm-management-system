@@ -249,6 +249,10 @@ def get_farm_stats(request):
             min_size=Min('size_Ha'),
             max_size=Max('size_Ha')
         )
+
+        print(f"Total Sectors: {total_sectors}, With Geometry: {sectors_with_geometry}, Without Geometry: {sectors_without_geometry}")
+        print(f"Texture Stats: {list(texture_stats)}")
+        print(f"Overall Stats: {overall_stats}")
         
         return JsonResponse({
             'success': True,

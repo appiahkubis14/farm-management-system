@@ -386,6 +386,33 @@ def get_sector_statistics(request):
     """Get statistics about sectors"""
     try:
         sectors = SectorModel.objects.all()
+        print(f"Total sectors in database: {sectors.count()}")
+        
+        # Get texture distribution and convert to list of dicts
+        texture_dist = list(sectors.values('Texture_co').annotate(
+            count=models.Count('id')
+        ).order_by('-count'))
+        
+        # Also get pH distribution
+        ph_distribution = {
+            'acidic': sectors.filter(mean_pH__lt=5.5).count(),
+            'neutral': sectors.filter(mean_pH__gte=5.5, mean_pH__lte=7.5).count(),
+            'alkaline': sectors.filter(mean_pH__gt=7.5).count()
+        }
+        
+        # Get OC distribution
+        oc_distribution = {
+            'low': sectors.filter(mean_OC__lt=2).count(),
+            'medium': sectors.filter(mean_OC__gte=2, mean_OC__lte=4).count(),
+            'high': sectors.filter(mean_OC__gt=4).count()
+        }
+        
+        # Get size distribution
+        size_distribution = {
+            'small': sectors.filter(size_Ha__lt=5).count(),
+            'medium': sectors.filter(size_Ha__gte=5, size_Ha__lte=20).count(),
+            'large': sectors.filter(size_Ha__gt=20).count()
+        }
         
         stats = {
             'total_sectors': sectors.count(),
@@ -395,10 +422,21 @@ def get_sector_statistics(request):
             'avg_oc': sectors.aggregate(avg=models.Avg('mean_OC'))['avg'],
             'min_size': sectors.aggregate(min=models.Min('size_Ha'))['min'],
             'max_size': sectors.aggregate(max=models.Max('size_Ha'))['max'],
-            'texture_distribution': sectors.values('Texture_co').annotate(count=models.Count('id')).order_by('-count')
+            'min_ph': sectors.aggregate(min=models.Min('mean_pH'))['min'],
+            'max_ph': sectors.aggregate(max=models.Max('mean_pH'))['max'],
+            'min_oc': sectors.aggregate(min=models.Min('mean_OC'))['min'],
+            'max_oc': sectors.aggregate(max=models.Max('mean_OC'))['max'],
+            'total_area': sectors.aggregate(total=models.Sum('size_Ha'))['total'] or 0,
+            'texture_distribution': texture_dist,
+            'ph_distribution': ph_distribution,
+            'oc_distribution': oc_distribution,
+            'size_distribution': size_distribution
         }
         
         return JsonResponse({'success': True, 'stats': stats})
         
     except Exception as e:
+        print(f"Error in get_sector_statistics: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
