@@ -609,16 +609,24 @@
                                 <div class="card-body">
                                     <div class="tab-content" id="chartTabContent">
                                         <div class="tab-pane fade show active" id="heightChart" role="tabpanel">
-                                            <canvas id="heightHistoryChart" style="height: 300px; width: 100%;"></canvas>
+                                            <div style="position: relative; height: 300px; width: 100%;">
+                                                <canvas id="heightHistoryChart"></canvas>
+                                            </div>
                                         </div>
                                         <div class="tab-pane fade" id="leavesChart" role="tabpanel">
-                                            <canvas id="leavesHistoryChart" style="height: 300px; width: 100%;"></canvas>
+                                            <div style="position: relative; height: 300px; width: 100%;">
+                                                <canvas id="leavesHistoryChart"></canvas>
+                                            </div>
                                         </div>
                                         <div class="tab-pane fade" id="stemChart" role="tabpanel">
-                                            <canvas id="stemHistoryChart" style="height: 300px; width: 100%;"></canvas>
+                                            <div style="position: relative; height: 300px; width: 100%;">
+                                                <canvas id="stemHistoryChart"></canvas>
+                                            </div>
                                         </div>
                                         <div class="tab-pane fade" id="healthChart" role="tabpanel">
-                                            <canvas id="healthHistoryChart" style="height: 300px; width: 100%;"></canvas>
+                                            <div style="position: relative; height: 300px; width: 100%;">
+                                                <canvas id="healthHistoryChart"></canvas>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -675,9 +683,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" id="printGrowthHistory">
+                <!-- <button type="button" class="btn btn-success" id="printGrowthHistory">
                     <i class="fas fa-print me-1"></i> Print Report
-                </button>
+                </button> -->
             </div>
         </div>
     </div>
@@ -749,9 +757,14 @@
 }
 
 /* Ensure charts are responsive */
-#growthHistoryModal canvas {
+/* #growthHistoryModal canvas {
     max-width: 100%;
     height: auto !important;
+} */
+
+/* AFTER — never override chart canvas dimensions */
+#growthHistoryModal canvas {
+    max-width: 100%;
 }
 
 /* Make modal full width on larger screens */
@@ -1086,6 +1099,8 @@ $(document).ready(function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 0 },      // ← add this
+                resizeDelay: 100, 
                 plugins: {
                     tooltip: { mode: 'index', intersect: false },
                     legend: { display: false }
@@ -1126,6 +1141,8 @@ $(document).ready(function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 0 },      // ← add this
+                resizeDelay: 100, 
                 plugins: {
                     tooltip: { mode: 'index', intersect: false },
                     legend: { display: false }
@@ -1166,6 +1183,8 @@ $(document).ready(function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 0 },      // ← add this
+                resizeDelay: 100,
                 plugins: {
                     tooltip: { mode: 'index', intersect: false },
                     legend: { display: false }
@@ -1206,6 +1225,8 @@ $(document).ready(function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 0 },      // ← add this
+                resizeDelay: 100,
                 plugins: {
                     tooltip: { mode: 'index', intersect: false },
                     legend: { display: false }
@@ -1244,6 +1265,8 @@ $(document).ready(function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 0 },      // ← add this
+                resizeDelay: 100,
                 cutout: '70%',
                 plugins: {
                     legend: { display: false },
@@ -1256,38 +1279,62 @@ $(document).ready(function() {
         });
     }
     
-    // Initialize ONLY the active tab's chart
+    // AFTER — waits for tab fade animation to complete before drawing
     function initializeActiveTabChart() {
         if (!currentChartData) return;
-        
-        const activeTab = $('#chartTabs .nav-link.active').attr('id');
-        
-        if (activeTab === 'height-tab') {
-            if (heightChart) {
-                heightChart.destroy();
-                heightChart = null;
+        setTimeout(function() {
+            const activeTab = $('#chartTabs .nav-link.active').attr('id');
+            if (activeTab === 'height-tab') {
+                if (heightChart) { heightChart.destroy(); heightChart = null; }
+                clearCanvas('heightHistoryChart');
+                initHeightChart();
+            } else if (activeTab === 'leaves-tab') {
+                if (leavesChart) { leavesChart.destroy(); leavesChart = null; }
+                clearCanvas('leavesHistoryChart');
+                initLeavesChart();
+            } else if (activeTab === 'stem-tab') {
+                if (stemChart) { stemChart.destroy(); stemChart = null; }
+                clearCanvas('stemHistoryChart');
+                initStemChart();
+            } else if (activeTab === 'health-tab') {
+                if (healthChart) { healthChart.destroy(); healthChart = null; }
+                clearCanvas('healthHistoryChart');
+                initHealthChart();
             }
-            initHeightChart();
-        } else if (activeTab === 'leaves-tab') {
-            if (leavesChart) {
-                leavesChart.destroy();
-                leavesChart = null;
-            }
-            initLeavesChart();
-        } else if (activeTab === 'stem-tab') {
-            if (stemChart) {
-                stemChart.destroy();
-                stemChart = null;
-            }
-            initStemChart();
-        } else if (activeTab === 'health-tab') {
-            if (healthChart) {
-                healthChart.destroy();
-                healthChart = null;
-            }
-            initHealthChart();
-        }
+        }, 150);
     }
+    // Initialize ONLY the active tab's chart
+    // function initializeActiveTabChart() {
+    //     if (!currentChartData) return;
+        
+    //     const activeTab = $('#chartTabs .nav-link.active').attr('id');
+        
+    //     if (activeTab === 'height-tab') {
+    //         if (heightChart) {
+    //             heightChart.destroy();
+    //             heightChart = null;
+    //         }
+    //         initHeightChart();
+    //     } else if (activeTab === 'leaves-tab') {
+    //         if (leavesChart) {
+    //             leavesChart.destroy();
+    //             leavesChart = null;
+    //         }
+    //         initLeavesChart();
+    //     } else if (activeTab === 'stem-tab') {
+    //         if (stemChart) {
+    //             stemChart.destroy();
+    //             stemChart = null;
+    //         }
+    //         initStemChart();
+    //     } else if (activeTab === 'health-tab') {
+    //         if (healthChart) {
+    //             healthChart.destroy();
+    //             healthChart = null;
+    //         }
+    //         initHealthChart();
+    //     }
+    // }
     
     // Display Officer History
     function displayOfficerHistory(officers) {
