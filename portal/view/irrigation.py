@@ -314,14 +314,14 @@ def irrigation_stats_api(request):
         avg_volume = queryset.aggregate(avg=Avg('water_volume'))['avg'] or 0
         
         # By irrigation type
-        type_counts = queryset.values('irrigation_type').annotate(
+        type_counts = queryset.values('irrigation_type__irrigation_type').annotate(
             count=Count('id'),
             volume=Sum('water_volume')
         )
         
         type_data = {}
         for item in type_counts:
-            type_data[item['irrigation_type']] = {
+            type_data[item['irrigation_type__irrigation_type']] = {
                 'count': item['count'],
                 'volume': item['volume'] or 0
             }
