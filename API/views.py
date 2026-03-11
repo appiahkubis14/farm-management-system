@@ -774,7 +774,7 @@ class SaveDailyReportView(View):
                     community=community,
                     number_of_people_in_group=data.get("number_of_people_in_group", 0),
                     group_work=data.get("group_work", ""),
-                    sector=data.get("sector"),
+                    
                     projectTbl_foreignkey=project,
                     district=district,
                     is_done_by_contractor=data.get("is_done_by_contractor"),
