@@ -10,7 +10,7 @@ import json
 from datetime import datetime, timedelta
 from django.shortcuts import render
 
-from portal.models import FarmdetailsTbl, IrrigationModel, cocoaDistrict, projectTbl, staffTbl
+from portal.models import FarmdetailsTbl, IrrigationModel, cocoaDistrict, irrigationTypeModel, projectTbl, staffTbl
 
 # Irrigation Overview page
 def irrigation_overview(request):
@@ -98,8 +98,8 @@ def irrigation_list_api(request):
                 'farm_id': irrigation.farm.id if irrigation.farm else None,
                 'farm_reference': irrigation.farm.farm_reference if irrigation.farm else 'N/A',
                 'farmer_name': irrigation.farm.farmername if irrigation.farm else 'N/A',
-                'irrigation_type': irrigation.irrigation_type,
-                'irrigation_type_display': irrigation.irrigation_type.title() if irrigation.irrigation_type else 'N/A',
+                'irrigation_type': irrigation.irrigation_type.irrigation_type if irrigation.irrigation_type else 'N/A',
+                'irrigation_type_display': irrigation.irrigation_type.irrigation_type.title() if irrigation.irrigation_type else 'N/A',
                 'water_volume': irrigation.water_volume,
                 'date': irrigation.date.strftime('%Y-%m-%d') if irrigation.date else '',
                 'agent_id': irrigation.agent.id if irrigation.agent else None,
@@ -157,7 +157,7 @@ def irrigation_detail_api(request, pk):
             'farmer_name': irrigation.farm.farmername if irrigation.farm else None,
             'farm_location': irrigation.farm.location if irrigation.farm else None,
             'farm_size': irrigation.farm.farm_size if irrigation.farm else None,
-            'irrigation_type': irrigation.irrigation_type,
+            'irrigation_type': irrigation.irrigation_type.irrigation_type.title() if irrigation.irrigation_type else 'N/A',
             'water_volume': irrigation.water_volume,
             'date': irrigation.date.strftime('%Y-%m-%d') if irrigation.date else '',
             'agent_id': irrigation.agent.id if irrigation.agent else None,
@@ -222,7 +222,7 @@ def irrigation_update(request, pk):
 def update_irrigation_from_data(irrigation, data):
     """Helper function to update Irrigation from JSON data"""
     
-    irrigation.irrigation_type = data.get('irrigation_type', irrigation.irrigation_type)
+    irrigation.irrigation_type = irrigationTypeModel.objects.get(id=data['irrigation_type']) if data.get('irrigation_type') else irrigation.irrigation_type
     irrigation.water_volume = data.get('water_volume', irrigation.water_volume)
     
     if data.get('date'):
