@@ -18,21 +18,21 @@ class Sidebar:
                     "url": "/sector-management/",
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer", "Project Coordinator"]
                 },
-                "Farms Overview": {
-                    "icon": "fas fa-database", 
-                    "url": "/farm-management/farms/", 
-                    "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer"]
-                },
+                # "Farms Overview": {
+                #     "icon": "fas fa-database", 
+                #     "url": "/farm-management/farms/", 
+                #     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation", "District Officer"]
+                # },
                 "Map Window": {
                     "icon": "fas fa-map-marked-alt", 
                     "url": "/farm-management/mapped-farms/", 
                     "groups": ["Admin", "Project Officer", "Monitoring and Evaluation"]
                 },
-                "Farm Assignments": {
-                    "icon": "fas fa-user-check", 
-                    "url": "/farm-management/farm-assignment/", 
-                    "groups": ["Admin", "Project Officer", "Project Coordinator"]
-                },
+                # "Farm Assignments": {
+                #     "icon": "fas fa-user-check", 
+                #     "url": "/farm-management/farm-assignment/", 
+                #     "groups": ["Admin", "Project Officer", "Project Coordinator"]
+                # },
             }
         },
 

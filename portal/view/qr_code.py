@@ -466,7 +466,8 @@ def download_bulk_qr_codes(request):
         label_style = ParagraphStyle(
             'QRLabel',
             parent=styles['Normal'],
-            fontSize=6,
+            fontWeight='bolder',
+            fontSize=10,
             alignment=TA_CENTER,
             textColor=colors.black,
             leading=8,
