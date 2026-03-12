@@ -405,7 +405,7 @@
     </div>
 
     <!-- Charts Row 4 - Trend Lines -->
-    <div class="row mb-4">
+    <!-- <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
@@ -424,7 +424,67 @@
                 </div>
             </div>
         </div>
+    </div> -->
+
+    <!-- Charts Row 4 - Trend Lines -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-line me-2"></i>Activity Trends
+                </h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <!-- Chart Type Selector -->
+                    <div class="btn-group btn-group-sm me-2" role="group">
+                        <button class="btn btn-outline-primary active" data-chart-type="growth">
+                            <i class="fas fa-seedling"></i> Growth
+                        </button>
+                        <button class="btn btn-outline-primary" data-chart-type="reports">
+                            <i class="fas fa-file-alt"></i> Reports
+                        </button>
+                        <button class="btn btn-outline-primary" data-chart-type="assignments" style="display: none;">
+                            <i class="fas fa-tasks"></i> Assignments
+                        </button>
+                        <button class="btn btn-outline-primary" data-chart-type="irrigation">
+                            <i class="fas fa-tint"></i> Irrigation
+                        </button>
+                    </div>
+                    
+                    <!-- Chart Style Selector -->
+                    <div class="btn-group btn-group-sm me-2" role="group">
+                        <button class="btn btn-outline-secondary active" data-chart-style="area" title="Area Chart">
+                            <i class="fas fa-chart-area"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" data-chart-style="bar" title="Bar Chart">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" data-chart-style="stacked" title="Stacked Bar Chart">
+                            <i class="fas fa-chart-bar"></i> <span class="small">Stacked</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Time Range Selector -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-info" data-range="7">7D</button>
+                        <button class="btn btn-outline-info active" data-range="30">30D</button>
+                        <button class="btn btn-outline-info" data-range="90">90D</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Chart Container -->
+                <div id="trendChart" style="height: 350px;"></div>
+                
+                <!-- Chart Info Footer -->
+                <div class="mt-2 text-muted small" id="chartInfo">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <span id="chartDescription">Showing growth trend for the last 30 days</span>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 
     <!-- Recent Activity and Upcoming Tasks Row -->
     <div class="row mb-4">
@@ -869,79 +929,514 @@ function initIrrigationByTypeChart() {
         }
     });
 }
+// Complete enhanced trend chart function
+initTrendChart('growth', 'area', 30);
+    
+    // Chart Type Click Handlers
+    $('[data-chart-type]').on('click', function(e) {
+        e.preventDefault();
+        var type = $(this).data('chart-type');
+        var currentStyle = $('[data-chart-style].active').data('chart-style') || 'area';
+        var currentRange = $('[data-range].active').data('range') || 30;
+        
+        // Update active state
+        $('[data-chart-type]').removeClass('active');
+        $(this).addClass('active');
+        
+        // Load chart with new type
+        initTrendChart(type, currentStyle, currentRange);
+    });
+    
+    // Chart Style Click Handlers
+    $('[data-chart-style]').on('click', function(e) {
+        e.preventDefault();
+        var style = $(this).data('chart-style');
+        var currentType = $('[data-chart-type].active').data('chart-type') || 'growth';
+        var currentRange = $('[data-range].active').data('range') || 30;
+        
+        // Update active state
+        $('[data-chart-style]').removeClass('active');
+        $(this).addClass('active');
+        
+        // Load chart with new style
+        initTrendChart(currentType, style, currentRange);
+    });
+    
+    // Time Range Click Handlers
+    $('[data-range]').on('click', function(e) {
+        e.preventDefault();
+        var days = $(this).data('range');
+        var currentType = $('[data-chart-type].active').data('chart-type') || 'growth';
+        var currentStyle = $('[data-chart-style].active').data('chart-style') || 'area';
+        
+        // Update active state
+        $('[data-range]').removeClass('active');
+        $(this).addClass('active');
+        
+        // Load chart with new range
+        initTrendChart(currentType, currentStyle, days);
+    });
 
-function initTrendChart(chartType) {
+
+// Enhanced trend chart function
+function initTrendChart(chartType, chartStyle = 'area', days = 30) {
     var endpoint = '';
     var seriesName = '';
+    var yaxisTitle = '';
+    var isMultiSeries = false;
     
+    // Configure based on chart type
     if (chartType === 'growth') {
         endpoint = 'growth_trend';
         seriesName = 'Average Plant Height (cm)';
+        yaxisTitle = 'Height (cm)';
     } else if (chartType === 'reports') {
         endpoint = 'daily_reports_trend';
         seriesName = 'Daily Reports';
+        yaxisTitle = 'Number of Reports';
     } else if (chartType === 'assignments') {
         endpoint = 'assignments_trend';
         seriesName = 'Assignments';
+        yaxisTitle = 'Number of Assignments';
     } else if (chartType === 'irrigation') {
         endpoint = 'irrigation_trend';
         seriesName = 'Irrigation Events';
+        yaxisTitle = 'Number of Events';
+        isMultiSeries = true;
     }
     
+    // Update chart description
+    updateChartDescription(chartType, days);
+    
+    // Show loading indicator
+    $("#trendChart").html(`
+        <div class="text-center py-5">
+            <div class="spinner-border text-info" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading chart data...</p>
+        </div>
+    `);
+    
+    // Make AJAX call
     $.ajax({
         url: "{% url 'chart_data' %}",
         type: "GET",
-        data: { type: endpoint, days: 30 },
+        data: { type: endpoint, days: days },
         success: function(response) {
             if (response.success) {
-                var options = {
-                    series: [{
-                        name: seriesName,
-                        data: response.data
-                    }],
-                    chart: {
-                        height: 350,
-                        type: 'area',
-                        toolbar: {
-                            show: true
-                        }
-                    },
-                    dataLabels: {
-                        enabled: false
-                    },
-                    stroke: {
-                        curve: 'smooth',
-                        width: 2
-                    },
-                    xaxis: {
-                        categories: response.labels,
-                        type: 'datetime'
-                    },
-                    tooltip: {
-                        x: {
-                            format: 'dd MMM yyyy'
-                        }
-                    },
-                    colors: ['#17a2b8'],
-                    fill: {
-                        type: 'gradient',
-                        gradient: {
-                            shadeIntensity: 1,
-                            opacityFrom: 0.7,
-                            opacityTo: 0.3,
-                            stops: [0, 90, 100]
-                        }
-                    }
-                };
-                
-                // Clear previous chart
-                $("#trendChart").html("");
-                var chart = new ApexCharts(document.querySelector("#trendChart"), options);
-                chart.render();
+                renderChart(response, chartType, chartStyle, seriesName, yaxisTitle, isMultiSeries);
+            } else {
+                showChartError(response.message || 'Failed to load data');
             }
+        },
+        error: function(xhr, status, error) {
+            console.error("Error loading trend chart:", error);
+            showChartError('Failed to load trend data');
         }
     });
 }
+
+// Render the chart with ApexCharts
+function renderChart(response, chartType, chartStyle, seriesName, yaxisTitle, isMultiSeries) {
+    var series = [];
+    
+    // Handle multi-series for irrigation
+    if (isMultiSeries && response.volume_data) {
+        series = [
+            {
+                name: seriesName,
+                data: response.data,
+                type: chartStyle === 'stacked' ? 'bar' : chartStyle
+            },
+            {
+                name: 'Water Volume (L)',
+                data: response.volume_data,
+                type: chartStyle === 'stacked' ? 'bar' : 'line'
+            }
+        ];
+    } else {
+        series = [{
+            name: seriesName,
+            data: response.data
+        }];
+    }
+    
+    // Configure chart options
+    var chartOptions = {
+        series: series,
+        chart: {
+            height: 350,
+            type: chartStyle === 'stacked' ? 'bar' : chartStyle,
+            toolbar: {
+                show: true,
+                tools: {
+                    download: true,
+                    selection: true,
+                    zoom: true,
+                    zoomin: true,
+                    zoomout: true,
+                    pan: true,
+                    reset: true
+                }
+            },
+            stacked: chartStyle === 'stacked',
+            stackType: chartStyle === 'stacked' ? 'normal' : undefined,
+            animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 800
+            },
+            background: '#ffffff',
+            fontFamily: 'inherit'
+        },
+        dataLabels: {
+            enabled: chartStyle !== 'area',
+            formatter: function(val, opts) {
+                if (val === null || val === undefined) return '';
+                if (opts.seriesIndex === 1 && response.volume_data) {
+                    return formatVolume(val);
+                } else if (chartType === 'growth') {
+                    return val.toFixed(1) + 'cm';
+                }
+                return Math.round(val);
+            },
+            offsetY: chartStyle === 'bar' ? -20 : (chartStyle === 'stacked' ? 0 : undefined),
+            style: {
+                fontSize: '10px',
+                colors: ['#304758']
+            }
+        },
+        stroke: {
+            curve: 'smooth',
+            width: chartStyle === 'area' ? 2 : (chartStyle === 'bar' ? 1 : 0)
+        },
+        title: {
+            text: getChartTitle(chartType, chartStyle),
+            align: 'left',
+            margin: 10,
+            style: {
+                fontSize: '14px',
+                fontWeight: 'bold'
+            }
+        },
+        grid: {
+            borderColor: '#e9ecef',
+            strokeDashArray: 4,
+            padding: {
+                left: 10,
+                right: 10
+            }
+        },
+        xaxis: {
+            categories: response.labels,
+            type: 'datetime',
+            labels: {
+                format: 'dd MMM',
+                rotate: -45,
+                rotateAlways: false,
+                style: {
+                    fontSize: '11px'
+                }
+            },
+            title: {
+                text: 'Date',
+                style: {
+                    fontSize: '12px',
+                    fontWeight: 500
+                }
+            }
+        },
+        yaxis: {
+            title: {
+                text: yaxisTitle,
+                style: {
+                    fontSize: '12px',
+                    fontWeight: 500
+                }
+            },
+            labels: {
+                formatter: function(val) {
+                    if (chartType === 'growth') {
+                        return val.toFixed(1) + ' cm';
+                    } else if (chartType === 'irrigation' && val > 1000) {
+                        return (val/1000).toFixed(1) + 'k';
+                    }
+                    return Math.round(val);
+                }
+            },
+            min: 0
+        },
+        tooltip: {
+            shared: true,
+            intersect: false,
+            x: {
+                format: 'dd MMM yyyy'
+            },
+            y: {
+                formatter: function(val, { seriesIndex }) {
+                    if (seriesIndex === 1 && response.volume_data) {
+                        return formatVolume(val);
+                    } else if (chartType === 'growth') {
+                        return val.toFixed(1) + ' cm';
+                    }
+                    return Math.round(val).toString();
+                }
+            }
+        },
+        colors: getChartColors(chartType, chartStyle),
+        fill: chartStyle === 'area' ? {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.7,
+                opacityTo: 0.3,
+                stops: [0, 90, 100]
+            }
+        } : {
+            type: 'solid',
+            opacity: 0.9
+        },
+        legend: {
+            show: series.length > 1,
+            position: 'top',
+            horizontalAlign: 'right',
+            fontSize: '12px'
+        },
+        plotOptions: {
+            bar: {
+                borderRadius: chartStyle === 'stacked' ? 2 : 4,
+                columnWidth: chartStyle === 'stacked' ? '70%' : '60%',
+                dataLabels: {
+                    position: chartStyle === 'stacked' ? 'center' : 'top'
+                }
+            }
+        },
+        responsive: [{
+            breakpoint: 768,
+            options: {
+                chart: {
+                    height: 300
+                },
+                legend: {
+                    position: 'bottom',
+                    horizontalAlign: 'center'
+                },
+                xaxis: {
+                    labels: {
+                        rotate: -45
+                    }
+                }
+            }
+        }]
+    };
+    
+    // Clear and render new chart
+    $("#trendChart").html("");
+    var chart = new ApexCharts(document.querySelector("#trendChart"), chartOptions);
+    chart.render();
+    
+    // Store chart instance
+    window.currentTrendChart = chart;
+    window.currentChartOptions = {
+        type: chartType,
+        style: chartStyle,
+        days: days,
+        response: response
+    };
+}
+
+// Helper Functions
+function formatVolume(val) {
+    if (val >= 1000000) {
+        return (val/1000000).toFixed(1) + ' ML';
+    } else if (val >= 1000) {
+        return (val/1000).toFixed(1) + ' kL';
+    }
+    return Math.round(val) + ' L';
+}
+
+function getChartTitle(chartType, chartStyle) {
+    var titles = {
+        'growth': 'Plant Growth',
+        'reports': 'Daily Reports',
+        'assignments': 'Assignments',
+        'irrigation': 'Irrigation Activity'
+    };
+    
+    var styleLabels = {
+        'area': ' - Area Chart',
+        'bar': ' - Bar Chart',
+        'stacked': ' - Stacked Bar Chart'
+    };
+    
+    return (titles[chartType] || 'Activity') + (styleLabels[chartStyle] || '');
+}
+
+function getChartColors(chartType, chartStyle) {
+    var colors = {
+        'growth': ['#28a745', '#17a2b8'],
+        'reports': ['#17a2b8', '#6c757d'],
+        'assignments': ['#ffc107', '#dc3545'],
+        'irrigation': ['#17a2b8', '#28a745']
+    };
+    
+    return colors[chartType] || ['#007bff'];
+}
+
+function updateChartDescription(chartType, days) {
+    var descriptions = {
+        'growth': 'Showing plant growth trend',
+        'reports': 'Showing daily reports trend',
+        'assignments': 'Showing assignments trend',
+        'irrigation': 'Showing irrigation activity trend'
+    };
+    
+    var dayText = days + ' day' + (days > 1 ? 's' : '');
+    $('#chartDescription').text(descriptions[chartType] + ' for the last ' + dayText);
+}
+
+function showChartError(message) {
+    $('#trendChart').html(`
+        <div class="text-center text-danger py-5">
+            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+            <h5>Error</h5>
+            <p class="text-muted">${message}</p>
+            <button class="btn btn-sm btn-outline-info mt-2" onclick="retryLastChart()">
+                <i class="fas fa-sync-alt mr-1"></i>Retry
+            </button>
+        </div>
+    `);
+}
+
+function retryLastChart() {
+    if (window.currentChartOptions) {
+        initTrendChart(
+            window.currentChartOptions.type, 
+            window.currentChartOptions.style,
+            window.currentChartOptions.days
+        );
+    } else {
+        initTrendChart('growth', 'area', 30);
+    }
+}
+
+// Function to update chart time range
+function updateChartRange(days) {
+    if (window.currentChartOptions) {
+        var options = window.currentChartOptions;
+        
+        $.ajax({
+            url: "{% url 'chart_data' %}",
+            type: "GET",
+            data: { 
+                type: getEndpointForChartType(options.type), 
+                days: days 
+            },
+            success: function(response) {
+                if (response.success) {
+                    window.currentChartOptions.response = response;
+                    
+                    if (window.currentTrendChart) {
+                        // Update chart data
+                        if (options.type === 'irrigation' && response.volume_data) {
+                            window.currentTrendChart.updateSeries([
+                                {
+                                    name: getSeriesName(options.type),
+                                    data: response.data
+                                },
+                                {
+                                    name: 'Water Volume (L)',
+                                    data: response.volume_data
+                                }
+                            ]);
+                        } else {
+                            window.currentTrendChart.updateSeries([{
+                                name: getSeriesName(options.type),
+                                data: response.data
+                            }]);
+                        }
+                        
+                        // Update xaxis categories
+                        window.currentTrendChart.updateOptions({
+                            xaxis: {
+                                categories: response.labels
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Helper function to get endpoint for chart type
+function getEndpointForChartType(chartType) {
+    var endpoints = {
+        'growth': 'growth_trend',
+        'reports': 'daily_reports_trend',
+        'assignments': 'assignments_trend',
+        'irrigation': 'irrigation_trend'
+    };
+    return endpoints[chartType] || 'growth_trend';
+}
+
+// Helper function to get series name
+function getSeriesName(chartType) {
+    var names = {
+        'growth': 'Average Plant Height (cm)',
+        'reports': 'Daily Reports',
+        'assignments': 'Assignments',
+        'irrigation': 'Irrigation Events'
+    };
+    return names[chartType] || 'Data';
+}
+
+// Initialize with default values when document is ready
+$(document).ready(function() {
+    // Initialize with growth chart
+    initTrendChart('growth', 'area');
+    
+    // Add event listeners for chart type toggles (if they exist)
+    $('[data-chart-type]').on('click', function(e) {
+        e.preventDefault();
+        var type = $(this).data('chart-type');
+        var currentStyle = window.currentChartOptions ? window.currentChartOptions.style : 'area';
+        
+        // Update active state
+        $('[data-chart-type]').removeClass('active');
+        $(this).addClass('active');
+        
+        switchChartStyle(type, currentStyle);
+    });
+    
+    // Add event listeners for chart style toggles (if they exist)
+    $('[data-chart-style]').on('click', function(e) {
+        e.preventDefault();
+        var style = $(this).data('chart-style');
+        var currentType = window.currentChartOptions ? window.currentChartOptions.type : 'growth';
+        
+        // Update active state
+        $('[data-chart-style]').removeClass('active');
+        $(this).addClass('active');
+        
+        switchChartStyle(currentType, style);
+    });
+    
+    // Add event listeners for time range buttons (if they exist)
+    $('[data-range]').on('click', function(e) {
+        e.preventDefault();
+        var days = $(this).data('range');
+        
+        // Update active state
+        $('[data-range]').removeClass('active');
+        $(this).addClass('active');
+        
+        updateChartRange(days);
+    });
+});
+
+
 
 function initTopSectorsChart() {
     // Top sectors by area
