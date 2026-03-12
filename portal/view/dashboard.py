@@ -536,9 +536,7 @@ def get_chart_data(request):
         labels = []
         
         if chart_type == 'personnel_by_type':
-            queryset = PersonnelModel.objects.filter(
-                delete_field='no'
-            ).values('personnel_type').annotate(
+            queryset = PersonnelModel.objects.all().values('personnel_type').annotate(
                 count=Count('id')
             ).order_by('-count')
             
